@@ -1,0 +1,14 @@
+{
+  "data": {
+    "task_status": "success",
+    "result": {
+      "face_shape": "oval",
+      "face_proportions": {
+        "forehead_ratio": 0.33,
+        "midface_ratio": 0.34,
+        "jawline_ratio": 0.33
+      },
+      "symmetry_score": 87.5
+    }
+  }
+}

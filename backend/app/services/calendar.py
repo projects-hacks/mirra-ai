@@ -4,11 +4,12 @@ from datetime import datetime, timedelta
 
 from app.core.config import settings
 from app.core import cache
+from app.core.constants import CachePrefix
 
 
 async def get_todays_events() -> dict:
     """Get today's events. Cached for 5 minutes in Redis."""
-    cache_key = "calendar:today"
+    cache_key = f"{CachePrefix.CALENDAR}:today"
     cached = await cache.get(cache_key)
     if cached:
         return cached
