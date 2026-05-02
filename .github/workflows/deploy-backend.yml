@@ -1,12 +1,15 @@
-name: Deploy Backend to Railway
+name: Backend CI
 
 on:
   push:
     branches: [main]
     paths: [backend/**]
+  pull_request:
+    branches: [main]
+    paths: [backend/**]
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,16 +29,6 @@ jobs:
           pip install ruff
           ruff check backend/app/
 
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service mirra-backend
+# DigitalOcean App Platform auto-deploys from GitHub on push to main.
+# No deploy step needed — DO watches the repo directly.
+# This workflow only runs lint checks as a quality gate.
