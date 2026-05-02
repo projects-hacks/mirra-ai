@@ -1,75 +1,58 @@
-"""Tool executor — routes function calls to the correct service."""
+"""Tool executor — routes function calls to the correct tool module."""
 import base64
 from typing import Any
 
-from app.services import perfectcorp, weather, calendar, serper
+from app.core.validation import validate, ValidationError
+from app.core.constants import ToolName
+from app.tools import skin_tools, fashion_tools, beauty_tools, hair_tools, accessory_tools
+from app.services import weather, calendar, serper
 
 
-async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None = None) -> dict:
-    """Execute a Mirra tool by name and return the result."""
-    selfie_bytes = base64.b64decode(selfie_b64) if selfie_b64 else None
+async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None = None, user_id: str | None = None) -> dict:
+    """Route a function call to the correct tool and return the result."""
+    selfie_bytes = _decode_selfie(selfie_b64) if selfie_b64 else None
 
     match name:
-        case "analyze_skin":
-            return await _skin_analysis(selfie_bytes)
-        case "analyze_skin_tone":
-            return await _skin_tone(selfie_bytes)
-        case "try_on_clothes":
-            return await _clothes_vto(selfie_bytes, args["product_id"])
-        case "try_on_makeup":
-            return await _makeup_vto(selfie_bytes, args)
-        case "try_on_earrings":
-            return await _earrings_vto(selfie_bytes, args["product_id"])
-        case "change_hairstyle":
-            return await _hairstyle(selfie_bytes, args["style"])
-        case "check_calendar":
+        case ToolName.ANALYZE_SKIN:
+            return await _require_selfie(selfie_bytes, skin_tools.analyze_skin, user_id=user_id)
+        case ToolName.ANALYZE_SKIN_TONE:
+            return await _require_selfie(selfie_bytes, skin_tools.analyze_skin_tone, user_id=user_id)
+        case ToolName.ANALYZE_FACE:
+            return await _require_selfie(selfie_bytes, skin_tools.analyze_face, user_id=user_id)
+        case ToolName.TRY_ON_CLOTHES:
+            return await _require_selfie(selfie_bytes, fashion_tools.try_on_clothes, product_id=args["product_id"])
+        case ToolName.TRY_ON_MAKEUP:
+            return await _require_selfie(selfie_bytes, beauty_tools.try_on_makeup, params=args)
+        case ToolName.TRY_ON_EARRINGS:
+            return await _require_selfie(selfie_bytes, accessory_tools.try_on_earrings, product_id=args["product_id"])
+        case ToolName.TRY_ON_NECKLACE:
+            return await _require_selfie(selfie_bytes, accessory_tools.try_on_necklace, product_id=args["product_id"])
+        case ToolName.CHANGE_HAIRSTYLE:
+            return await _require_selfie(selfie_bytes, hair_tools.change_hairstyle, style=args["style"])
+        case ToolName.CHECK_CALENDAR:
             return await calendar.get_todays_events()
-        case "check_weather":
+        case ToolName.CHECK_WEATHER:
             return await weather.get_weather(args.get("location", "San Francisco"))
-        case "search_products":
+        case ToolName.SEARCH_PRODUCTS:
             return await serper.search(args["query"], args.get("max_price"))
-        case "generate_proof_card":
+        case ToolName.GENERATE_PROOF_CARD:
             return {"card": args}
         case _:
             return {"error": f"Unknown tool: {name}"}
 
 
-async def _skin_analysis(selfie: bytes | None) -> dict:
-    if not selfie:
-        return {"error": "No selfie available"}
-    result = await perfectcorp.call_api("skin-analysis", selfie, {
-        "dst_actions": ["wrinkle", "pore", "texture", "acne", "moisture", "oiliness", "redness", "radiance", "firmness", "dark_circle_v2", "eye_bag", "age_spot"],
-        "format": "json",
-    })
-    return {"scores": result}
+def _decode_selfie(b64: str) -> bytes:
+    image_bytes = base64.b64decode(b64)
+    validate(image_bytes)
+    return image_bytes
 
 
-async def _skin_tone(selfie: bytes | None) -> dict:
-    if not selfie:
-        return {"error": "No selfie available"}
-    return await perfectcorp.call_api("skin-tone", selfie)
-
-
-async def _clothes_vto(selfie: bytes | None, product_id: str) -> dict:
-    if not selfie:
-        return {"error": "No selfie available"}
-    # TODO: load product image from catalog by product_id
-    return await perfectcorp.call_api("clothes-vto", selfie, {"product_id": product_id})
-
-
-async def _makeup_vto(selfie: bytes | None, params: dict) -> dict:
-    if not selfie:
-        return {"error": "No selfie available"}
-    return await perfectcorp.call_api("makeup-vto", selfie, params)
-
-
-async def _earrings_vto(selfie: bytes | None, product_id: str) -> dict:
-    if not selfie:
-        return {"error": "No selfie available"}
-    return await perfectcorp.call_api("earrings-vto", selfie, {"product_id": product_id})
-
-
-async def _hairstyle(selfie: bytes | None, style: str) -> dict:
-    if not selfie:
-        return {"error": "No selfie available"}
-    return await perfectcorp.call_api("hairstyle", selfie, {"style": style})
+async def _require_selfie(selfie_bytes: bytes | None, tool_fn, **kwargs) -> dict:
+    if not selfie_bytes:
+        return {"error": "No selfie available — please capture your face first"}
+    try:
+        return await tool_fn(selfie_bytes, **kwargs)
+    except ValidationError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"Tool execution failed: {str(e)}"}

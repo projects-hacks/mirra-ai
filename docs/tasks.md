@@ -11,14 +11,14 @@ Pick a task, move it to `[/]`, create a branch, and go.
 - [ ] **F4: Camera capture hook** — `useCamera.js` — request camera, capture selfie as base64, preview
 
 ### Backend
-- [ ] **B1: Scaffold FastAPI project** — Project structure, config, CORS, health endpoint
-- [ ] **B2: Perfect Corp API client** — `services/perfectcorp.py` — upload→task→poll→result pattern
-- [ ] **B3: Mock interceptor** — `core/mock_interceptor.py` — switch between mock/live responses
-- [ ] **B4: Capture mock data** — Run each API in Perfect Corp Playground, save JSON responses
+- [x] **B1: Scaffold FastAPI project** — Project structure, config, CORS, health endpoint
+- [x] **B2: Perfect Corp API client** — `services/perfectcorp.py` — upload→task→poll→result pattern
+- [x] **B3: Mock interceptor** — `core/mock_interceptor.py` — switch between mock/live responses
+- [/] **B4: Capture mock data** — Placeholder JSONs created. Replace with real Playground captures.
 
 ### Infra
-- [ ] **I1: Supabase setup** — Create project, run schema SQL, seed closet + products data
-- [ ] **I2: Environment files** — Create `.env.example` for both frontend and backend
+- [x] **I1: Supabase setup** — Schema SQL + seed data + Auth + RLS policies + triggers
+- [x] **I2: Environment files** — `.env.example` for frontend and backend (with REDIS_URL)
 
 ---
 
@@ -30,10 +30,10 @@ Pick a task, move it to `[/]`, create a branch, and go.
 - [ ] **F7: Visual panel** — Display selfie, swap to VTO result with fade animation
 
 ### Backend
-- [ ] **B5: Deepgram Voice Agent WS route** — `/ws/voice` — proxy to Deepgram, intercept FunctionCallRequest
-- [ ] **B6: Gemini 3.1 Pro settings** — Build settings JSON with system prompt + function definitions
-- [ ] **B7: Skin Analysis integration** — `tools/skin_tools.py` — call Perfect Corp Skin Analysis API
-- [ ] **B8: Google Calendar integration** — `services/calendar.py` — OAuth2, get today's events
+- [x] **B5: Deepgram Voice Agent WS route** — `/ws/voice` — proxy to Deepgram, intercept FunctionCallRequest
+- [x] **B6: Gemini 3.1 Pro settings** — Build settings JSON with system prompt + function definitions
+- [x] **B7: Skin Analysis integration** — `tools/skin_tools.py` — analyze_skin, skin_tone, face_attributes
+- [x] **B8: Google Calendar integration** — `services/calendar.py` — OAuth2, get today's events, Redis cached
 
 ---
 

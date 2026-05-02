@@ -1,0 +1,21 @@
+{
+  "data": {
+    "task_status": "success",
+    "result": {
+      "all": 75.76,
+      "skin_age": 28,
+      "wrinkle": { "score": 82.5, "level": "low" },
+      "pore": { "score": 68.3, "level": "moderate" },
+      "texture": { "score": 78.1, "level": "low" },
+      "acne": { "score": 88.0, "level": "very_low" },
+      "moisture": { "score": 62.4, "level": "moderate" },
+      "oiliness": { "score": 55.8, "level": "moderate" },
+      "redness": { "score": 71.2, "level": "low" },
+      "radiance": { "score": 80.5, "level": "good" },
+      "firmness": { "score": 85.0, "level": "good" },
+      "dark_circle_v2": { "score": 60.1, "level": "moderate" },
+      "eye_bag": { "score": 73.4, "level": "low" },
+      "age_spot": { "score": 91.2, "level": "very_low" }
+    }
+  }
+}

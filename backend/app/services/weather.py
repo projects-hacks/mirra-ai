@@ -2,11 +2,12 @@
 import httpx
 
 from app.core import cache
+from app.core.constants import CachePrefix
 
 
 async def get_weather(location: str = "San Francisco") -> dict:
     """Get current weather. Cached for 30 minutes in Redis."""
-    cache_key = f"weather:{location.lower()}"
+    cache_key = f"{CachePrefix.WEATHER}:{location.lower()}"
     cached = await cache.get(cache_key)
     if cached:
         return cached

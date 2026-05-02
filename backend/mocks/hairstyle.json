@@ -1,0 +1,9 @@
+{
+  "data": {
+    "task_status": "success",
+    "result": {
+      "result_image_url": "https://storage.example.com/vto/hairstyle-result-001.png",
+      "style_applied": "loose_waves"
+    }
+  }
+}
