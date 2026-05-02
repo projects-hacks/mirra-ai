@@ -3,7 +3,6 @@
 ## Branch Strategy
 - `main` — always deployable
 - `feat/xyz` — features, `fix/xyz` — bugs
-- PR required, 1 review before merge
 
 ## Code Standards
 
@@ -39,4 +38,11 @@ docs: update API contract
 
 ## Deployment
 - **Frontend:** Push `main` → auto-deploys to **Vercel**
-- **Backend:** Push `main` → Docker build → push registry → `kubectl apply` on **Linode K8s**
+- **Backend:** Push `main` → **GitHub Actions** builds Docker → pushes to GHCR → `kubectl set image` on **Linode K8s**
+
+### Required GitHub Secrets
+| Secret | What |
+|---|---|
+| `KUBE_CONFIG` | Base64-encoded kubeconfig for Linode K8s |
+
+`GITHUB_TOKEN` is automatic (used for GHCR push).
