@@ -52,10 +52,12 @@ pip install -r requirements.txt && cp .env.example .env && uvicorn app.main:app 
 ## Docs
 | Doc | Purpose |
 |---|---|
-| [technical-plan.md](agent/technical-plan.md) | Architecture & deployment |
-| [system-prompt.md](agent/system-prompt.md) | Mirra's AI brain |
+| [system-architecture.md](docs/system-architecture.md) | Workflows, latency, scalability, reliability |
+| [technical-plan.md](agent/technical-plan.md) | Implementation details & deployment |
 | [feedback-loops.md](docs/feedback-loops.md) | How Mirra learns over time |
+| [system-prompt.md](agent/system-prompt.md) | Mirra's AI brain |
 | [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Code standards (TS, Tailwind, SOLID) |
 | [tasks.md](docs/tasks.md) | Task board |
 | [api-contract.md](docs/api-contract.md) | Frontend ↔ Backend API |
 | [mirra_final_prd.md](mirra_final_prd.md) | Product requirements |
+
