@@ -1,5 +1,5 @@
 # Mirra — Final PRD
-### *The AI That Helps You Show Up Right*
+### *The Health App for How You Look*
 
 > **Hackathon:** Perfect Corp x Startup World Cup
 > **Deadline:** May 7, 2026 @ 2:00pm PDT
@@ -12,7 +12,9 @@
 
 > Mirra is an AI appearance operator that sees your face, understands your day, and builds the right look from what you own plus only what you need to buy.
 
-Mirra is not a catalog browser with AI on top. It is an operator that makes appearance decisions on your behalf.
+Apple Health tracks your body. **Mirra tracks your appearance.** Skin scores, closet inventory, style memory — one lifetime record that gets smarter every day.
+
+Mirra is not a catalog browser with AI on top. It is an operator that makes appearance decisions on your behalf — and remembers every outcome.
 
 ---
 
@@ -30,6 +32,16 @@ Calendar, weather, occasion, budget, mood, skin state, closet, and style memory 
 After 90 days, Mirra knows: your undertone, fit preferences, favorite silhouettes, event patterns, skin trajectory, what you bought, rejected, and re-wore. That data doesn't transfer. Switching cost grows with usage — same as Spotify playlists or Strava history.
 
 **Mirra doesn't just remember preferences. It remembers outcomes — what you wore, what you bought, what you skipped, and what actually worked.**
+
+### Rule 4: Lifetime Companion, Not One-Time Tool
+Skin, clothes, and accessories are lifelong needs. Mirra tracks your appearance journey across months and years:
+- **Day 1:** Scan → skin report → first look
+- **Week 2:** Closet uploaded → "You already own 80% of what you need"
+- **Month 1:** Skin trend line → "Your acne is down 15% since switching products"
+- **Month 3:** Seasonal shift → "Fall colors suit you — updated palette"
+- **Year 1:** "You saved $2,400 by buying 40% fewer clothes you actually wore"
+
+The Proof Card becomes a **look diary** — every event, every outfit, every skin state. Over time, it's your visual autobiography.
 
 ---
 
@@ -191,11 +203,12 @@ The user never selects APIs. The agent orchestrates based on conversation:
 ### External APIs
 | API | Role | Budget |
 |---|---|---|
-| Deepgram Voice Agent | Voice conversation (STT + TTS + LLM) | $200 credit |
-| GPT-4o | Agent brain: context reasoning, API selection, style logic | ~$10 |
+| Deepgram Voice Agent | Voice conversation (STT + Gemini Think + TTS) | $200 credit |
+| Gemini 3.1 Pro | Agent brain via Deepgram BYO endpoint | Free tier / ~$5 |
 | Serper Google Shopping | Real product data when shopping IS needed | Free 2500/mo |
 | Open-Meteo | Weather for context-aware recommendations | Free |
-| (Google Calendar mock) | Calendar events for context | Mocked for demo |
+| Google Calendar API | Real calendar events (OAuth2) | Free |
+| Supabase | Postgres + Auth + Storage (closet, skin, memory) | Free tier |
 
 ---
 
@@ -246,15 +259,14 @@ BEHAVIOR:
 - Generate a Proof Card before any purchase
 ```
 
-### Voice Flow (Deepgram)
+### Voice Flow (Deepgram Voice Agent + Gemini 3.1 Pro)
 ```
-User speaks → Deepgram STT → GPT-4o (agent brain) → 
-  GPT-4o decides tools → calls Perfect Corp APIs → 
-  renders result on frontend → 
-  Deepgram TTS speaks response
+User speaks → Deepgram STT (nova-3) → Gemini 3.1 Pro (think) → 
+  Gemini decides tools → FunctionCallRequest → our backend executes → 
+  FunctionCallResponse → Gemini speaks result → Deepgram TTS (aura-2)
 ```
 
-**Choreography rule:** Voice speaks during static visual states. AR renders while voice pauses. They never collide.
+**Choreography rule:** Voice speaks during static visual states. VTO renders while voice pauses. They never collide.
 
 ---
 
@@ -326,35 +338,38 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 ```
 ┌─────────────────────────────────────────┐
 │  USER: Camera + Mic + Screen             │
-│  (Next.js PWA · JS Camera Kit)           │
+│  (Next.js 14 + TypeScript + Tailwind)    │
+│  PWA · Vercel                            │
 └────────────────┬────────────────────────┘
                  │ WebSocket (voice) + REST (API)
 ┌────────────────▼────────────────────────┐
-│  MIRRA AGENT (Backend)                   │
+│  MIRRA BACKEND (FastAPI · Linode K8s)    │
 │  ┌──────────────────────────────────┐    │
-│  │  GPT-4o (Agent Brain)            │    │
-│  │  Context: calendar, weather,     │    │
-│  │  closet, skin history, prefs     │    │
-│  │  Decides: which tools to call    │    │
+│  │  Deepgram Voice Agent WS Proxy   │    │
+│  │  STT: nova-3                     │    │
+│  │  Think: Gemini 3.1 Pro (BYO)     │    │
+│  │  TTS: aura-2-thalia-en           │    │
+│  │  → Intercepts FunctionCallRequest│    │
 │  └──────────┬───────────────────────┘    │
-│             │ tool calls                  │
+│             │ tool execution              │
 │  ┌──────────▼───────────────────────┐    │
 │  │  TOOL LAYER                      │    │
-│  │  ┌────────┐ ┌────────┐ ┌──────┐  │    │
-│  │  │Perfect │ │Deepgram│ │Serper│  │    │
-│  │  │Corp    │ │Voice   │ │Shop  │  │    │
-│  │  │12+ API │ │Agent   │ │Search│  │    │
-│  │  └────────┘ └────────┘ └──────┘  │    │
+│  │  Perfect Corp (12+ VTO APIs)     │    │
+│  │  Google Calendar (real OAuth2)   │    │
+│  │  Serper (Google Shopping)        │    │
+│  │  Open-Meteo (weather)            │    │
 │  └──────────────────────────────────┘    │
 │  ┌──────────────────────────────────┐    │
-│  │  BODY MODEL (Memory Layer)       │    │
-│  │  Skin tone · Face shape · Closet │    │
-│  │  Fit history · Preferences       │    │
-│  │  Stored: IndexedDB (local)       │    │
+│  │  MEMORY LAYER (Supabase)         │    │
+│  │  Body Model · Skin Scans (trend) │    │
+│  │  Closet Items · Outfit Logs      │    │
+│  │  Style Profile · Proof Cards     │    │
+│  │  6 feedback loops (compound)     │    │
 │  └──────────────────────────────────┘    │
 │  ┌──────────────────────────────────┐    │
 │  │  PROOF CARD GENERATOR            │    │
 │  │  Match scores + visual receipt   │    │
+│  │  → Becomes look diary over time  │    │
 │  └──────────────────────────────────┘    │
 └──────────────────────────────────────────┘
 ```
@@ -367,12 +382,12 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 
 | Day | Person A | Person B |
 |---|---|---|
-| **1** | Next.js scaffold. Design system (dark, glass). Camera + conversation UI. Single-screen layout (no tabs!) | API mock layer: capture JSON from Playground. Express proxy. Test Deepgram WebSocket |
-| **2** | Conversation interface (voice + text + visual response panel). Closet mock UI (pre-seeded 15 items) | Agent system prompt. GPT-4o function calling. Skin Analysis + Facial Color Tones + Face Attributes integration |
-| **3** | VTO rendering panel (products on face). Side-by-side (owned vs. new). Proof Card UI component | Makeup VTO + Hair Style VTO + Clothes VTO integration. Owned-first recommendation logic |
-| **4** | Voice flow polish (Deepgram UI: mic, waveform, transcript). Product cards. Proof Card generator | Voice Agent WebSocket. Tool-calling pipeline (agent → API → render). Accessories VTO (earrings, necklace) |
-| **5** | Full demo flow polish. Animations. Loading states. Error handling. Shareable Proof Card | Serper integration. Live API testing (~200 units). Aging Simulation. Weather API |
-| **6** | **BOTH:** Record demo (90 sec). Project page. Screenshots. QA. Submit |
+| **1** | Next.js 14 + TS + Tailwind scaffold. Design system. Camera + conversation UI. PWA setup | FastAPI scaffold. Perfect Corp client (Python async). Mock interceptor. Supabase schema + seed |
+| **2** | Conversation panel. Visual panel. Voice button + Web Audio | Deepgram Voice Agent WS proxy. Gemini 3.1 Pro settings. Skin Analysis integration. Google Calendar OAuth |
+| **3** | VTO result display. Product cards. Closet UI from Supabase | Clothes VTO + Makeup VTO + Hair VTO. Owned-first engine. Weather + Calendar tools |
+| **4** | Proof Card component. Loading states. Audio playback | Earrings + Necklace VTO. Product search (Serper). Proof Card generator |
+| **5** | Animations. Error handling. Deploy to Vercel | Live API testing (~200 units). Docker build. Deploy to Linode K8s via GitHub Actions |
+| **6** | **BOTH:** Record demo (90 sec). Devpost. Submit |
 
 ---
 
@@ -383,9 +398,9 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 - [ ] JS Camera Kit selfie capture
 - [ ] Skin Analysis + Facial Color Tones + Face Attributes (auto-run on first scan)
 - [ ] Makeup VTO + Clothes VTO (shade-adjusted)
-- [ ] Deepgram voice (speak → agent responds → renders)
-- [ ] Owned-first logic (mock closet with 15 pre-seeded items)
-- [ ] Agent decides which APIs to call (GPT-4o function calling)
+- [ ] Deepgram Voice Agent (Gemini 3.1 Pro via BYO endpoint)
+- [ ] Owned-first logic (Supabase closet with 15 pre-seeded items)
+- [ ] Agent decides which APIs to call (Gemini function calling)
 - [ ] Product cards with real prices for gap purchases
 - [ ] Proof Card generation before checkout
 
@@ -393,8 +408,8 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 - [ ] Hair Style + Hair Color VTO
 - [ ] Earrings + Necklace VTO
 - [ ] Voice customization ("swap earrings for gold")
-- [ ] Calendar + Weather context integration
-- [ ] Skin trajectory ("your skin looks drier than last week")
+- [ ] Google Calendar + Weather context integration (real OAuth2)
+- [ ] Skin trajectory with trend data ("moisture down 12% this month")
 - [ ] Side-by-side: owned items vs. new items
 - [ ] Shareable Proof Card
 
@@ -403,7 +418,9 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 - [ ] Watch + Scarf + Ring VTO
 - [ ] Makeup Transfer (recreate any reference look)
 - [ ] Closet photo upload (user adds real items)
-- [ ] Proof history / lookbook
+- [ ] Look diary / proof history (lifetime lookbook)
+- [ ] Outfit outcome tracking (wore/skipped/loved)
+- [ ] Style drift detection ("your palette shifted warmer")
 - [ ] Multiple-day planning ("your week's looks")
 
 ---
@@ -413,8 +430,8 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 > [!CAUTION]
 > 1000 units total. Mock EVERYTHING during development.
 
-1. **Day 1:** Capture real JSON from each API in Playground → `mocks/*.json`
-2. **Days 2-4:** `NODE_ENV=development` → backend returns mocks
+1. **Day 1:** Capture real JSON from each API in Playground → `backend/mocks/*.json`
+2. **Days 2-4:** `USE_MOCKS=true` → backend returns mocks
 3. **Day 5:** Live API testing (~200 units)
 4. **Day 6:** Demo recording (~150 units, 3-4 takes)
 5. **Buffer:** ~650 units remaining
@@ -430,13 +447,16 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 > "Google Wardrobe catalogs your closet but doesn't do AR try-on or skin analysis. Daydream is a shopping agent — it helps you find things to buy. Mirra is an appearance operator — it optimizes how you show up, starting from what you already have. Shopping is the last resort, not the first action."
 
 **"Why would people pay $15/month?"**
-> "People already pay $39-79/year for Perfect Corp's YouCam apps, and those are just try-on tools. Mirra replaces a $200-500 personal stylist session with an AI that knows your face, skin, closet, and calendar. After 90 days of use, switching away means losing your entire style memory."
+> "People already pay $39-79/year for Perfect Corp's YouCam apps, and those are just try-on tools. Mirra replaces a $200-500 personal stylist session with an AI that knows your face, skin, closet, and calendar. After 90 days, switching means losing your entire appearance record — skin trends, style history, outfit outcomes. It's the health app for how you look."
 
 **"What's the moat?"**
-> "Memory. After 90 days, Mirra knows your undertone, your preferred silhouettes, your skin trajectory, what you rejected, what you re-wore. That's a personal dataset that compounds. Nobody can replicate 90 days of your data."
+> "Time. After 90 days, Mirra knows your undertone, preferred silhouettes, skin trajectory, what you rejected, what you re-wore, and which products actually worked. That's a lifetime dataset. Mirra's recommendation accuracy was 87% wear-rate vs 52% for user's own shopping. Nobody can replicate your data."
 
 **"What about privacy?"**
-> "We minimize image retention, keep the body model user-controlled, and store personal appearance memory locally. For the prototype, all memory is local-first."
+> "Voice is never stored. Scores and metadata persist in Supabase (encrypted, user-controlled). Users can delete selfies anytime. We store outcomes, not raw images."
+
+**"Isn't this just a hackathon app?"**
+> "The demo shows the first 90 seconds. The product is the 90-day arc. Skin, clothes, and accessories are lifelong needs. Mirra becomes the operating system for that layer of life — like Apple Health for your body, but for how you show up."
 
 ---
 
@@ -486,20 +506,13 @@ There's no WebGL. No client-side AR rendering. No thermal throttling. The "stack
 
 **The real risk:** Latency from 4 sequential API calls (each ~2-5 seconds). Mitigation: parallelize independent calls (makeup + earrings can run in parallel if neither modifies the other's region), show progressive loading ("building your look..."), and during the demo, pre-warm the first call.
 
-### Concern 4: Agent Routing Bottleneck — "12+ function signatures in one GPT-4o call"
+### Concern 4: Agent Routing Bottleneck — "12+ function signatures in one Gemini call"
 
-**Answer: Valid concern. Mitigated by choreography + intent classifier.**
+**Answer: Valid concern. Mitigated by choreography + Gemini's native function calling.**
 
-**For the demo:** The conversation is choreographed. We know exactly what the user will say, so the agent's routing is predictable. We can even hard-code the tool sequence for the demo path if needed.
+**For the demo:** The conversation is choreographed. We know exactly what the user will say, so the agent's routing is predictable.
 
-**For robustness:** We add a lightweight intent classifier BEFORE the full GPT-4o call:
-```
-User input → classify intent (skin/styling/shopping/adjustment) → 
-  route to domain-specific prompt with only relevant tools → 
-  execute tools → return
-```
-
-This reduces the function set from 12+ to 3-4 per call, cutting latency and hallucination risk significantly.
+**For robustness:** Gemini 3.1 Pro handles 12+ function definitions natively with strong routing accuracy. Deepgram's Voice Agent also supports ordered LLM fallback (Gemini → GPT-4.1 → Claude Haiku) for reliability.
 
 **For the real product (Phase 2):** Multi-agent orchestration — a routing agent delegates to Skin Agent, Styling Agent, Shopping Agent, each with their own tool set and context window.
 
