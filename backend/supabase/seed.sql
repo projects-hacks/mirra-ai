@@ -1,16 +1,35 @@
 -- Mirra Seed Data — Demo User + 15 Closet Items
--- Run after schema.sql
+-- Run AFTER schema.sql
+-- Uses Supabase auth.users → triggers auto-create of profiles + user_preferences
 
-insert into users (id, email, display_name) values
-  ('00000000-0000-0000-0000-000000000001', 'demo@mirra.ai', 'Demo User');
+-- Step 1: Create demo user in auth.users (triggers handle_new_user)
+insert into auth.users (id, email, raw_user_meta_data, created_at, updated_at, instance_id, aud, role)
+values (
+  '00000000-0000-0000-0000-000000000001',
+  'demo@mirra.ai',
+  '{"display_name": "Demo User"}',
+  now(), now(),
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated',
+  'authenticated'
+) on conflict (id) do nothing;
 
+-- Step 2: Update profile with display name + location
+update profiles set
+  display_name = 'Demo User',
+  location = 'San Francisco',
+  onboarded = true
+where id = '00000000-0000-0000-0000-000000000001';
+
+-- Step 3: Seed body model
 insert into body_model (user_id, skin_scores, skin_tone, face_shape) values (
   '00000000-0000-0000-0000-000000000001',
   '{"all": 75.76, "moisture": 62.4, "acne": 88.0, "wrinkle": 82.5}',
   '{"undertone": "warm", "depth": "medium", "hex": "#D4A574"}',
   '{"shape": "oval", "symmetry_score": 87.5}'
-);
+) on conflict (user_id) do nothing;
 
+-- Step 4: Seed 15 closet items
 insert into closet_items (user_id, name, category, color, brand, price, occasions, times_worn) values
   ('00000000-0000-0000-0000-000000000001', 'Navy Blazer', 'jacket', 'navy', 'J.Crew', 198, '{"office","meeting","date"}', 23),
   ('00000000-0000-0000-0000-000000000001', 'Black Leather Jacket', 'jacket', 'black', 'AllSaints', 450, '{"casual","date","concert"}', 15),
