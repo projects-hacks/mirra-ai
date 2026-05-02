@@ -321,15 +321,17 @@ At scale, 1M subscribers would imply roughly **$240M ARR.**
 
 ---
 
-## 10. The Startup Story (For Judges)
+## 10. The Vision (For Judges)
 
-**Today:** Mirra — personal appearance operator. One conversation, owned-first, context-aware.
+**The Pitch:** "We're building the health app for appearance. Apple Health tracks your body; Mirra tracks how you show up."
+The Moat (Time): No competitor can replicate three years of personal appearance data.
 
-**The moat underneath:** Every interaction trains Mirra's model of you — your skin tone, face shape, closet, fit history, preferences. After 90 days, switching means losing all of that. The model improves every week.
+Day 1: Scan face → skin report → first look built.
 
-**The expansion:** Mirra's visual approval layer becomes a B2B API that any AI shopping agent can call before checkout. Same engine, new buyer.
+Month 3: Seasonal palette shift → "Fall colors suit you better — here's your updated wardrobe."
 
-> "Appearance is high-stakes, daily, emotional, and expensive to get wrong. Mirra becomes the operator for that layer of life."
+Year 1: "You saved $2,400 by buying 40% fewer clothes because you actually wore what you owned."
+The Retention Mechanic: The Proof Card isn't just a receipt; it is a "Look Diary." It becomes a visual autobiography of every event, outfit, and skin state.
 
 ---
 

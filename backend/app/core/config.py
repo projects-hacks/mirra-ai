@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
 
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     # App
     USE_MOCKS: bool = True
     PORT: int = 8000

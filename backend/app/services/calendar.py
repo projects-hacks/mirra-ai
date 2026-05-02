@@ -1,15 +1,18 @@
-"""Google Calendar service."""
+"""Google Calendar service with Redis cache."""
 import json
 from datetime import datetime, timedelta
 
 from app.core.config import settings
-
-# TODO: implement OAuth2 flow for production
-# For hackathon demo: pre-authorize one account, store refresh token in env
+from app.core import cache
 
 
 async def get_todays_events() -> dict:
-    """Get today's calendar events. Returns mock data until OAuth is configured."""
+    """Get today's events. Cached for 5 minutes in Redis."""
+    cache_key = "calendar:today"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+
     if not settings.GOOGLE_CALENDAR_CREDENTIALS:
         return _mock_events()
 
@@ -28,7 +31,7 @@ async def get_todays_events() -> dict:
         orderBy="startTime",
     ).execute()
 
-    return {
+    result = {
         "events": [
             {
                 "title": e["summary"],
@@ -39,6 +42,9 @@ async def get_todays_events() -> dict:
             for e in events.get("items", [])
         ]
     }
+
+    await cache.set(cache_key, result, cache.TTL.CALENDAR)
+    return result
 
 
 def _mock_events() -> dict:

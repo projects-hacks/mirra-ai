@@ -435,11 +435,11 @@ async def get_todays_events() -> dict:
 
 | Pattern | Where | Why |
 |---|---|---|
-| **Context + useReducer** | Frontend state | Single-page, no routing complexity. Zero dependencies. |
+| **Context + useReducer** | Frontend state | Single-page, one screen. Zero deps. Upgrades to Zustand if state grows. |
 | **AudioWorklet** | Voice capture | Off-main-thread audio. No UI jank. |
 | **WebSocket proxy** | Backend voice route | Full control over function calls. Deepgram handles STT/Think/TTS. |
-| **Strategy pattern** | tool_executor.py | match/case routes to correct handler. Easy to add new tools. |
-| **Cache-aside** | Calendar, weather | TTL-based dict cache. Upgrades to Redis post-hackathon. |
+| **Strategy pattern** | tool_executor.py | match/case routes to correct handler. Open/closed — add tools without touching router. |
+| **Redis cache-aside** | Calendar, weather, VTO | TTL-based async cache. Connection pool with hiredis C parser. |
 | **Mock interceptor** | All API calls | Single toggle (`USE_MOCKS`) switches entire API layer. |
 | **Progressive reveal** | Visual panel | Show partial results (shimmer → crossfade) to mask VTO latency. |
 | **Exponential backoff** | WS reconnection | Prevents thundering herd on transient failures. |
@@ -459,13 +459,16 @@ async def get_todays_events() -> dict:
 | Calendar API | <500ms | ~300ms (cached after first) |
 | Weather API | <500ms | ~200ms (cached) |
 
-## SCALABILITY NOTES
+## SCALABILITY (Enterprise from Day 1)
 
-| Decision | Hackathon | Production |
+No hackathon shortcuts. Every component is production-grade.
+
+| Component | Implementation | Scale Path |
 |---|---|---|
-| Session storage | In-memory dict | Redis |
-| Calendar cache | In-memory dict | Redis with pub/sub invalidation |
-| WebSocket | Single process | Sticky sessions + Redis pub/sub |
-| VTO results | No cache | Redis cache (selfie hash + product_id → result) |
-| Background jobs | Inline | Celery + Redis |
-| DB connections | Direct | PgBouncer (Supabase built-in) |
+| Cache | **Redis** (async, hiredis, connection pool) | Redis Cluster for >100K users |
+| Session storage | **Redis** (hash per session, TTL expiry) | Same Redis, sharded by user |
+| WebSocket | FastAPI + uvicorn workers | Sticky sessions + Redis pub/sub |
+| VTO result cache | **Redis** (key: sha256(selfie):{product_id}, TTL 24h) | CDN for result images |
+| Background jobs | **Redis** + Celery when needed | Worker pool scales independently |
+| DB connections | Supabase built-in PgBouncer | Connection pooling from day 1 |
+| Health checks | `/health` validates Redis + DB | K8s liveness/readiness probes |
