@@ -15,7 +15,10 @@ from app.core.constants import (
 from app.services.tool_executor import execute_tool
 
 DG_URL = "wss://api.deepgram.com/v1/agent/converse"
-SYSTEM_PROMPT = (Path(__file__).parent.parent.parent.parent / "agent" / "system-prompt.md").read_text()
+_PROMPT_PATH = Path(__file__).parent.parent / "agent" / "system-prompt.md"
+if not _PROMPT_PATH.exists():
+    _PROMPT_PATH = Path(__file__).parent.parent.parent.parent / "agent" / "system-prompt.md"
+SYSTEM_PROMPT = _PROMPT_PATH.read_text()
 
 
 def _function_definitions() -> list[dict]:
