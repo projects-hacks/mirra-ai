@@ -15,9 +15,9 @@ from app.core.constants import (
 from app.services.tool_executor import execute_tool
 
 DG_URL = "wss://api.deepgram.com/v1/agent/converse"
-_PROMPT_PATH = Path(__file__).parent.parent / "agent" / "system-prompt.md"
-if not _PROMPT_PATH.exists():
-    _PROMPT_PATH = Path(__file__).parent.parent.parent.parent / "agent" / "system-prompt.md"
+# In Docker: /app/app/routers/voice.py → .parent×3 = /app → /app/agent/system-prompt.md
+# Locally:   backend/app/routers/voice.py → .parent×3 = backend → backend/agent/system-prompt.md
+_PROMPT_PATH = Path(__file__).parent.parent.parent / "agent" / "system-prompt.md"
 SYSTEM_PROMPT = _PROMPT_PATH.read_text()
 
 
