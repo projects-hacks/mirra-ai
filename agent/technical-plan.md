@@ -431,33 +431,45 @@ create table users (
   created_at timestamptz default now()
 );
 
--- Body Model (skin scores, preferences, history)
+-- Body Model (latest snapshot)
 create table body_model (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references users(id),
-  skin_scores jsonb,          -- latest skin analysis
-  skin_tone jsonb,            -- undertone, depth, colors
-  face_shape jsonb,           -- face geometry
-  preferences jsonb,          -- style prefs learned over time
+  user_id uuid references users(id) unique,
+  skin_scores jsonb,
+  skin_tone jsonb,
+  face_shape jsonb,
+  preferences jsonb,
   updated_at timestamptz default now()
 );
+
+-- Skin Scans (history for trend tracking)
+create table skin_scans (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id),
+  scores jsonb not null,
+  skin_age int,
+  scan_context text,              -- 'morning', 'evening', 'post-workout'
+  created_at timestamptz default now()
+);
+create index idx_skin_scans_user_date on skin_scans(user_id, created_at desc);
 
 -- Closet
 create table closet_items (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id),
   name text not null,
-  category text not null,     -- 'dress', 'jacket', 'shoes', etc.
+  category text not null,
   color text,
   brand text,
-  image_url text,             -- Supabase Storage URL
-  occasions text[],           -- ['office','date','casual']
+  price float,
+  image_url text,
+  occasions text[],
   last_worn timestamptz,
   times_worn int default 0,
   created_at timestamptz default now()
 );
 
--- Proof Cards (approval history)
+-- Proof Cards
 create table proof_cards (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id),
@@ -474,11 +486,38 @@ create table proof_cards (
   created_at timestamptz default now()
 );
 
--- Session memory
+-- Outfit Logs (outcome feedback loop)
+create table outfit_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id),
+  proof_card_id uuid references proof_cards(id),
+  occasion text,
+  weather jsonb,
+  items jsonb,
+  outcome text default 'pending', -- 'wore', 'skipped', 'returned', 'loved'
+  feedback text,
+  compliments boolean default false,
+  created_at timestamptz default now()
+);
+
+-- Style Profile (computed weekly)
+create table style_profile (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id),
+  period text,                    -- '2026-W18', '2026-Q1'
+  top_colors text[],
+  top_categories text[],
+  top_brands text[],
+  formality_avg float,
+  accessory_prefs jsonb,
+  computed_at timestamptz default now()
+);
+
+-- Sessions
 create table sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id),
-  conversation jsonb,         -- full conversation history
+  conversation jsonb,
   selfie_url text,
   created_at timestamptz default now()
 );
