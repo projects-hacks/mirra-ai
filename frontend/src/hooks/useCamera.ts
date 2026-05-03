@@ -93,8 +93,8 @@ export function useCamera(): UseCameraReturn {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: CAMERA.FACING_MODE,
-            width: { ideal: 720 },
-            height: { ideal: 1280 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
           },
           audio: false,
         });
@@ -154,9 +154,9 @@ export function useCamera(): UseCameraReturn {
     let sourceX = 0;
     let sourceY = 0;
 
-    // Force portrait: crop sides if landscape
+    // Force portrait: crop sides if landscape (3:4 aspect ratio)
     if (vw > vh) {
-      targetWidth = Math.floor(vh * (9 / 16));
+      targetWidth = Math.floor(vh * (3 / 4));
       sourceX = Math.floor((vw - targetWidth) / 2);
     }
 

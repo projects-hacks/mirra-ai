@@ -181,7 +181,7 @@ class ToolName(StrEnum):
 # ============================================================
 
 MAX_IMAGE_SIZE_BYTES = 10_000_000  # 10MB
-MIN_IMAGE_DIMENSION = 480          # px
+MIN_IMAGE_DIMENSION = 300          # px
 SELFIE_ORIENTATION = "portrait"    # height >= width
 
 # ============================================================
