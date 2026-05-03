@@ -54,22 +54,23 @@ export function useCloset() {
           image_url: item.imageUrl,
           brand: item.brand,
           purchase_price: item.purchasePrice,
-        })
+        } as any)
         .select()
         .single();
 
       if (!error && data) {
+        const item = data as any;
         dispatch({
           type: "SET_CLOSET",
           payload: [
             {
-              id: data.id,
-              name: data.name,
-              category: data.category,
-              color: data.color ?? "",
-              imageUrl: data.image_url ?? "",
-              brand: data.brand,
-              purchasePrice: data.purchase_price,
+              id: item.id,
+              name: item.name,
+              category: item.category,
+              color: item.color ?? "",
+              imageUrl: item.image_url ?? "",
+              brand: item.brand,
+              purchasePrice: item.purchase_price,
             },
             ...closetItems,
           ],
