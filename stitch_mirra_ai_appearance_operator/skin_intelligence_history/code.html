@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirra - Skin Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Serif:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "secondary": "#645d55",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ebe0da",
+                        "tertiary": "#010100",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#f1f1f1",
+                        "secondary-fixed-dim": "#cec5bb",
+                        "on-surface-variant": "#44474a",
+                        "surface-container": "#eeeeee",
+                        "primary": "#000101",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-background": "#1a1c1c",
+                        "surface": "#f9f9f9",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#1a1c1e",
+                        "tertiary-container": "#201b17",
+                        "secondary-container": "#ebe1d6",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-container": "#8b837d",
+                        "on-secondary-container": "#6a635b",
+                        "on-primary-container": "#838486",
+                        "tertiary-fixed-dim": "#cfc5be",
+                        "on-surface": "#1a1c1c",
+                        "inverse-primary": "#c6c6c9",
+                        "surface-dim": "#dadada",
+                        "surface-container-high": "#e8e8e8",
+                        "on-tertiary-fixed": "#201b17",
+                        "primary-fixed": "#e2e2e5",
+                        "on-primary-fixed": "#1a1c1e",
+                        "surface-tint": "#5d5e61",
+                        "primary-fixed-dim": "#c6c6c9",
+                        "inverse-surface": "#2f3131",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#454749",
+                        "secondary-fixed": "#ebe1d6",
+                        "on-error-container": "#93000a",
+                        "outline": "#75777a",
+                        "on-secondary-fixed": "#1f1b14",
+                        "on-secondary-fixed-variant": "#4c463e",
+                        "outline-variant": "#c5c6ca",
+                        "on-tertiary-fixed-variant": "#4c4641",
+                        "surface-bright": "#f9f9f9",
+                        "background": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section-gap": "40px",
+                        "container-padding": "24px",
+                        "glass-margin": "12px",
+                        "unit": "4px",
+                        "stack-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter", "sans-serif"],
+                        "h3": ["Noto Serif", "serif"],
+                        "h1": ["Noto Serif", "serif"],
+                        "label-caps": ["Inter", "sans-serif"],
+                        "h2": ["Noto Serif", "serif"],
+                        "match-score": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h3": ["24px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "h1": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600" }],
+                        "h2": ["32px", { "lineHeight": "1.3", "fontWeight": "500" }],
+                        "match-score": ["48px", { "lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 0.5px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col overflow-x-hidden antialiased">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between px-container-padding py-4 sticky top-0 bg-background/80 backdrop-blur-md z-50">
+<button aria-label="Back" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-h3 text-on-surface m-0 text-center flex-1">Skin Intelligence</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<main class="flex-1 px-container-padding py-stack-gap flex flex-col gap-stack-gap pb-[100px]">
+<!-- Insight Card -->
+<section class="glass-panel rounded-DEFAULT p-4 flex gap-4 items-center animate-fade-in-up">
+<div class="flex-1">
+<span class="font-label-caps text-secondary uppercase tracking-widest block mb-1">Key Insight</span>
+<p class="font-body-md text-on-surface">Your moisture is up <strong class="text-primary font-semibold">8%</strong> since switching to the HA serum.</p>
+</div>
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-tr from-secondary-container to-surface-container-lowest opacity-50"></div>
+<span class="material-symbols-outlined text-primary text-3xl relative z-10" data-icon="water_drop">water_drop</span>
+</div>
+</section>
+<!-- Trend Graph Section -->
+<section class="glass-panel rounded-lg p-6 flex flex-col gap-6 animate-fade-in-up" style="animation-delay: 0.1s;">
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-h2 text-on-surface mb-1">Hydration &amp; Clarity</h2>
+<p class="font-body-sm text-secondary">Last 30 Days Trend</p>
+</div>
+<div class="text-right">
+<span class="font-match-score text-primary block">+8%</span>
+<span class="font-label-caps text-secondary uppercase">Moisture</span>
+</div>
+</div>
+<!-- Graph Area (Simulated) -->
+<div class="relative h-48 w-full bg-surface-container-lowest rounded-DEFAULT overflow-hidden p-4">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none opacity-20">
+<div class="border-b border-outline-variant w-full h-0"></div>
+<div class="border-b border-outline-variant w-full h-0"></div>
+<div class="border-b border-outline-variant w-full h-0"></div>
+<div class="border-b border-outline-variant w-full h-0"></div>
+</div>
+<!-- SVG Graph Placeholder -->
+<svg class="w-full h-full text-primary drop-shadow-sm" preserveaspectratio="none" viewbox="0 0 100 40">
+<defs>
+<lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="currentColor" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,35 Q10,30 20,25 T40,20 T60,15 T80,10 T100,5 L100,40 L0,40 Z" fill="url(#gradient)"></path>
+<path d="M0,35 Q10,30 20,25 T40,20 T60,15 T80,10 T100,5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+<!-- Data Points -->
+<circle class="text-background" cx="20" cy="25" fill="currentColor" r="1.5" stroke="currentColor" stroke-width="0.5"></circle>
+<circle class="text-background" cx="60" cy="15" fill="currentColor" r="1.5" stroke="currentColor" stroke-width="0.5"></circle>
+<circle class="text-background" cx="100" cy="5" fill="currentColor" r="1.5" stroke="currentColor" stroke-width="0.5"></circle>
+</svg>
+<!-- Axis Labels -->
+<div class="absolute bottom-1 left-4 right-4 flex justify-between text-[10px] font-medium text-secondary">
+<span>Wk 1</span>
+<span>Wk 2</span>
+<span>Wk 3</span>
+<span>Wk 4</span>
+</div>
+</div>
+</section>
+<!-- Visual Autobiography Grid -->
+<section class="animate-fade-in-up" style="animation-delay: 0.2s;">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-h3 text-on-surface">Visual Autobiography</h3>
+<button class="font-label-caps text-secondary uppercase hover:text-primary transition-colors">View All</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Proof Card 1 -->
+<div class="glass-panel rounded-DEFAULT p-3 flex flex-col gap-2">
+<div class="aspect-square rounded-lg bg-surface-container-high overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A close-up, high-fashion beauty portrait of a woman's face highlighting glowing, well-hydrated skin. The lighting is soft, studio-quality, emphasizing a minimal, high-tech aesthetic with a subtle warm glow reflecting a premium skincare routine. The background is a clean, neutral tone to ensure focus remains strictly on the smooth texture and clarity of the complexion." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA2UkrXwtVEzzuzjc9A_b7Fop-9MmrWzICVl_WThFvoZ7oMrUUUv7-yL6757vLimhKHyKootuCSiMTWJiGWmG6hoGDpmFQMBxbRVjW5af2li5xMjxidRHkgSvDbtSodEeN1_cHxq1U8q22M_f_KLz4GSaCKMJJ_a7jDndEbnCo-pHecp0F58ocqtZweALpHAsW0e8RIAiRcvRqIVj5FpBD28vT3-pk1bXNByst8ePy48eyu2fO3ao-eY5EQ-k7lZACnjdz4hGsPMP0');"></div>
+</div>
+<div class="flex justify-between items-center px-1">
+<span class="font-label-caps text-secondary">Oct 12</span>
+<span class="font-body-md font-medium text-primary text-sm">Clear</span>
+</div>
+</div>
+<!-- Proof Card 2 -->
+<div class="glass-panel rounded-DEFAULT p-3 flex flex-col gap-2">
+<div class="aspect-square rounded-lg bg-surface-container-high overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A minimalist, editorial-style close-up photograph focusing on the cheek and jawline of a person, demonstrating skin texture analysis. The image is brightly lit with a sophisticated, clinical precision, utilizing a palette of stark whites and subtle skin tones. It conveys a trustworthy, AI-driven skincare assessment moment within a high-end personal grooming context." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuASyca0rcX6naSgUODnz8Tr9FDsEZxhatKZ0sPrPIwKo6WY4LLpdQVSF7EXgu7LtAiEyq4uH9AorQxsthGGz_RKESlmO_ihonDF7bOsjEP6LqPDT2QdG_2vSdh9RtX1mDmgCKJegrtbT7Nw7L0gL6iuRmU1U3v7xFKFonKYIXfZZgRazl6hs3X5aHwEobo-Pio-OVqUVM6IB18koIe2vHAR7e_8kYMKoXtH60OWWWcXAT09PY88Kf9Sd-J8KhYb5FbWMNv6gDpUMcw');"></div>
+</div>
+<div class="flex justify-between items-center px-1">
+<span class="font-label-caps text-secondary">Oct 05</span>
+<span class="font-body-md font-medium text-primary text-sm">Dry</span>
+</div>
+</div>
+<!-- Proof Card 3 -->
+<div class="glass-panel rounded-DEFAULT p-3 flex flex-col gap-2">
+<div class="aspect-square rounded-lg bg-surface-container-high overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A soft-focus, sophisticated beauty shot of a section of a face, illustrating improvement in skin clarity. The lighting mimics natural, diffused daylight, fitting a minimalist and personal aesthetic. The overall tone is calm and elegant, utilizing neutral colors to highlight the subtle differences in skin hydration levels over time." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQGodzno_EfpWLjka1OTC1_aJWhBovo1YQg1qOVWwy-mg2mufYM9qV-POR3RXoouQzJ2fWw-98xxwI3FRBtzvk5popL_J67wOPVsASRChKEg8U8Nu6_nXYhADikVbcv4zw5qIzx5eMj8SNe7i9Cx0pKLT24iNzFONFVKVddGO9nrC9ejUn5uvmTN-Nd8j5_uHHcdkm5P5uxvR08MKO44X6GSL57wbWp5_FOkImBhdB7rQGBRWbo_GKZ7t3KSa2ZBUdjhijtBjO-c8');"></div>
+</div>
+<div class="flex justify-between items-center px-1">
+<span class="font-label-caps text-secondary">Sep 28</span>
+<span class="font-body-md font-medium text-primary text-sm">Uneven</span>
+</div>
+</div>
+<!-- Proof Card 4 -->
+<div class="glass-panel rounded-DEFAULT p-3 flex flex-col gap-2">
+<div class="aspect-square rounded-lg bg-surface-container-high overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="An abstract, high-tech representation of skin hydration levels, featuring a close-up macro view of skin texture overlaid with delicate, glowing digital topographical lines. The visual merges human elements with sophisticated AI precision, using a muted, elegant color palette of soft skin tones and subtle amber accents to denote data points." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBcIMarRksb6UU7woyS19hw3Lsgdc7q9d36Rixw23IEU5irFxmM6b1NluaxIHANKaloB8JvRBPNBVUkciSHQCEZDCv6n8CfPcVxmats_T-wm87CdovtdqxyCvaYi8LDpckimu90duXDSdv398fZnotilejZ4XCXWOq47AzPL12jkMatPdh6rscq4RSehtbCDkJegPer4N4EM03SjOUcQgD3wm25TvfpTaY0e5smr27tOXShy8xd2e4_Q7uUQmomAjdMqfxd3yTh9Zk');"></div>
+</div>
+<div class="flex justify-between items-center px-1">
+<span class="font-label-caps text-secondary">Sep 21</span>
+<span class="font-body-md font-medium text-primary text-sm">Dull</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Nav Included based on shared components logic (this is a destination/browsing screen, not a focused process) -->
+<nav class="fixed bottom-0 left-0 right-0 border-t border-outline-variant/30 bg-surface/90 backdrop-blur-xl z-50 px-4 pb-safe pt-2 flex justify-between items-center shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-colors py-2" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="Home">home</span>
+<span class="font-label-caps text-[10px]">Home</span>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary py-2 relative" href="#">
+<div class="absolute -top-1 w-8 h-1 bg-primary rounded-full"></div>
+<span class="material-symbols-outlined text-[24px]" data-icon="Brain" style="font-variation-settings: 'FILL' 1;">neurology</span>
+<span class="font-label-caps text-[10px]">Intelligence</span>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-colors py-2" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="Sparkle">star_shine</span>
+<span class="font-label-caps text-[10px]">Routine</span>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-colors py-2" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="User">verified_user</span>
+<span class="font-label-caps text-[10px]">Profile</span>
+</a>
+</nav>
+<style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+            opacity: 0;
+        }
+    </style>
+</body></html>
