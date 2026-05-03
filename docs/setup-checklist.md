@@ -1,6 +1,6 @@
 # Mirra — Manual Setup Checklist
 
-Run these steps once after merging `feat/backend-day1-day2`.
+Run these steps once after cloning the repo.
 
 ---
 
@@ -34,8 +34,20 @@ brew install redis && brew services start redis
 
 ### Enable Auth Provider
 1. Go to **Authentication → Providers**
-2. Enable **Google** → add OAuth Client ID + Secret from Google Cloud Console
-3. Set redirect URL: `http://localhost:3000/auth/callback`
+2. Enable **Google** → add OAuth Client ID + Secret from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Create OAuth 2.0 Client ID (Web Application)
+   - Authorized redirect URI: `https://cemeenqljfaujlbgerys.supabase.co/auth/v1/callback`
+3. Go to **Authentication → URL Configuration**
+   - Site URL: `http://localhost:3001`
+   - Redirect URLs: add `http://localhost:3001/auth/callback`
+
+### Verify Trigger
+The `handle_new_user()` trigger auto-creates rows in `profiles` and `user_preferences` on signup.
+```sql
+SELECT trigger_name FROM information_schema.triggers
+WHERE event_object_schema = 'auth' AND event_object_table = 'users';
+-- Should return: on_auth_user_created
+```
 
 ---
 
@@ -70,12 +82,36 @@ REDIS_URL=redis://localhost:6379/0
 GOOGLE_CALENDAR_CREDENTIALS=
 USE_MOCKS=true
 PORT=8000
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:3001
 ```
 
 ---
 
-## 5. Verify Everything Works
+## 5. Frontend Setup (Required)
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+```
+
+Fill in `.env.local`:
+```
+NEXT_PUBLIC_SUPABASE_URL=<from step 2>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from step 2>
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000
+```
+
+Start dev server:
+```bash
+npm run dev
+# → http://localhost:3001
+```
+
+---
+
+## 6. Verify Everything Works
 
 ```bash
 cd backend
@@ -98,7 +134,7 @@ If `redis: "disconnected"` → Redis isn't running. Go back to step 1.
 
 ---
 
-## 6. Capture Real Mock Data (Before Demo Day)
+## 7. Capture Real Mock Data (Before Demo Day)
 
 This is B4 — replace placeholder JSONs with real Perfect Corp API responses:
 
@@ -121,7 +157,7 @@ This is B4 — replace placeholder JSONs with real Perfect Corp API responses:
 
 ---
 
-## 7. Google Calendar OAuth (Optional — can skip for demo)
+## 8. Google Calendar OAuth (Optional — can skip for demo)
 
 If you want real calendar integration instead of mock events:
 

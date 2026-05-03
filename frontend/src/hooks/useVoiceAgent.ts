@@ -15,6 +15,7 @@ interface UseVoiceAgentReturn {
   connect: (selfie: string) => void;
   disconnect: () => void;
   isConnected: boolean;
+  isConnecting: boolean;
   isListening: boolean;
   startListening: () => void;
   stopListening: () => void;
@@ -41,8 +42,10 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   const retryCountRef = useRef(0);
 
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dispatch = useAppDispatch();
 
@@ -163,11 +166,27 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     (selfie: string) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+      setIsConnecting(true);
+      setError(null);
+
+      // Timeout: if WS doesn't open in 10s, give up
+      connectTimeoutRef.current = setTimeout(() => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          wsRef.current?.close();
+          wsRef.current = null;
+          setIsConnecting(false);
+          setError("Backend unavailable. Try again later.");
+          retryCountRef.current = WS_CONFIG.MAX_RETRIES; // stop retries
+        }
+      }, 10000);
+
       const ws = new WebSocket(`${WS_URL}${Endpoint.WS_VOICE}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
         setIsConnected(true);
+        setIsConnecting(false);
         setError(null);
         retryCountRef.current = 0;
 
@@ -184,15 +203,17 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       ws.onclose = () => {
         setIsConnected(false);
+        setIsConnecting(false);
         cleanup();
 
-        // Reconnect with backoff
+        // Reconnect with backoff (only if not timed out)
         if (retryCountRef.current < WS_CONFIG.MAX_RETRIES) {
           const delay =
             WS_CONFIG.RECONNECT_DELAYS[
               Math.min(retryCountRef.current, WS_CONFIG.RECONNECT_DELAYS.length - 1)
             ];
           retryCountRef.current++;
+          setIsConnecting(true);
           setTimeout(() => connect(selfie), delay);
         } else {
           setError("Connection lost. Please refresh.");
@@ -296,6 +317,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     connect,
     disconnect,
     isConnected,
+    isConnecting,
     isListening,
     startListening,
     stopListening,

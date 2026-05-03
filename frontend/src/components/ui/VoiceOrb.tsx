@@ -4,6 +4,8 @@ interface VoiceOrbProps {
   isListening: boolean;
   isProcessing: boolean;
   isConnected: boolean;
+  isConnecting: boolean;
+  error: string | null;
   onClick: () => void;
 }
 
@@ -12,23 +14,39 @@ export default function VoiceOrb({
   isListening,
   isProcessing,
   isConnected,
+  isConnecting,
+  error,
   onClick,
 }: VoiceOrbProps) {
-  const disabled = !isConnected || isProcessing;
+  const disabled = isConnecting || isProcessing;
+
+  // Status label
+  const label = error
+    ? error
+    : isConnecting
+      ? "Connecting…"
+      : isProcessing
+        ? "Thinking…"
+        : isListening
+          ? "Listening"
+          : "Tap to speak";
 
   return (
     <div className="flex flex-col items-center gap-2">
       <button
         onClick={onClick}
         disabled={disabled}
-        className={`voice-orb ${isListening ? "listening" : ""}`}
+        className={`voice-orb ${isListening ? "listening" : ""} ${isConnecting ? "connecting" : ""}`}
         style={{
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? "not-allowed" : "pointer",
         }}
         aria-label={isListening ? "Stop listening" : "Start listening"}
       >
-        {isListening ? (
+        {isConnecting ? (
+          /* Spinner */
+          <div className="processing-ring" style={{ width: 20, height: 20 }} />
+        ) : isListening ? (
           /* Stop icon */
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -45,17 +63,11 @@ export default function VoiceOrb({
       <span
         className="text-xs font-medium"
         style={{
-          color: "rgba(255,255,255,0.7)",
+          color: error ? "var(--error)" : "rgba(255,255,255,0.7)",
           textShadow: "0 1px 3px rgba(0,0,0,0.3)",
         }}
       >
-        {!isConnected
-          ? "Connecting…"
-          : isProcessing
-            ? "Thinking…"
-            : isListening
-              ? "Listening"
-              : "Tap to speak"}
+        {label}
       </span>
     </div>
   );

@@ -91,6 +91,8 @@ export default function HomePage() {
           isListening={voice.isListening}
           isProcessing={state.isProcessing}
           isConnected={voice.isConnected}
+          isConnecting={voice.isConnecting}
+          error={voice.error}
           onClick={handleVoiceToggle}
         />
       </div>

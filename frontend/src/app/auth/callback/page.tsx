@@ -1,22 +1,54 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 
 /** OAuth callback handler — exchanges code for session, redirects home. */
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = getSupabase();
+    // Check for error params from Supabase
+    const errorParam = searchParams.get("error");
+    const errorDesc = searchParams.get("error_description");
 
+    if (errorParam) {
+      setError(errorDesc ?? errorParam);
+      // Redirect home after showing error briefly
+      setTimeout(() => router.replace("/"), 3000);
+      return;
+    }
+
+    // Exchange code for session
+    const supabase = getSupabase();
     supabase.auth.onAuthStateChange((event: string) => {
       if (event === "SIGNED_IN") {
         router.replace("/");
       }
     });
-  }, [router]);
+
+    // Timeout fallback — if nothing happens in 10s, redirect home
+    const timeout = setTimeout(() => router.replace("/"), 10000);
+    return () => clearTimeout(timeout);
+  }, [router, searchParams]);
+
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 px-8">
+        <div className="text-4xl">⚠️</div>
+        <h3>Sign-in failed</h3>
+        <p className="text-sm text-center" style={{ color: "var(--on-surface-variant)" }}>
+          {error}
+        </p>
+        <p className="text-xs" style={{ color: "var(--on-surface-muted)" }}>
+          Redirecting home…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen items-center justify-center">
