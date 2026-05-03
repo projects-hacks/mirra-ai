@@ -81,7 +81,9 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
             if data["task_status"] == "success":
                 return data
             if data["task_status"] == "error":
-                raise Exception(f"Perfect Corp error: {data.get('error', 'Unknown')}")
+                import logging
+                logging.getLogger(__name__).error(f"Perfect Corp API error response: {data}")
+                raise Exception(f"Perfect Corp error: {data.get('error', data)}")  
 
         raise TimeoutError(f"Task {task_id} timed out")
 
