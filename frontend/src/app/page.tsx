@@ -33,20 +33,22 @@ export default function HomePage() {
     }
   }, [cameraReady, hasCaptured, capture, dispatch]);
 
-  // Connect voice agent after selfie
-  useEffect(() => {
-    if (state.selfie && !voice.isConnected) {
-      voice.connect(state.selfie);
-    }
-  }, [state.selfie, voice]);
-
+  // Voice connection is user-initiated (first mic tap), not auto-connect.
+  // This avoids a reconnect storm when no backend is available.
   const handleVoiceToggle = useCallback(() => {
     if (voice.isListening) {
       voice.stopListening();
-    } else {
-      voice.startListening();
+      return;
     }
-  }, [voice]);
+
+    // Connect on first tap if not yet connected
+    if (!voice.isConnected && state.selfie) {
+      voice.connect(state.selfie);
+      return; // connect will auto-start listening once open
+    }
+
+    voice.startListening();
+  }, [voice, state.selfie]);
 
   const handleRecapture = useCallback(() => {
     const selfie = capture();

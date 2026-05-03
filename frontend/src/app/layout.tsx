@@ -13,7 +13,6 @@ const notoSerif = Noto_Serif({
 export const metadata: Metadata = {
   title: "Mirra — AI Appearance Operator",
   description: "Your closet. Your skin. Your context. One operator.",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
