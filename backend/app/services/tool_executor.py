@@ -14,7 +14,12 @@ from app.services.proof_card_generator import proof_card_generator
 
 async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None = None, user_id: str | None = None) -> dict:
     """Route a function call to the correct tool and return the result."""
-    selfie_bytes = _decode_selfie(selfie_b64) if selfie_b64 else None
+    try:
+        selfie_bytes = _decode_selfie(selfie_b64) if selfie_b64 else None
+    except ValidationError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"Image processing failed: {str(e)}"}
 
     match name:
         case ToolName.ANALYZE_SKIN:
