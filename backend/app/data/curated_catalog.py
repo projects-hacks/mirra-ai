@@ -4,6 +4,11 @@ Fallback for when Serper API is unavailable
 20 pre-tested products with known-good VTO images
 """
 
+# ── Constants ───────────────────────────────────────
+
+EVERLANE_URL = "https://www.everlane.com"
+MEJURI_URL = "https://www.mejuri.com"
+
 CURATED_CATALOG = [
     # Dresses
     {
@@ -19,7 +24,7 @@ CURATED_CATALOG = [
         "title": "Everlane Silk Slip Dress - Sage",
         "price": "$128",
         "source": "Everlane",
-        "link": "https://www.everlane.com",
+        "link": EVERLANE_URL,
         "imageUrl": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400",
         "category": "dress",
         "rating": 4.7,
@@ -88,7 +93,7 @@ CURATED_CATALOG = [
         "title": "Everlane Trench Coat - Beige",
         "price": "$198",
         "source": "Everlane",
-        "link": "https://www.everlane.com",
+        "link": EVERLANE_URL,
         "imageUrl": "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400",
         "category": "jacket",
         "rating": 4.8,
@@ -108,7 +113,7 @@ CURATED_CATALOG = [
         "title": "Mejuri Gold Hoop Earrings",
         "price": "$29",
         "source": "Mejuri",
-        "link": "https://www.mejuri.com",
+        "link": MEJURI_URL,
         "imageUrl": "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400",
         "category": "accessory",
         "rating": 4.9,
@@ -117,7 +122,7 @@ CURATED_CATALOG = [
         "title": "Mejuri Pearl Drop Earrings",
         "price": "$48",
         "source": "Mejuri",
-        "link": "https://www.mejuri.com",
+        "link": MEJURI_URL,
         "imageUrl": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400",
         "category": "accessory",
         "rating": 4.7,
@@ -128,7 +133,7 @@ CURATED_CATALOG = [
         "title": "Mejuri Gold Chain Necklace",
         "price": "$58",
         "source": "Mejuri",
-        "link": "https://www.mejuri.com",
+        "link": MEJURI_URL,
         "imageUrl": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400",
         "category": "accessory",
         "rating": 4.8,
@@ -166,7 +171,7 @@ CURATED_CATALOG = [
         "title": "Everlane Day Heel - Nude",
         "price": "$145",
         "source": "Everlane",
-        "link": "https://www.everlane.com",
+        "link": EVERLANE_URL,
         "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
         "category": "shoes",
         "rating": 4.5,
@@ -197,7 +202,7 @@ CURATED_CATALOG = [
         "title": "Everlane Silk Scarf - Floral",
         "price": "$48",
         "source": "Everlane",
-        "link": "https://www.everlane.com",
+        "link": EVERLANE_URL,
         "imageUrl": "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400",
         "category": "accessory",
         "rating": 4.6,

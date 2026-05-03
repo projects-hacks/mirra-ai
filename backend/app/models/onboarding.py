@@ -4,22 +4,28 @@ from typing import Literal
 from pydantic import BaseModel, field_validator, Field
 
 
+# ── Constants ───────────────────────────────────────
+
+USER_ID_DESCRIPTION = "User ID from Supabase Auth"
+USER_ID_VALIDATION_ERROR = "user_id must be non-empty"
+
+
 class InitRequest(BaseModel):
     """Request model for onboarding initialization."""
-    user_id: str = Field(..., min_length=1, description="User ID from Supabase Auth")
+    user_id: str = Field(..., min_length=1, description=USER_ID_DESCRIPTION)
 
     @field_validator('user_id')
     @classmethod
     def validate_user_id(cls, v: str) -> str:
         """Validate user_id is non-empty."""
         if not v or not v.strip():
-            raise ValueError('user_id must be non-empty')
+            raise ValueError(USER_ID_VALIDATION_ERROR)
         return v
 
 
 class AnalyzeRequest(BaseModel):
     """Request model for appearance analysis."""
-    user_id: str = Field(..., min_length=1, description="User ID from Supabase Auth")
+    user_id: str = Field(..., min_length=1, description=USER_ID_DESCRIPTION)
     selfie: str = Field(..., description="Base64-encoded JPEG selfie (with or without data URL prefix)")
 
     @field_validator('user_id')
@@ -27,7 +33,7 @@ class AnalyzeRequest(BaseModel):
     def validate_user_id(cls, v: str) -> str:
         """Validate user_id is non-empty."""
         if not v or not v.strip():
-            raise ValueError('user_id must be non-empty')
+            raise ValueError(USER_ID_VALIDATION_ERROR)
         return v
 
     @field_validator('selfie')
@@ -53,20 +59,20 @@ class AnalyzeRequest(BaseModel):
 
 class SeedClosetRequest(BaseModel):
     """Request model for closet seeding."""
-    user_id: str = Field(..., min_length=1, description="User ID from Supabase Auth")
+    user_id: str = Field(..., min_length=1, description=USER_ID_DESCRIPTION)
 
     @field_validator('user_id')
     @classmethod
     def validate_user_id(cls, v: str) -> str:
         """Validate user_id is non-empty."""
         if not v or not v.strip():
-            raise ValueError('user_id must be non-empty')
+            raise ValueError(USER_ID_VALIDATION_ERROR)
         return v
 
 
 class CompleteRequest(BaseModel):
     """Request model for onboarding completion."""
-    user_id: str = Field(..., min_length=1, description="User ID from Supabase Auth")
+    user_id: str = Field(..., min_length=1, description=USER_ID_DESCRIPTION)
     calendar_connected: bool = Field(default=False, description="Whether calendar was connected")
 
     @field_validator('user_id')
@@ -74,7 +80,7 @@ class CompleteRequest(BaseModel):
     def validate_user_id(cls, v: str) -> str:
         """Validate user_id is non-empty."""
         if not v or not v.strip():
-            raise ValueError('user_id must be non-empty')
+            raise ValueError(USER_ID_VALIDATION_ERROR)
         return v
 
 
