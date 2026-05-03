@@ -64,16 +64,9 @@ async def initiate_google_oauth(request: Request) -> AuthInitResponse:
                 detail=SUPABASE_NOT_CONFIGURED
             )
         
-        # Get the frontend URL from environment or request origin
-        frontend_url = os.getenv("FRONTEND_URL")
-        if not frontend_url:
-            # Use the Origin header from the request
-            origin = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
-            frontend_url = origin if origin else "http://localhost:3000"
-        
-        # Ensure no trailing slash
-        frontend_url = frontend_url.rstrip("/")
-        redirect_url = f"{frontend_url}/auth/callback"
+        # Get the backend URL for OAuth callback
+        backend_url = os.getenv("BACKEND_URL") or str(request.base_url).rstrip("/")
+        redirect_url = f"{backend_url}/api/auth/callback"
         
         # Initiate OAuth with Supabase (PKCE handled automatically)
         response = supabase.auth.sign_in_with_oauth({
