@@ -137,75 +137,114 @@ async def voice_websocket(ws: WebSocket) -> None:
 
     await cache.set(f"{CachePrefix.SESSION}:{sid}", {"connected": True}, ttl=3600)
 
+    max_retries = 3
+    retry_count = 0
+
     try:
-        async with websockets.connect(
-            DG_URL, extra_headers={"Authorization": f"Token {settings.DEEPGRAM_API_KEY}"}
-        ) as dg:
-            # Wait for Welcome message before sending Settings (required by protocol)
-            welcome = await dg.recv()
-            logger.info(f"Deepgram welcome: {welcome[:100] if isinstance(welcome, str) else 'binary'}")
+        while retry_count < max_retries:
+            try:
+                async with websockets.connect(
+                    DG_URL, extra_headers={"Authorization": f"Token {settings.DEEPGRAM_API_KEY}"}
+                ) as dg:
+                    # Wait for Welcome message before sending Settings (required by protocol)
+                    welcome = await dg.recv()
+                    logger.info(f"Deepgram welcome: {welcome[:100] if isinstance(welcome, str) else 'binary'}")
 
-            # Send Settings as first client message
-            settings_payload = json.dumps(build_agent_settings())
-            logger.info(f"Sending Settings ({len(settings_payload)} bytes)")
-            await dg.send(settings_payload)
+                    # Send Settings as first client message
+                    settings_payload = json.dumps(build_agent_settings())
+                    logger.info(f"Sending Settings ({len(settings_payload)} bytes)")
+                    await dg.send(settings_payload)
 
-            async def dg_to_client():
-                """Forward Deepgram messages to browser client."""
-                async for msg in dg:
-                    if isinstance(msg, bytes):
-                        # Audio data — forward directly
-                        await ws.send_bytes(msg)
+                    async def dg_to_client():
+                        """Forward Deepgram messages to browser client."""
+                        async for msg in dg:
+                            if isinstance(msg, bytes):
+                                # Audio data — forward directly
+                                await ws.send_bytes(msg)
+                                continue
+
+                            data = json.loads(msg)
+                            msg_type = data.get("type")
+
+                            if msg_type == DeepgramMessageType.FUNCTION_CALL_REQUEST:
+                                # Process each function in the functions array
+                                for func in data.get("functions", []):
+                                    if func.get("client_side", True):
+                                        await _handle_function_call(func, dg, ws, session)
+                            elif msg_type == "InjectionRefused":
+                                logger.warning(f"Injection refused: {data.get('message')}")
+                            elif msg_type == "Error":
+                                error_desc = data.get("description", "")
+                                error_code = data.get("code", "")
+                                
+                                # Handle CLIENT_MESSAGE_TIMEOUT gracefully
+                                if error_code == "CLIENT_MESSAGE_TIMEOUT":
+                                    logger.info("Client timeout - user hasn't spoken yet. Sending reminder.")
+                                    # Send a friendly reminder to the user
+                                    await ws.send_text(json.dumps({
+                                        "type": "ConversationText",
+                                        "role": "assistant",
+                                        "content": "I'm listening! Tap the mic and tell me what you'd like to try — or use the menu above to explore features.",
+                                    }))
+                                    # Trigger reconnection by raising exception
+                                    raise Exception("CLIENT_MESSAGE_TIMEOUT - reconnecting")
+                                
+                                logger.error(f"Deepgram error: {data}")
+                                await ws.send_text(json.dumps({
+                                    "type": WSServerMessageType.ERROR,
+                                    "message": data.get("message", "Voice agent error"),
+                                }))
+                            else:
+                                # Forward all other messages (ConversationText, AgentThinking, etc.)
+                                await ws.send_text(msg)
+
+                    async def client_to_dg():
+                        """Forward browser client messages to Deepgram."""
+                        while True:
+                            data = await ws.receive()
+                            if "bytes" in data:
+                                # Audio data — forward directly
+                                await dg.send(data["bytes"])
+                            elif "text" in data:
+                                msg = json.loads(data["text"])
+                                msg_type = msg.get("type")
+                                match msg_type:
+                                    # ── Our custom messages (DO NOT forward to Deepgram) ──
+                                    case WSClientMessageType.SELFIE:
+                                        session["selfie"] = msg["data"]
+                                        logger.info("Selfie received")
+                                    case WSClientMessageType.READY:
+                                        session["ready"] = True
+                                        session["user_id"] = msg.get("user_id")
+                                        logger.info(f"Session ready, user: {session['user_id']}")
+                                    case WSClientMessageType.STOP:
+                                        logger.info("Client stopped listening")
+                                    # ── Deepgram messages (forward) ──
+                                    case "KeepAlive" | "UpdatePrompt" | "UpdateSpeak" | "UpdateThink" | "InjectAgentMessage" | "InjectUserMessage":
+                                        await dg.send(data["text"])
+                                    case _:
+                                        logger.warning(f"Unknown client message type: {msg_type}")
+
+                    await asyncio.gather(dg_to_client(), client_to_dg())
+                    # If we reach here, connection was successful - break retry loop
+                    break
+                    
+            except Exception as e:
+                error_msg = str(e)
+                if "CLIENT_MESSAGE_TIMEOUT" in error_msg:
+                    retry_count += 1
+                    logger.info(f"Reconnecting after timeout (attempt {retry_count}/{max_retries})")
+                    if retry_count < max_retries:
+                        await asyncio.sleep(1)  # Brief pause before reconnect
                         continue
-
-                    data = json.loads(msg)
-                    msg_type = data.get("type")
-
-                    if msg_type == DeepgramMessageType.FUNCTION_CALL_REQUEST:
-                        # Process each function in the functions array
-                        for func in data.get("functions", []):
-                            if func.get("client_side", True):
-                                await _handle_function_call(func, dg, ws, session)
-                    elif msg_type == "InjectionRefused":
-                        logger.warning(f"Injection refused: {data.get('message')}")
-                    elif msg_type == "Error":
-                        logger.error(f"Deepgram error: {data}")
-                        await ws.send_text(json.dumps({
-                            "type": WSServerMessageType.ERROR,
-                            "message": data.get("message", "Voice agent error"),
-                        }))
                     else:
-                        # Forward all other messages (ConversationText, AgentThinking, etc.)
-                        await ws.send_text(msg)
-
-            async def client_to_dg():
-                """Forward browser client messages to Deepgram."""
-                while True:
-                    data = await ws.receive()
-                    if "bytes" in data:
-                        # Audio data — forward directly
-                        await dg.send(data["bytes"])
-                    elif "text" in data:
-                        msg = json.loads(data["text"])
-                        msg_type = msg.get("type")
-                        match msg_type:
-                            # ── Our custom messages (DO NOT forward to Deepgram) ──
-                            case WSClientMessageType.SELFIE:
-                                session["selfie"] = msg["data"]
-                                logger.info("Selfie received")
-                            case WSClientMessageType.READY:
-                                session["ready"] = True
-                                session["user_id"] = msg.get("user_id")
-                                logger.info(f"Session ready, user: {session['user_id']}")
-                            case WSClientMessageType.STOP:
-                                logger.info("Client stopped listening")
-                            # ── Deepgram messages (forward) ──
-                            case "KeepAlive" | "UpdatePrompt" | "UpdateSpeak" | "UpdateThink" | "InjectAgentMessage" | "InjectUserMessage":
-                                await dg.send(data["text"])
-                            case _:
-                                logger.warning(f"Unknown client message type: {msg_type}")
-
-            await asyncio.gather(dg_to_client(), client_to_dg())
+                        logger.warning("Max reconnection attempts reached")
+                        break
+                else:
+                    # Non-timeout error - don't retry
+                    logger.error(f"Voice session error: {e}")
+                    raise
+                    
     except WebSocketDisconnect:
         logger.info(f"Client disconnected: {sid}")
     except Exception as e:
