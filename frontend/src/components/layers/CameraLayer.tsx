@@ -1,43 +1,58 @@
 "use client";
 
-import { useState, type RefObject } from "react";
+import type { RefObject } from "react";
 import type { VTOResult } from "@/types";
 import { ToolName, LOADING_TEXT } from "@/lib/constants";
 
 interface CameraLayerProps {
+  containerRef: RefObject<HTMLDivElement | null>;
   videoRef: RefObject<HTMLVideoElement | null>;
   selfie: string | null;
   vtoResult: VTOResult | null;
   isProcessing: boolean;
   currentTool: ToolName | null;
   cameraError: string | null;
+  isUsingCameraKit: boolean;
 }
 
 /** Layer 0 — Full-screen camera feed, selfie, or VTO result. */
 export default function CameraLayer({
+  containerRef,
   videoRef,
   selfie,
   vtoResult,
   isProcessing,
   currentTool,
   cameraError,
+  isUsingCameraKit,
 }: CameraLayerProps) {
   const displayImage = vtoResult?.imageUrl ?? selfie;
 
   return (
     <div className="absolute inset-0 z-0">
-      {/* Live Camera Feed */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{
-          transform: "scaleX(-1)",
-          display: selfie ? "none" : "block",
-        }}
-      />
+      {/* JS Camera Kit Container (renders its own UI with face detection) */}
+      {isUsingCameraKit && (
+        <div
+          ref={containerRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ display: selfie ? "none" : "block" }}
+        />
+      )}
+
+      {/* Native Camera Feed (fallback) */}
+      {!isUsingCameraKit && (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            transform: "scaleX(-1)",
+            display: selfie ? "none" : "block",
+          }}
+        />
+      )}
 
       {/* Captured Selfie / VTO Result */}
       {displayImage && (

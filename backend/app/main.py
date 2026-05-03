@@ -26,6 +26,7 @@ app = FastAPI(
 def _cors_origins() -> list[str]:
     origins = [o.strip() for o in settings.CORS_ORIGIN.split(",")]
     origins.append("http://localhost:3000")
+    origins.append("http://localhost:3001")
     return list(set(origins))
 
 

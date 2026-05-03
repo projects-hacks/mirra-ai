@@ -20,15 +20,31 @@ async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None =
         case ToolName.ANALYZE_FACE:
             return await _require_selfie(selfie_bytes, skin_tools.analyze_face, user_id=user_id)
         case ToolName.TRY_ON_CLOTHES:
-            return await _require_selfie(selfie_bytes, fashion_tools.try_on_clothes, product_id=args["product_id"])
+            return await _require_selfie(
+                selfie_bytes, fashion_tools.try_on_clothes,
+                garment_url=args["garment_url"],
+                garment_category=args.get("garment_category", "upper"),
+            )
         case ToolName.TRY_ON_MAKEUP:
-            return await _require_selfie(selfie_bytes, beauty_tools.try_on_makeup, params=args)
+            return await _require_selfie(
+                selfie_bytes, beauty_tools.try_on_makeup,
+                effects=args.get("effects", []),
+            )
         case ToolName.TRY_ON_EARRINGS:
-            return await _require_selfie(selfie_bytes, accessory_tools.try_on_earrings, product_id=args["product_id"])
+            return await _require_selfie(
+                selfie_bytes, accessory_tools.try_on_earrings,
+                earring_url=args["earring_url"],
+            )
         case ToolName.TRY_ON_NECKLACE:
-            return await _require_selfie(selfie_bytes, accessory_tools.try_on_necklace, product_id=args["product_id"])
+            return await _require_selfie(
+                selfie_bytes, accessory_tools.try_on_necklace,
+                necklace_url=args["necklace_url"],
+            )
         case ToolName.CHANGE_HAIRSTYLE:
-            return await _require_selfie(selfie_bytes, hair_tools.change_hairstyle, style=args["style"])
+            return await _require_selfie(
+                selfie_bytes, hair_tools.change_hairstyle,
+                ref_hair_url=args["ref_hair_url"],
+            )
         case ToolName.CHECK_CALENDAR:
             return await calendar.get_todays_events()
         case ToolName.CHECK_WEATHER:

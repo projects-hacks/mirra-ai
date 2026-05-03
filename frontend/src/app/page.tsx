@@ -13,7 +13,7 @@ import StatusBar from "@/components/ui/StatusBar";
 export default function HomePage() {
   const state = useAppState();
   const dispatch = useAppDispatch();
-  const { videoRef, capture, isReady: cameraReady, error: cameraError } = useCamera();
+  const { containerRef, videoRef, capture, isReady: cameraReady, error: cameraError, isUsingCameraKit } = useCamera();
   const voice = useVoiceAgent();
   const { user, signInWithGoogle, signOut } = useAuth();
 
@@ -32,6 +32,22 @@ export default function HomePage() {
       return () => clearTimeout(timer);
     }
   }, [cameraReady, hasCaptured, capture, dispatch]);
+
+  // Show a local welcome message immediately after selfie capture
+  // (before WS connects, so the user doesn't see a "stuck" screen)
+  useEffect(() => {
+    if (hasCaptured && state.messages.length === 0) {
+      dispatch({
+        type: "ADD_MESSAGE",
+        payload: {
+          type: "agent",
+          text: "Hi! I'm Mirra ✨ Tap the mic to start — I can analyze your skin, try on outfits, and help you look your best.",
+          id: "welcome",
+          timestamp: Date.now(),
+        },
+      });
+    }
+  }, [hasCaptured, state.messages.length, dispatch]);
 
   // Voice connection is user-initiated (first mic tap), not auto-connect.
   // This avoids a reconnect storm when no backend is available.
@@ -61,12 +77,14 @@ export default function HomePage() {
     <div className="relative h-full w-full overflow-hidden">
       {/* Layer 0: Camera / Selfie / VTO */}
       <CameraLayer
+        containerRef={containerRef}
         videoRef={videoRef}
         selfie={state.selfie}
         vtoResult={state.vtoResult}
         isProcessing={state.isProcessing}
         currentTool={state.currentTool}
         cameraError={cameraError}
+        isUsingCameraKit={isUsingCameraKit}
       />
 
       {/* Layer 2 Top: Status Bar */}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Serif } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { AppProvider } from "@/components/providers/AppProvider";
 
@@ -13,6 +14,11 @@ const notoSerif = Noto_Serif({
 export const metadata: Metadata = {
   title: "Mirra — AI Appearance Operator",
   description: "Your closet. Your skin. Your context. One operator.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -25,7 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#f9f9f9",
+  themeColor: "#c084fc",
 };
 
 export default function RootLayout({
@@ -37,7 +43,25 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${notoSerif.variable} h-full antialiased`}>
       <body className="h-full overflow-hidden">
         <AppProvider>{children}</AppProvider>
+
+        {/* Perfect Corp JS Camera Kit */}
+        <Script
+          src="https://plugins-media.makeupar.com/v2.2-camera-kit/sdk.js"
+          strategy="afterInteractive"
+        />
+
+        {/* Service Worker Registration */}
+        <Script id="sw-register" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );
 }
+

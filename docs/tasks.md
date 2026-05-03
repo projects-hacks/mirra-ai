@@ -36,37 +36,45 @@ Pick a task, move it to `[/]`, create a branch, and go.
 
 ---
 
-## Phase 2 — Intelligence & VTO (Next)
+## Phase 2 — API Integration & VTO (✅ In Progress)
 
-### Frontend
-- [ ] **F14: VTO result display** — Image swap with smooth animation, before/after toggle in CameraLayer
-- [ ] **F15: Skin analysis modal** — Layer 4 modal with scores, recommendations, radial chart
-- [ ] **F16: Product cards** — Styled cards for shopping results (image, name, price, brand)
-- [ ] **F17: Closet grid UI** — "From your closet" section with owned items
-- [ ] **F18: Proof Card component** — Visual receipt with Tone Match, Style Fit, Skin Safe scores
-- [ ] **F19: Loading states** — "Scanning your skin...", "Building your look...", progressive reveal
+### Backend (✅ Complete — API alignment)
+- [x] **B8: Perfect Corp API alignment** — Fixed all VTO endpoint paths per official docs:
+  - `cloth-v3` (was `clothes-vto`), `hair-transfer` v2.1 (was `hairstyle`)
+  - `2d-vto/earring` (was `earrings-vto`), `2d-vto/necklace` (was `necklace-vto`)
+- [x] **B9: VTO client refactor** — `call_vto()` wrapper for ref_file_url (garment/accessory/hair)
+- [x] **B10: Tool executor update** — All tools use correct params: garment_url, earring_url, necklace_url, ref_hair_url, effects[]
+- [x] **B11: Deepgram function defs update** — Richer descriptions, correct param schemas
 
-### Backend
-- [ ] **B8: Clothes VTO** — `tools/fashion_tools.py` — selfie + garment → composited result
-- [ ] **B9: Makeup VTO** — `tools/beauty_tools.py` — selfie + makeup → composited result
-- [ ] **B10: Hair Style VTO** — `tools/hair_tools.py` — selfie + style → result
-- [ ] **B11: Earrings VTO** — `tools/accessory_tools.py` — selfie + earring → result
+### Frontend (✅ Complete — Camera & PWA)
+- [x] **F14: JS Camera Kit integration** — Perfect Corp CDN SDK with face detection, auto-fallback to native
+- [x] **F15: Welcome message** — Local greeting after selfie capture (before WS connects)
+- [x] **F16: PWA complete** — manifest.json, icons (192/512/apple-touch), service worker, layout links
+- [x] **F17: Camera Layer refactor** — Supports both Camera Kit container and native video fallback
+
+### Frontend (Remaining)
+- [ ] **F18: VTO result display** — Image swap with smooth animation, before/after toggle in CameraLayer
+- [ ] **F19: Skin analysis modal** — Layer 4 modal with scores, recommendations, radial chart
+- [ ] **F20: Product cards** — Styled cards for shopping results (image, name, price, brand)
+- [ ] **F21: Closet grid UI** — "From your closet" section with owned items
+- [ ] **F22: Proof Card component** — Visual receipt with Tone Match, Style Fit, Skin Safe scores
+
+### Backend (Remaining)
 - [ ] **B12: Owned-first engine** — Match closet items to context (occasion, weather, color)
+- [ ] **B13: Live API testing** — `USE_MOCKS=false`, test each Perfect Corp tool end-to-end
 
 ---
 
 ## Phase 3 — Commerce & Polish
 
 ### Frontend
-- [ ] **F20: Animations polish** — Micro-interactions, smooth layer transitions
-- [ ] **F21: Error handling** — Network errors, API failures, graceful degradation
-- [ ] **F22: PWA icons** — Add manifest.json back with proper icon assets
+- [ ] **F23: Animations polish** — Micro-interactions, smooth layer transitions
+- [ ] **F24: Error handling** — Network errors, API failures, graceful degradation
 
 ### Backend
-- [ ] **B13: Product search** — `services/serper.py` — Google Shopping via Serper API
-- [ ] **B14: Weather API** — `services/weather.py` — Open-Meteo current conditions
-- [ ] **B15: Proof Card generator** — Compose scores + items into proof card data
-- [ ] **B16: Live API testing** — `USE_MOCKS=false`, test each tool
+- [ ] **B14: Product search** — `services/serper.py` — Google Shopping via Serper API
+- [ ] **B15: Weather API** — `services/weather.py` — Open-Meteo current conditions
+- [ ] **B16: Proof Card generator** — Compose scores + items into proof card data
 
 ---
 
@@ -82,9 +90,9 @@ Pick a task, move it to `[/]`, create a branch, and go.
 ## Task Assignment Format
 When you pick a task:
 ```
-- [/] **F14: VTO result display** — @yourname — branch: feat/vto-display
+- [/] **F18: VTO result display** — @yourname — branch: feat/vto-display
 ```
 When done:
 ```
-- [x] **F14: VTO result display** — @yourname — PR #5
+- [x] **F18: VTO result display** — @yourname — PR #5
 ```

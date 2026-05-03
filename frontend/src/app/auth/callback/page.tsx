@@ -21,17 +21,25 @@ function CallbackHandler() {
       return;
     }
 
-    // Exchange code for session
+    // Exchange code for session (PKCE flow)
     const supabase = getSupabase();
-    supabase.auth.onAuthStateChange((event: string) => {
-      if (event === "SIGNED_IN") {
-        router.replace("/");
-      }
-    });
+    const code = searchParams.get("code");
 
-    // Timeout fallback
-    const timeout = setTimeout(() => router.replace("/"), 10000);
-    return () => clearTimeout(timeout);
+    async function handleCallback() {
+      if (code) {
+        // Exchange the auth code for a session — this stores the session in cookies
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setError(error.message);
+          setTimeout(() => router.replace("/"), 3000);
+          return;
+        }
+      }
+      // Session is now stored — redirect home
+      router.replace("/");
+    }
+
+    handleCallback();
   }, [router, searchParams]);
 
   if (error) {

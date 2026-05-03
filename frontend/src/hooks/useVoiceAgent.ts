@@ -77,66 +77,88 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         const msg = JSON.parse(event.data);
 
         switch (msg.type) {
-          case WSServerMsg.SESSION_READY:
+          // ── Deepgram native messages ──────────────
+          case "ConversationText":
+            if (msg.role === "assistant" || msg.role === "agent") {
+              dispatch({
+                type: "ADD_MESSAGE",
+                payload: createAgentMessage(msg.content),
+              });
+            } else if (msg.role === "user") {
+              dispatch({
+                type: "ADD_MESSAGE",
+                payload: createUserMessage(msg.content),
+              });
+            }
+            break;
+
+          case "UserStartedSpeaking":
+            // Could be used to interrupt agent audio playback
+            break;
+
+          case "AgentStartedSpeaking":
+            // Reset audio queue — fresh utterance
+            nextPlayTimeRef.current = 0;
+            break;
+
+          case "AgentAudioDone":
+            // Agent finished speaking
+            break;
+
+          case "SettingsApplied":
             dispatch({ type: "SET_CONNECTED", payload: true });
             break;
 
-          case WSServerMsg.GREETING:
-          case WSServerMsg.AGENT_TEXT:
-            dispatch({
-              type: "ADD_MESSAGE",
-              payload: createAgentMessage(msg.text),
-            });
-            break;
-
-          case WSServerMsg.USER_TEXT:
-            dispatch({
-              type: "ADD_MESSAGE",
-              payload: createUserMessage(msg.text),
-            });
-            break;
-
-          case WSServerMsg.TOOL_START: {
-            const toolName = msg.tool as ToolName;
-            const text = LOADING_TEXT[toolName] ?? "Processing…";
-            dispatch({ type: "SET_PROCESSING", payload: true });
-            dispatch({ type: "SET_CURRENT_TOOL", payload: toolName });
-            dispatch({
-              type: "ADD_MESSAGE",
-              payload: createLoadingMessage(toolName, text),
-            });
-            break;
-          }
-
+          // ── Custom messages from our backend ──────
           case WSServerMsg.VTO_RESULT:
-            dispatch({ type: "REMOVE_LOADING", payload: msg.tool });
-            dispatch({
-              type: "SET_VTO_RESULT",
-              payload: {
-                imageUrl: msg.image_url,
-                toolName: msg.tool,
-                timestamp: Date.now(),
-              },
-            });
-            dispatch({ type: "SET_PROCESSING", payload: false });
-            dispatch({ type: "SET_CURRENT_TOOL", payload: null });
-            break;
-
-          case WSServerMsg.SKIN_RESULT:
-          case WSServerMsg.PRODUCT_RESULT:
-          case WSServerMsg.PROOF_CARD:
-            dispatch({ type: "REMOVE_LOADING", payload: msg.tool });
-            dispatch({
-              type: "ADD_MESSAGE",
-              payload: createToolResultMessage(msg.tool, msg.data),
-            });
-            dispatch({ type: "SET_PROCESSING", payload: false });
-            dispatch({ type: "SET_CURRENT_TOOL", payload: null });
+            if (msg.status === "running") {
+              // Tool started
+              const toolName = msg.tool as ToolName;
+              const text = LOADING_TEXT[toolName] ?? "Processing…";
+              dispatch({ type: "SET_PROCESSING", payload: true });
+              dispatch({ type: "SET_CURRENT_TOOL", payload: toolName });
+              dispatch({
+                type: "ADD_MESSAGE",
+                payload: createLoadingMessage(toolName, text),
+              });
+            } else if (msg.status === "complete") {
+              // Tool finished
+              dispatch({ type: "REMOVE_LOADING", payload: msg.tool });
+              if (msg.image_url) {
+                dispatch({
+                  type: "SET_VTO_RESULT",
+                  payload: {
+                    imageUrl: msg.image_url,
+                    toolName: msg.tool,
+                    timestamp: Date.now(),
+                  },
+                });
+              } else if (msg.scores || msg.data) {
+                dispatch({
+                  type: "ADD_MESSAGE",
+                  payload: createToolResultMessage(msg.tool, msg.scores || msg.data || msg),
+                });
+              }
+              dispatch({ type: "SET_PROCESSING", payload: false });
+              dispatch({ type: "SET_CURRENT_TOOL", payload: null });
+            }
             break;
 
           case WSServerMsg.ERROR:
             setError(msg.message ?? "Something went wrong");
             dispatch({ type: "SET_PROCESSING", payload: false });
+            break;
+
+          // Legacy server message types (backward compat)
+          case WSServerMsg.SESSION_READY:
+            dispatch({ type: "SET_CONNECTED", payload: true });
+            break;
+          case WSServerMsg.GREETING:
+          case WSServerMsg.AGENT_TEXT:
+            dispatch({ type: "ADD_MESSAGE", payload: createAgentMessage(msg.text) });
+            break;
+          case WSServerMsg.USER_TEXT:
+            dispatch({ type: "ADD_MESSAGE", payload: createUserMessage(msg.text) });
             break;
         }
       } catch {
@@ -147,15 +169,35 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   );
 
   // ── Play audio from WS ─────────────────────────
+  // Schedule audio chunks sequentially to avoid overlaps/gaps (gibberish noise)
+  const nextPlayTimeRef = useRef<number>(0);
+
   async function playAudio(data: Blob | ArrayBuffer) {
     try {
-      const ctx = audioCtxRef.current ?? new AudioContext();
+      const ctx = audioCtxRef.current ?? new AudioContext({ sampleRate: 24000 });
+      if (!audioCtxRef.current) audioCtxRef.current = ctx;
+
       const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
-      const audioBuffer = await ctx.decodeAudioData(buffer);
+
+      // Deepgram sends raw linear16 PCM (no WAV header when container="none")
+      const pcmData = new Int16Array(buffer);
+      const float32 = new Float32Array(pcmData.length);
+      for (let i = 0; i < pcmData.length; i++) {
+        float32[i] = pcmData[i] / 32768;
+      }
+
+      const audioBuffer = ctx.createBuffer(1, float32.length, 24000);
+      audioBuffer.getChannelData(0).set(float32);
+
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(ctx.destination);
-      source.start();
+
+      // Schedule: play right after the previous chunk ends (gapless)
+      const now = ctx.currentTime;
+      const startTime = Math.max(now, nextPlayTimeRef.current);
+      source.start(startTime);
+      nextPlayTimeRef.current = startTime + audioBuffer.duration;
     } catch {
       // Silently skip undecodable audio chunks
     }
@@ -194,7 +236,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         ws.send(
           JSON.stringify({
             type: WSClientMsg.SELFIE,
-            image: selfie,
+            data: selfie,
           })
         );
       };
@@ -244,7 +286,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 16000,
+          sampleRate: 24000,
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
@@ -252,7 +294,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
       });
       streamRef.current = stream;
 
-      const audioCtx = new AudioContext({ sampleRate: 16000 });
+      const audioCtx = new AudioContext({ sampleRate: 24000 });
       audioCtxRef.current = audioCtx;
 
       // Load AudioWorklet processor

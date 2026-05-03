@@ -73,13 +73,13 @@ class VTOTaskType(StrEnum):
     SKIN_ANALYSIS = "skin-analysis"
     SKIN_TONE = "skin-tone"
     FACE_ATTRIBUTES = "face-attributes"
-    CLOTHES = "clothes-vto"
+    CLOTHES = "cloth-v3"
     MAKEUP = "makeup-vto"
-    HAIRSTYLE = "hairstyle"
-    EARRINGS = "earrings-vto"
-    NECKLACE = "necklace-vto"
-    WATCH = "watch-vto"
-    SCARF = "scarf-vto"
+    HAIRSTYLE = "hair-transfer"      # v2.1 endpoint
+    EARRINGS = "2d-vto/earring"
+    NECKLACE = "2d-vto/necklace"
+    WATCH = "2d-vto/watch"
+    SCARF = "2d-vto/scarf"
 
 
 class SkinConcern(StrEnum):
@@ -122,13 +122,27 @@ class ProductSource(StrEnum):
 # ============================================================
 
 class DeepgramMessageType(StrEnum):
+    # Client → Server
     SETTINGS = "Settings"
-    FUNCTION_CALL_REQUEST = "FunctionCallRequest"
     FUNCTION_CALL_RESPONSE = "FunctionCallResponse"
+    INJECT_AGENT_MESSAGE = "InjectAgentMessage"
+    INJECT_USER_MESSAGE = "InjectUserMessage"
+    UPDATE_PROMPT = "UpdatePrompt"
+    UPDATE_SPEAK = "UpdateSpeak"
+    UPDATE_THINK = "UpdateThink"
+    KEEP_ALIVE = "KeepAlive"
+
+    # Server → Client
+    WELCOME = "Welcome"
+    SETTINGS_APPLIED = "SettingsApplied"
     CONVERSATION_TEXT = "ConversationText"
     AGENT_THINKING = "AgentThinking"
-    INJECT_MESSAGE = "InjectAgentMessage"
+    AGENT_STARTED_SPEAKING = "AgentStartedSpeaking"
+    AGENT_AUDIO_DONE = "AgentAudioDone"
     USER_STARTED_SPEAKING = "UserStartedSpeaking"
+    FUNCTION_CALL_REQUEST = "FunctionCallRequest"
+    INJECTION_REFUSED = "InjectionRefused"
+    PROMPT_UPDATED = "PromptUpdated"
 
 
 class WSClientMessageType(StrEnum):

@@ -9,12 +9,14 @@ from app.core.constants import CachePrefix
 async def execute_vto(
     task_type: str,
     selfie_bytes: bytes,
-    params: dict[str, Any] | None = None,
+    ref_image_url: str,
+    extra_params: dict[str, Any] | None = None,
     cache_suffix: str = "",
 ) -> dict:
     """Execute any Perfect Corp VTO call with Redis caching.
 
-    Cache key: {CachePrefix.VTO}:{task_type}:{selfie_hash}:{cache_suffix}
+    All VTO tasks require a selfie (uploaded as src_file_id) and a
+    reference image URL (garment, earring, hairstyle, etc.).
     """
     selfie_hash = cache.hash_bytes(selfie_bytes)
     cache_key = f"{CachePrefix.VTO}:{task_type}:{selfie_hash}:{cache_suffix}"
@@ -23,7 +25,7 @@ async def execute_vto(
     if cached:
         return cached
 
-    result = await perfectcorp.call_api(task_type, selfie_bytes, params)
+    result = await perfectcorp.call_vto(task_type, selfie_bytes, ref_image_url, extra_params)
     inner = result.get("result", result)
 
     vto_result = {

@@ -3,30 +3,92 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { CAMERA } from "@/lib/constants";
 
+/* ── Perfect Corp JS Camera Kit types ── */
+declare global {
+  interface Window {
+    YMK?: {
+      init: (config: {
+        container: HTMLElement;
+        mode: "photo";
+        onReady?: () => void;
+        onError?: (err: unknown) => void;
+        onCapture?: (result: { base64: string; blob: Blob }) => void;
+      }) => YMKInstance;
+    };
+    ymkAsyncInit?: () => void;
+  }
+}
+
+interface YMKInstance {
+  capture: () => void;
+  destroy: () => void;
+  startCamera: () => void;
+  stopCamera: () => void;
+}
+
 interface UseCameraReturn {
+  containerRef: React.RefObject<HTMLDivElement | null>;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   capture: () => string | null;
   isReady: boolean;
   error: string | null;
   stop: () => void;
+  isUsingCameraKit: boolean;
 }
 
 /**
  * Hook: manages camera stream.
- * - Opens front camera on mount
- * - Provides capture() → base64 JPEG
- * - Stream stays open for low-latency capture
+ * Attempts to use Perfect Corp JS Camera Kit if loaded (provides face detection,
+ * quality checks, guided capture). Falls back to native getUserMedia.
  */
 export function useCamera(): UseCameraReturn {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const ymkRef = useRef<YMKInstance | null>(null);
+  const lastCaptureRef = useRef<string | null>(null);
+
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUsingCameraKit, setIsUsingCameraKit] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function startCamera() {
+    async function initCamera() {
+      // Try JS Camera Kit first (loaded via CDN in layout.tsx)
+      if (window.YMK && containerRef.current) {
+        try {
+          const instance = window.YMK.init({
+            container: containerRef.current,
+            mode: "photo",
+            onReady: () => {
+              if (!cancelled) {
+                setIsReady(true);
+                setIsUsingCameraKit(true);
+              }
+            },
+            onError: (err) => {
+              console.warn("JS Camera Kit error, falling back to native:", err);
+              if (!cancelled) startNativeCamera();
+            },
+            onCapture: (result) => {
+              lastCaptureRef.current = `data:image/jpeg;base64,${result.base64}`;
+            },
+          });
+          ymkRef.current = instance;
+          instance.startCamera();
+          return;
+        } catch {
+          console.warn("JS Camera Kit init failed, using native camera");
+        }
+      }
+
+      // Fallback: native getUserMedia
+      await startNativeCamera();
+    }
+
+    async function startNativeCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -60,10 +122,12 @@ export function useCamera(): UseCameraReturn {
       }
     }
 
-    startCamera();
+    initCamera();
 
     return () => {
       cancelled = true;
+      ymkRef.current?.destroy();
+      ymkRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       setIsReady(false);
@@ -71,6 +135,14 @@ export function useCamera(): UseCameraReturn {
   }, []);
 
   const capture = useCallback((): string | null => {
+    // If using Camera Kit, trigger its capture (result arrives via onCapture)
+    if (isUsingCameraKit && ymkRef.current) {
+      ymkRef.current.capture();
+      // Return last captured result (may be from a previous capture)
+      return lastCaptureRef.current;
+    }
+
+    // Native capture via canvas
     const video = videoRef.current;
     if (!video || !isReady) return null;
 
@@ -94,13 +166,14 @@ export function useCamera(): UseCameraReturn {
     }
 
     return dataUrl;
-  }, [isReady]);
+  }, [isReady, isUsingCameraKit]);
 
   const stop = useCallback(() => {
+    ymkRef.current?.stopCamera();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setIsReady(false);
   }, []);
 
-  return { videoRef, capture, isReady, error, stop };
+  return { containerRef, videoRef, capture, isReady, error, stop, isUsingCameraKit };
 }
