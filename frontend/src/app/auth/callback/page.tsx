@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 
-/** OAuth callback handler — exchanges code for session, redirects home. */
-export default function AuthCallbackPage() {
+/** Inner component that uses useSearchParams (requires Suspense boundary). */
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +17,6 @@ export default function AuthCallbackPage() {
 
     if (errorParam) {
       setError(errorDesc ?? errorParam);
-      // Redirect home after showing error briefly
       setTimeout(() => router.replace("/"), 3000);
       return;
     }
@@ -30,7 +29,7 @@ export default function AuthCallbackPage() {
       }
     });
 
-    // Timeout fallback — if nothing happens in 10s, redirect home
+    // Timeout fallback
     const timeout = setTimeout(() => router.replace("/"), 10000);
     return () => clearTimeout(timeout);
   }, [router, searchParams]);
@@ -54,5 +53,20 @@ export default function AuthCallbackPage() {
     <div className="flex h-screen items-center justify-center">
       <div className="processing-ring" />
     </div>
+  );
+}
+
+/** OAuth callback page — wraps handler in Suspense as required by Next.js for useSearchParams. */
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="processing-ring" />
+        </div>
+      }
+    >
+      <CallbackHandler />
+    </Suspense>
   );
 }
