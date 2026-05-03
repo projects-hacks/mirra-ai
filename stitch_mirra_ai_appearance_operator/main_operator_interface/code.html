@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirra - Live Conversation</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Noto+Serif:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "secondary": "#645d55",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ebe0da",
+                        "tertiary": "#010100",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#f1f1f1",
+                        "secondary-fixed-dim": "#cec5bb",
+                        "on-surface-variant": "#44474a",
+                        "surface-container": "#eeeeee",
+                        "primary": "#000101",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-background": "#1a1c1c",
+                        "surface": "#f9f9f9",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#1a1c1e",
+                        "tertiary-container": "#201b17",
+                        "secondary-container": "#ebe1d6",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-container": "#8b837d",
+                        "on-secondary-container": "#6a635b",
+                        "on-primary-container": "#838486",
+                        "tertiary-fixed-dim": "#cfc5be",
+                        "on-surface": "#1a1c1c",
+                        "inverse-primary": "#c6c6c9",
+                        "surface-dim": "#dadada",
+                        "surface-container-high": "#e8e8e8",
+                        "on-tertiary-fixed": "#201b17",
+                        "primary-fixed": "#e2e2e5",
+                        "on-primary-fixed": "#1a1c1e",
+                        "surface-tint": "#5d5e61",
+                        "primary-fixed-dim": "#c6c6c9",
+                        "inverse-surface": "#2f3131",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#454749",
+                        "secondary-fixed": "#ebe1d6",
+                        "on-error-container": "#93000a",
+                        "outline": "#75777a",
+                        "on-secondary-fixed": "#1f1b14",
+                        "on-secondary-fixed-variant": "#4c463e",
+                        "outline-variant": "#c5c6ca",
+                        "on-tertiary-fixed-variant": "#4c4641",
+                        "surface-bright": "#f9f9f9",
+                        "background": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section-gap": "40px",
+                        "container-padding": "24px",
+                        "glass-margin": "12px",
+                        "unit": "4px",
+                        "stack-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter", "sans-serif"],
+                        "h3": ["Noto Serif", "serif"],
+                        "h1": ["Noto Serif", "serif"],
+                        "label-caps": ["Inter", "sans-serif"],
+                        "h2": ["Noto Serif", "serif"],
+                        "match-score": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h3": ["24px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "h1": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600" }],
+                        "h2": ["32px", { "lineHeight": "1.3", "fontWeight": "500" }],
+                        "match-score": ["48px", { "lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-primary text-on-surface antialiased overflow-hidden selection:bg-surface-variant">
+<!-- Main Container: Mobile Screen Frame -->
+<div class="relative w-full h-[884px] max-w-md mx-auto flex flex-col font-body-md shadow-2xl bg-primary">
+<!-- Live Camera Background -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center z-0" data-alt="A clear, front-facing portrait of a stylish young woman looking slightly off-camera, simulating a live smartphone camera feed. She has a natural, warm skin tone with minimal makeup. The lighting is soft, natural daylight typical of a bright, modern light-mode aesthetic, casting gentle shadows. The background is slightly blurred to maintain focus on her face, maintaining an intimate, human-centric warmth essential to the interface." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC9oXKlcbAsq79WeYXPRPtqy-Tg1NaP6yJPW_K0KQmGVGlrRYxqj199wCgPnKyjnL7zcNTFX9MH7C_3tSh1ldRIBthjvvhkOl6lu8sYEham5U_p1Yo_BZbROwfEcGXF5c6bjv63Hwekkl1Ybdo9R8H-XQjuF8G9TexfKxTfn1ZnlYVOmDDo31CbLE6Qpl1N_Zs31z1spKqFj2wZfBOpMZXPGE32hMa3gh04neZqmzdcNMJB66C2juQLW2ux0s2xEVjzGX0-3qkgJ00');">
+<!-- Ambient gradient to ensure text legibility while keeping the "glass" look -->
+<div class="absolute inset-0 bg-gradient-to-b from-primary/30 via-transparent to-primary/80 pointer-events-none"></div>
+</div>
+<!-- Interface Layer -->
+<div class="relative z-10 flex flex-col h-full justify-between pb-[40px]">
+<!-- Header Area -->
+<header class="flex items-center justify-between p-container-padding pt-10">
+<button class="flex items-center justify-center w-12 h-12 rounded-full bg-surface-container-lowest/40 backdrop-blur-xl border-[0.5px] border-surface-container-lowest/50 text-surface-container-lowest shadow-[0_4px_24px_rgba(0,0,0,0.1)] transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[24px]" data-icon="cameraswitch" style="font-variation-settings: 'wght' 300;">cameraswitch</span>
+</button>
+<h2 class="font-h3 text-surface-container-lowest drop-shadow-md">Mirra</h2>
+<div class="w-12 flex justify-end">
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-lowest/20 backdrop-blur-md border-[0.5px] border-surface-container-lowest/30 shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+<div class="w-2 h-2 rounded-full bg-error animate-pulse shadow-[0_0_8px_rgba(186,26,26,0.8)]"></div>
+<span class="font-label-caps text-surface-container-lowest tracking-wider">Live</span>
+</div>
+</div>
+</header>
+<!-- Conversation Stack & Controls -->
+<main class="flex flex-col gap-stack-gap px-container-padding w-full mt-auto">
+<!-- Agent Chat Bubble (Glassmorphic Proof Card Style) -->
+<div class="flex items-end gap-3 w-full self-start transform transition-all duration-500 ease-out translate-y-0 opacity-100">
+<div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0 border-[0.5px] border-surface-container-lowest/60 shadow-[0_8px_24px_rgba(0,0,0,0.15)] relative" data-alt="A minimalist, professional avatar representing an AI fashion agent. The image shows a close-up profile of a sophisticated woman with elegant, structural features. The overall color palette is highly subdued and neutral, using deep blacks and pristine whites, blending seamlessly into a high-end fashion editorial style. The mood is trustworthy, high-tech, and personal." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCbm3p9sT3sUStTeoquT_3E8yx02U2l7wfhAOukQqHGEya9RzQkmbzAuuOTiT1i0wpvhCBJU2RJjH1Af6rQv5OeUGB0o3gcKucAEOLoO670bI5vUwFDrPsmDE0K3M9Lq-4nfLINijcB5nNu4PIbiPRshCR90pi4r2NXFvFt0AOBiyGpMSOH8DOAjMACqKyBKrhc3FEIqj_zAMVWLq4qFTsHTsTHvlQrI8xCFb-K03vHISyiTK_NScrLtIOy2jQ_iLe0I4aG0lUpW3c');">
+<div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-surface-container-lowest border-2 border-primary-container flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest/75 backdrop-blur-[24px] border-[0.5px] border-surface-container-lowest/80 text-on-surface p-5 rounded-[24px] rounded-bl-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.08)] max-w-[88%]">
+<p class="font-label-caps text-secondary mb-2 tracking-widest uppercase">Mirra Agent</p>
+<p class="font-body-md text-on-surface-variant leading-relaxed">
+                            72° and dry in SF. For the meeting, your navy blazer works with your warm undertone. Minimal makeup — your skin is a bit drier than last week, so I'd skip powder today.
+                        </p>
+</div>
+</div>
+<!-- Carousel: Owned Items (Glassmorphism) -->
+<div class="flex gap-4 overflow-x-auto pb-2 -mx-container-padding px-container-padding snap-x snap-mandatory hide-scrollbar mt-2">
+<!-- Item 1 -->
+<div class="snap-start shrink-0 w-[140px] flex flex-col gap-3 p-2 bg-surface-container-lowest/60 backdrop-blur-xl border-[0.5px] border-surface-container-lowest/60 rounded-[20px] shadow-[0_8px_32px_rgba(0,0,0,0.06)]">
+<div class="w-full aspect-[3/4] rounded-[14px] bg-cover bg-center border-[0.5px] border-surface-container-lowest/40" data-alt="A high-quality, editorial product shot of a tailored navy blue blazer. The garment is impeccably structured, laid flat or on a minimalist mannequin against a pristine, light-mode background. The lighting is soft and diffused, highlighting the premium texture of the wool fabric. The mood is sophisticated and elegant, reflecting a high-end personal wardrobe aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDO2k0Z50cimCFkuDoxkr-ipAW0FiRQkOVbiwL1lp4OIaPIZTe5ek32SwoKzsFk6n_4QNn9lHLZUtSUcjjDc35sMP6xEhFzfoucrHfjCi-wXw2xwSy9VqeoWukJZs8pv7OXj-giqXcLq7d7ni2oEJZVJFJ5mmDrPsjnDW-fAxMdQIlPioAGGSDEQ0h7973kWNBUMMUb335vKizPOeIw71CmMkJDCP3qTDSP-1Kr2NbRxyioSzBM_E3yCPRMjsNatzpbPnxQ8X8lezw');">
+</div>
+<div class="px-1 pb-1">
+<p class="font-body-md text-[15px] font-medium text-on-surface leading-tight mb-0.5">Navy Blazer</p>
+<p class="font-label-caps text-[10px] text-secondary">Owned</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="snap-start shrink-0 w-[140px] flex flex-col gap-3 p-2 bg-surface-container-lowest/60 backdrop-blur-xl border-[0.5px] border-surface-container-lowest/60 rounded-[20px] shadow-[0_8px_32px_rgba(0,0,0,0.06)]">
+<div class="w-full aspect-[3/4] rounded-[14px] bg-cover bg-center border-[0.5px] border-surface-container-lowest/40" data-alt="A delicate, close-up macro photograph of a pair of classic pearl stud earrings. The pearls are perfectly spherical and luminous, resting delicately on a clean, light surface. The high-key lighting creates a soft, modern glow around the jewelry, emphasizing its timeless elegance and high-tech minimalist style. The color palette revolves around warm, creamy whites and subtle shadows." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA38k13bQY6GOs4ok88nzfGIgMvvYmq2IdrqqDpBZvoLpsjv_6XxCAegDVcRu-3gWvUZpzy96X_0yWycLQK-Z4nAiPxY_gmxsJ5HD_4JT1bz3EhsOWq4uI9tazcHCf09nTwA6QDe-Kuv3UwdqnmA3QJZ7m65B4WB0tHeFhK7Dz1dbfxnR7jmqL06D4gTPZLQCX66rNL3qVGaCwMxJXvhSvKszKq60iUNH4NaygNP81Ngva9Wt046pUI6lgbXMeFTenypOh1gBFhcAw');">
+</div>
+<div class="px-1 pb-1">
+<p class="font-body-md text-[15px] font-medium text-on-surface leading-tight mb-0.5">Pearl Studs</p>
+<p class="font-label-caps text-[10px] text-secondary">Owned</p>
+</div>
+</div>
+</div>
+<!-- Voice Orb / Action Area -->
+<div class="flex justify-center w-full mt-6 mb-2">
+<button class="relative flex items-center justify-center w-20 h-20 rounded-full bg-primary text-surface-container-lowest shadow-[0_16px_48px_rgba(0,1,1,0.25)] border-[0.5px] border-surface-container-lowest/20 group outline-none focus:outline-none">
+<!-- Pulsating ambient rings for the "listening" state -->
+<div class="absolute inset-0 rounded-full bg-tertiary-fixed-dim/40 scale-125 blur-xl animate-pulse"></div>
+<div class="absolute inset-0 rounded-full bg-secondary-fixed/30 scale-150 blur-2xl animate-pulse" style="animation-delay: 0.5s;"></div>
+<span class="material-symbols-outlined text-[32px] relative z-10" data-icon="mic" data-weight="fill" style="font-variation-settings: 'FILL' 1, 'wght' 300;">mic</span>
+</button>
+</div>
+</main>
+</div>
+</div>
+</body></html>
