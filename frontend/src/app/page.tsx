@@ -5,11 +5,14 @@ import { useAppState, useAppDispatch } from "@/components/providers/AppProvider"
 import { useCamera } from "@/hooks/useCamera";
 import { useVoiceAgent } from "@/hooks/useVoiceAgent";
 import { useAuth } from "@/hooks/useAuth";
+import { getSupabase } from "@/lib/supabase";
 import CameraLayer from "@/components/layers/CameraLayer";
 import AgentOverlay from "@/components/layers/AgentOverlay";
 import VoiceOrb from "@/components/ui/VoiceOrb";
 import StatusBar from "@/components/ui/StatusBar";
 import FeatureMenu from "@/components/features/FeatureMenu";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 export default function HomePage() {
   const state = useAppState();
@@ -19,6 +22,45 @@ export default function HomePage() {
   const { user, signInWithGoogle, signOut } = useAuth();
 
   const [hasCaptured, setHasCaptured] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    async function checkOnboardingStatus() {
+      if (!user) {
+        setIsOnboarded(false);
+        setIsCheckingOnboarding(false);
+        return;
+      }
+
+      try {
+        const supabase = getSupabase();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("onboarded")
+          .eq("id", user.id)
+          .single();
+
+        if (error) {
+          console.error("Error checking onboarding status:", error);
+          setIsOnboarded(false);
+        } else {
+          setIsOnboarded(data?.onboarded ?? false);
+        }
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        setIsOnboarded(false);
+      } finally {
+        setIsCheckingOnboarding(false);
+      }
+    }
+
+    checkOnboardingStatus();
+  }, [user]);
+
+  // Show onboarding if not authenticated or not onboarded
+  const shouldShowOnboarding = !user || isOnboarded === false;
 
   // We no longer auto-capture the selfie. The selfie is captured exactly when the user taps to speak.
 
@@ -93,6 +135,25 @@ export default function HomePage() {
     }
   }, [capture, dispatch]);
 
+  // Show loading state while checking onboarding status
+  if (isCheckingOnboarding) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="processing-ring h-16 w-16" />
+      </div>
+    );
+  }
+
+  // Show onboarding flow if not authenticated or not onboarded
+  if (shouldShowOnboarding) {
+    return (
+      <OnboardingProvider>
+        <OnboardingFlow />
+      </OnboardingProvider>
+    );
+  }
+
+  // Show main interface if authenticated and onboarded
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* Layer 0: Camera / Selfie / VTO */}
