@@ -46,7 +46,7 @@ export default function HomePage() {
           console.error("Error checking onboarding status:", error);
           setIsOnboarded(false);
         } else {
-          setIsOnboarded(data?.onboarded ?? false);
+          setIsOnboarded((data as { onboarded: boolean } | null)?.onboarded ?? false);
         }
       } catch (error) {
         console.error("Error checking onboarding status:", error);

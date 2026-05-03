@@ -13,16 +13,15 @@ function CallbackHandler() {
       try {
         const supabase = getSupabase();
         
-        // Exchange the code for a session (PKCE verification happens automatically)
-        const { data, error: authError } = await supabase.auth.exchangeCodeForSession(
-          window.location.href
-        );
+        // The session is automatically detected and stored by Supabase
+        // Just verify we have a session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (authError) {
-          throw authError;
+        if (sessionError) {
+          throw sessionError;
         }
 
-        if (!data.session || !data.user) {
+        if (!session) {
           throw new Error("No session established");
         }
 

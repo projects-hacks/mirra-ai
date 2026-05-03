@@ -191,13 +191,13 @@ This implementation plan transforms the current broken user experience into a co
     - Transition to calendar prompt screen
     - _Requirements: 5.4, 5.5, 5.6_
 
-- [ ] 11. Checkpoint - Ensure all tests pass
+- [x] 11. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ### Phase 3: Calendar & Closet (Week 3)
 
 - [ ] 12. Implement calendar connection
-  - [ ] 12.1 Create `frontend/src/components/onboarding/CalendarPromptScreen.tsx`
+  - [x] 12.1 Create `frontend/src/components/onboarding/CalendarPromptScreen.tsx`
     - Display prompt: "Want to connect your calendar so I know what's coming up?"
     - Add "Connect Calendar" (primary) and "Skip for Now" (secondary) buttons
     - _Requirements: 6.1, 6.2_
