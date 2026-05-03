@@ -20,6 +20,7 @@ You talk to Mirra → Mirra sees your face → checks your closet → reads your
 ```
 
 - **Voice-first:** Talk, don't tap. Mirra handles the rest.
+- **Feature Discovery:** Visual menu shows all 13 features — tap any button or use voice.
 - **Owned-first:** Your closet before any store.
 - **Visual proof:** See yourself in it before you buy.
 - **Memory:** Every scan, every outfit, every outcome — remembered forever.

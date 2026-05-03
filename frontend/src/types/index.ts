@@ -76,6 +76,11 @@ export interface SkinAnalysis {
   redness: number;
   firmness: number;
   moisture: number;
+  oiliness: number;
+  texture: number;
+  radiance: number;
+  ageSpot: number;
+  skinAge?: number;
 }
 
 export interface SkinTone {
@@ -107,20 +112,33 @@ export interface ClosetItem {
 
 // ── Proof Card ──────────────────────────────────────
 export interface ProofCard {
-  lookName: string;
-  toneMatch: number;
-  styleFit: number;
-  skinSafe: number;
-  items: ProofCardItem[];
-  weatherContext: string;
-  occasionContext: string;
+  look_name: string;
+  vto_image_url?: string;
+  tone_match: number;
+  style_fit: number;
+  skin_safe: boolean;
+  owned_items: ProofCardItem[];
+  new_items: ProofCardItem[];
+  total_new_spend: number;
+  occasion: string;
+  weather: string;
+  season: string;
 }
 
 export interface ProofCardItem {
   name: string;
-  source: "closet" | "new";
   price?: number;
   imageUrl?: string;
+  owned?: boolean;
+  category?: string;
+  color?: string;
+}
+
+// ── Menu State ──────────────────────────────────────
+export interface MenuState {
+  isVisible: boolean;
+  activeFeature: ToolName | null;
+  showParameterModal: boolean;
 }
 
 // ── App State ───────────────────────────────────────
@@ -134,6 +152,7 @@ export interface AppState {
   currentTool: ToolName | null;
   user: User | null;
   closetItems: ClosetItem[];
+  menu: MenuState;
 }
 
 // ── State Actions ───────────────────────────────────
@@ -149,4 +168,8 @@ export type AppAction =
   | { type: "SET_USER"; payload: User | null }
   | { type: "SET_CLOSET"; payload: ClosetItem[] }
   | { type: "CLEAR_VTO" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "TOGGLE_MENU" }
+  | { type: "SET_MENU_VISIBLE"; payload: boolean }
+  | { type: "SET_ACTIVE_FEATURE"; payload: ToolName | null }
+  | { type: "SHOW_PARAMETER_MODAL"; payload: boolean };

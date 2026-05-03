@@ -232,6 +232,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         setError(null);
         retryCountRef.current = 0;
 
+        // Expose WebSocket to window for feature menu access
+        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = ws;
+
         // Send selfie as first message
         ws.send(
           JSON.stringify({
@@ -247,6 +250,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         setIsConnected(false);
         setIsConnecting(false);
         cleanup();
+
+        // Clear WebSocket reference
+        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
 
         // Reconnect with backoff (only if not timed out)
         if (retryCountRef.current < WS_CONFIG.MAX_RETRIES) {
@@ -276,6 +282,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     wsRef.current = null;
     cleanup();
     setIsConnected(false);
+    
+    // Clear WebSocket reference
+    (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
   }, [cleanup]);
 
   // ── Start Listening (mic → WS) ──────────────────

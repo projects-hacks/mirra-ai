@@ -68,12 +68,18 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  
+  /* Safe area insets for notched devices (iPhone X+) */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* ── Typography ───────────────────────────────────── */
 h1 {
   font-family: var(--font-serif);
-  font-size: 2.5rem;
+  font-size: clamp(1.75rem, 5vw, 2.5rem); /* Responsive: 28px-40px */
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -81,14 +87,14 @@ h1 {
 }
 h2 {
   font-family: var(--font-serif);
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4vw, 2rem); /* Responsive: 24px-32px */
   font-weight: 500;
   line-height: 1.3;
   color: var(--on-surface);
 }
 h3 {
   font-family: var(--font-serif);
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 3vw, 1.5rem); /* Responsive: 20px-24px */
   font-weight: 500;
   line-height: 1.4;
   color: var(--on-surface);
@@ -96,7 +102,7 @@ h3 {
 
 .label-caps {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: clamp(0.625rem, 2vw, 0.75rem); /* Responsive: 10px-12px */
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -134,11 +140,15 @@ h3 {
   color: var(--on-primary);
   font-family: var(--font-serif);
   font-weight: 500;
-  font-size: 1rem;
+  font-size: clamp(0.9375rem, 2.5vw, 1rem); /* Responsive: 15px-16px */
   border: none;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all 0.2s ease;
+  
+  /* Touch-friendly tap target (min 44x44px) */
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 .btn-primary:hover {
   background: var(--primary-container);
@@ -159,11 +169,15 @@ h3 {
   color: var(--on-surface);
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: clamp(0.8125rem, 2.5vw, 0.875rem); /* Responsive: 13px-14px */
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all 0.2s ease;
+  
+  /* Touch-friendly tap target (min 44x44px) */
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 .btn-secondary:hover {
   background: var(--surface-container);
@@ -173,8 +187,8 @@ h3 {
 /* ── Voice Orb ────────────────────────────────────── */
 .voice-orb {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: clamp(56px, 15vw, 64px); /* Responsive: 56px-64px */
+  height: clamp(56px, 15vw, 64px);
   border-radius: 50%;
   background: linear-gradient(135deg, var(--secondary-container), var(--accent));
   border: none;
@@ -185,6 +199,10 @@ h3 {
   transition: all 0.3s ease;
   color: var(--primary);
   box-shadow: 0 4px 24px rgba(100, 93, 85, 0.2);
+  
+  /* Touch-friendly tap target (min 44x44px) */
+  min-width: 44px;
+  min-height: 44px;
 }
 .voice-orb:hover {
   transform: scale(1.05);
@@ -256,7 +274,7 @@ h3 {
 /* ── Product / Closet Card ────────────────────────── */
 .item-card {
   flex: 0 0 auto;
-  width: 180px;
+  width: clamp(160px, 45vw, 180px); /* Responsive: 160px-180px */
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -265,6 +283,9 @@ h3 {
   box-shadow: var(--glass-shadow);
   overflow: hidden;
   transition: transform 0.2s ease;
+  
+  /* Touch-friendly */
+  -webkit-tap-highlight-color: transparent;
 }
 .item-card:hover {
   transform: translateY(-2px);
@@ -272,7 +293,7 @@ h3 {
 
 .item-card img {
   width: 100%;
-  height: 160px;
+  height: clamp(140px, 40vw, 160px); /* Responsive height */
   object-fit: cover;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
@@ -284,12 +305,12 @@ h3 {
 .item-card .item-name {
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: clamp(0.8125rem, 2.5vw, 0.875rem); /* Responsive: 13px-14px */
   color: var(--on-surface);
 }
 
 .item-card .item-meta {
-  font-size: 0.75rem;
+  font-size: clamp(0.6875rem, 2vw, 0.75rem); /* Responsive: 11px-12px */
   color: var(--on-surface-variant);
   margin-top: 0.125rem;
 }
@@ -459,6 +480,20 @@ h3 {
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
 }
 
 .float-in {

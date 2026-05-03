@@ -9,6 +9,8 @@ import {
 } from "react";
 import type { AppState, AppAction, Message } from "@/types";
 import { ToolName } from "@/lib/constants";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { ToastProvider } from "../ui/Toast";
 
 // ── Initial State ───────────────────────────────────
 const initialState: AppState = {
@@ -21,6 +23,11 @@ const initialState: AppState = {
   currentTool: null,
   user: null,
   closetItems: [],
+  menu: {
+    isVisible: true,
+    activeFeature: null,
+    showParameterModal: false,
+  },
 };
 
 // ── Reducer ─────────────────────────────────────────
@@ -67,6 +74,30 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case "RESET":
       return { ...initialState, user: state.user };
 
+    case "TOGGLE_MENU":
+      return {
+        ...state,
+        menu: { ...state.menu, isVisible: !state.menu.isVisible },
+      };
+
+    case "SET_MENU_VISIBLE":
+      return {
+        ...state,
+        menu: { ...state.menu, isVisible: action.payload },
+      };
+
+    case "SET_ACTIVE_FEATURE":
+      return {
+        ...state,
+        menu: { ...state.menu, activeFeature: action.payload },
+      };
+
+    case "SHOW_PARAMETER_MODAL":
+      return {
+        ...state,
+        menu: { ...state.menu, showParameterModal: action.payload },
+      };
+
     default:
       return state;
   }
@@ -81,11 +112,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   return (
-    <AppStateContext.Provider value={state}>
-      <AppDispatchContext.Provider value={dispatch}>
-        {children}
-      </AppDispatchContext.Provider>
-    </AppStateContext.Provider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppStateContext.Provider value={state}>
+          <AppDispatchContext.Provider value={dispatch}>
+            {children}
+          </AppDispatchContext.Provider>
+        </AppStateContext.Provider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

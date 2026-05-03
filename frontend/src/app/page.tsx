@@ -9,6 +9,7 @@ import CameraLayer from "@/components/layers/CameraLayer";
 import AgentOverlay from "@/components/layers/AgentOverlay";
 import VoiceOrb from "@/components/ui/VoiceOrb";
 import StatusBar from "@/components/ui/StatusBar";
+import FeatureMenu from "@/components/features/FeatureMenu";
 
 export default function HomePage() {
   const state = useAppState();
@@ -94,6 +95,9 @@ export default function HomePage() {
         onSignIn={signInWithGoogle}
         onSignOut={signOut}
       />
+
+      {/* Layer 4: Feature Menu */}
+      <FeatureMenu />
 
       {/* Layer 3: Agent Messages + Cards */}
       <AgentOverlay
