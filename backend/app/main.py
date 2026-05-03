@@ -24,15 +24,13 @@ app = FastAPI(
 )
 
 def _cors_origins() -> list[str]:
-    origins = [o.strip() for o in settings.CORS_ORIGIN.split(",")]
-    origins.append("http://localhost:3000")
-    origins.append("http://localhost:3001")
-    return list(set(origins))
+    """Allow all origins for hackathon - returns wildcard."""
+    return ["*"]
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins(),
+    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.ondigitalocean\.app|http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

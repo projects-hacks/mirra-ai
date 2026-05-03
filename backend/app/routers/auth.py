@@ -64,8 +64,13 @@ async def initiate_google_oauth(request: Request) -> AuthInitResponse:
                 detail=SUPABASE_NOT_CONFIGURED
             )
         
-        # Get the frontend URL from environment or use request origin
-        frontend_url = os.getenv("FRONTEND_URL", str(request.base_url).rstrip("/"))
+        # Get the frontend URL from environment or request origin
+        frontend_url = os.getenv("FRONTEND_URL")
+        if not frontend_url:
+            # Use the Origin header from the request
+            origin = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
+            frontend_url = origin if origin else "http://localhost:3000"
+        
         redirect_url = f"{frontend_url}/auth/callback"
         
         # Initiate OAuth with Supabase (PKCE handled automatically)
@@ -99,7 +104,8 @@ async def handle_oauth_callback(
     code: str | None = None,
     error: str | None = None,
     error_description: str | None = None,
-    response: Response = None
+    response: Response = None,
+    request: Request = None
 ) -> RedirectResponse:
     """
     Handle OAuth callback from Supabase.
@@ -115,7 +121,12 @@ async def handle_oauth_callback(
     Returns:
         RedirectResponse to frontend with success/error status
     """
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    # Get frontend URL from environment or request origin
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not frontend_url:
+        # Use the Referer header to determine where the request came from
+        referer = request.headers.get("referer", "").rstrip("/") if request else ""
+        frontend_url = referer if referer else "http://localhost:3000"
     
     # Handle OAuth errors
     if error:
