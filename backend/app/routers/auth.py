@@ -16,6 +16,11 @@ from app.services.supabase_client import supabase
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+# ── Constants ───────────────────────────────────────
+
+SUPABASE_NOT_CONFIGURED = "Supabase client not configured"
+
+
 # ── Models ──────────────────────────────────────────
 
 
@@ -36,7 +41,9 @@ class AuthCallbackResponse(BaseModel):
 # ── Endpoints ───────────────────────────────────────
 
 
-@router.get("/login")
+@router.get("/login", responses={
+    500: {"description": "Supabase client not configured or OAuth initialization failed"}
+})
 async def initiate_google_oauth(request: Request) -> AuthInitResponse:
     """
     Initiate Google OAuth flow.
@@ -46,12 +53,15 @@ async def initiate_google_oauth(request: Request) -> AuthInitResponse:
     
     Returns:
         AuthInitResponse with authorization URL
+        
+    Raises:
+        HTTPException: 500 if Supabase client not configured or OAuth fails
     """
     try:
         if not supabase:
             raise HTTPException(
                 status_code=500,
-                detail="Supabase client not configured"
+                detail=SUPABASE_NOT_CONFIGURED
             )
         
         # Get the frontend URL from environment or use request origin
@@ -126,7 +136,7 @@ async def handle_oauth_callback(
         if not supabase:
             raise HTTPException(
                 status_code=500,
-                detail="Supabase client not configured"
+                detail=SUPABASE_NOT_CONFIGURED
             )
         
         # Exchange code for session (PKCE verification happens here)
@@ -160,7 +170,9 @@ async def handle_oauth_callback(
         )
 
 
-@router.post("/logout")
+@router.post("/logout", responses={
+    500: {"description": "Supabase client not configured or logout failed"}
+})
 async def logout() -> dict[str, str]:
     """
     Logout current user.
@@ -169,12 +181,15 @@ async def logout() -> dict[str, str]:
     
     Returns:
         Success message
+        
+    Raises:
+        HTTPException: 500 if Supabase client not configured or logout fails
     """
     try:
         if not supabase:
             raise HTTPException(
                 status_code=500,
-                detail="Supabase client not configured"
+                detail=SUPABASE_NOT_CONFIGURED
             )
         
         supabase.auth.sign_out()
@@ -188,7 +203,10 @@ async def logout() -> dict[str, str]:
         )
 
 
-@router.get("/session")
+@router.get("/session", responses={
+    401: {"description": "No active session"},
+    500: {"description": "Supabase client not configured or session retrieval failed"}
+})
 async def get_session() -> dict[str, Any]:
     """
     Get current session information.
@@ -197,12 +215,15 @@ async def get_session() -> dict[str, Any]:
     
     Returns:
         Session data including user information
+        
+    Raises:
+        HTTPException: 401 if no active session, 500 if Supabase client not configured
     """
     try:
         if not supabase:
             raise HTTPException(
                 status_code=500,
-                detail="Supabase client not configured"
+                detail=SUPABASE_NOT_CONFIGURED
             )
         
         session = supabase.auth.get_session()

@@ -20,7 +20,7 @@ router = APIRouter()
 onboarding_service = OnboardingService()
 
 
-@router.post("/init", response_model=InitResponse)
+@router.post("/init")
 async def init_onboarding(request: InitRequest) -> InitResponse:
     """Initialize onboarding session after authentication.
     
@@ -52,7 +52,7 @@ async def init_onboarding(request: InitRequest) -> InitResponse:
         )
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
+@router.post("/analyze")
 async def analyze_appearance(request: AnalyzeRequest) -> AnalyzeResponse:
     """Execute parallel appearance analysis.
     
@@ -89,7 +89,7 @@ async def analyze_appearance(request: AnalyzeRequest) -> AnalyzeResponse:
         )
 
 
-@router.post("/seed-closet", response_model=SeedClosetResponse)
+@router.post("/seed-closet")
 async def seed_closet(request: SeedClosetRequest) -> SeedClosetResponse:
     """Pre-populate user's closet with 15 demo items.
     
@@ -116,7 +116,7 @@ async def seed_closet(request: SeedClosetRequest) -> SeedClosetResponse:
         )
 
 
-@router.post("/complete", response_model=CompleteResponse)
+@router.post("/complete")
 async def complete_onboarding(request: CompleteRequest) -> CompleteResponse:
     """Mark onboarding as complete and finalize setup.
     
