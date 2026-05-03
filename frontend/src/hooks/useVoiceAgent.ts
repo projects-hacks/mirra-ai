@@ -203,90 +203,6 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     }
   }
 
-  // ── Connect ─────────────────────────────────────
-  const connect = useCallback(
-    (selfie: string) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) return;
-
-      setIsConnecting(true);
-      setError(null);
-
-      // Timeout: if WS doesn't open in 10s, give up
-      connectTimeoutRef.current = setTimeout(() => {
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-          wsRef.current?.close();
-          wsRef.current = null;
-          setIsConnecting(false);
-          setError("Backend unavailable. Try again later.");
-          retryCountRef.current = WS_CONFIG.MAX_RETRIES; // stop retries
-        }
-      }, 10000);
-
-      const ws = new WebSocket(`${WS_URL}${Endpoint.WS_VOICE}`);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
-        setIsConnected(true);
-        setIsConnecting(false);
-        setError(null);
-        retryCountRef.current = 0;
-
-        // Expose WebSocket to window for feature menu access
-        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = ws;
-
-        // Send selfie as first message
-        ws.send(
-          JSON.stringify({
-            type: WSClientMsg.SELFIE,
-            data: selfie,
-          })
-        );
-      };
-
-      ws.onmessage = handleMessage;
-
-      ws.onclose = () => {
-        setIsConnected(false);
-        setIsConnecting(false);
-        cleanup();
-
-        // Clear WebSocket reference
-        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
-
-        // Reconnect with backoff (only if not timed out)
-        if (retryCountRef.current < WS_CONFIG.MAX_RETRIES) {
-          const delay =
-            WS_CONFIG.RECONNECT_DELAYS[
-              Math.min(retryCountRef.current, WS_CONFIG.RECONNECT_DELAYS.length - 1)
-            ];
-          retryCountRef.current++;
-          setIsConnecting(true);
-          setTimeout(() => connect(selfie), delay);
-        } else {
-          setError("Connection lost. Please refresh.");
-        }
-      };
-
-      ws.onerror = () => {
-        setError("Connection error");
-      };
-    },
-    [handleMessage, cleanup]
-  );
-
-  // ── Disconnect ──────────────────────────────────
-  const disconnect = useCallback(() => {
-    retryCountRef.current = WS_CONFIG.MAX_RETRIES; // prevent reconnect
-    wsRef.current?.close();
-    wsRef.current = null;
-    cleanup();
-    setIsConnected(false);
-    
-    // Clear WebSocket reference
-    (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
-  }, [cleanup]);
-
   // ── Start Listening (mic → WS) ──────────────────
   const startListening = useCallback(async () => {
     const ws = wsRef.current;
@@ -335,6 +251,97 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
       console.error("Mic error:", err);
     }
   }, [dispatch]);
+
+  // ── Connect ─────────────────────────────────────
+  const connect = useCallback(
+    (selfie: string, autoStart: boolean = true) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+      setIsConnecting(true);
+      setError(null);
+
+      // Timeout: if WS doesn't open in 10s, give up
+      connectTimeoutRef.current = setTimeout(() => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          wsRef.current?.close();
+          wsRef.current = null;
+          setIsConnecting(false);
+          setError("Backend unavailable. Try again later.");
+          retryCountRef.current = WS_CONFIG.MAX_RETRIES; // stop retries
+        }
+      }, 10000);
+
+      const ws = new WebSocket(`${WS_URL}${Endpoint.WS_VOICE}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+        setIsConnected(true);
+        setIsConnecting(false);
+        setError(null);
+        retryCountRef.current = 0;
+
+        // Expose WebSocket to window for feature menu access
+        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = ws;
+
+        // Send selfie as first message
+        ws.send(
+          JSON.stringify({
+            type: WSClientMsg.SELFIE,
+            data: selfie,
+          })
+        );
+
+        if (autoStart) {
+          // Need a slight delay to ensure backend has sent Settings to Deepgram
+          setTimeout(() => {
+             startListening();
+          }, 500);
+        }
+      };
+
+      ws.onmessage = handleMessage;
+
+      ws.onclose = () => {
+        setIsConnected(false);
+        setIsConnecting(false);
+        cleanup();
+
+        // Clear WebSocket reference
+        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
+
+        // Reconnect with backoff (only if not timed out)
+        if (retryCountRef.current < WS_CONFIG.MAX_RETRIES) {
+          const delay =
+            WS_CONFIG.RECONNECT_DELAYS[
+              Math.min(retryCountRef.current, WS_CONFIG.RECONNECT_DELAYS.length - 1)
+            ];
+          retryCountRef.current++;
+          setIsConnecting(true);
+          setTimeout(() => connect(selfie), delay);
+        } else {
+          setError("Connection lost. Please refresh.");
+        }
+      };
+
+      ws.onerror = () => {
+        setError("Connection error");
+      };
+    },
+    [handleMessage, cleanup, startListening]
+  );
+
+  // ── Disconnect ──────────────────────────────────
+  const disconnect = useCallback(() => {
+    retryCountRef.current = WS_CONFIG.MAX_RETRIES; // prevent reconnect
+    wsRef.current?.close();
+    wsRef.current = null;
+    cleanup();
+    setIsConnected(false);
+    
+    // Clear WebSocket reference
+    (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
+  }, [cleanup]);
 
   // ── Stop Listening ──────────────────────────────
   const stopListening = useCallback(() => {

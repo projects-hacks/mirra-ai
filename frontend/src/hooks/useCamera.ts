@@ -93,8 +93,8 @@ export function useCamera(): UseCameraReturn {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: CAMERA.FACING_MODE,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 720 },
+            height: { ideal: 1280 },
           },
           audio: false,
         });
@@ -146,9 +146,23 @@ export function useCamera(): UseCameraReturn {
     const video = videoRef.current;
     if (!video || !isReady) return null;
 
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+
+    let targetWidth = vw;
+    let targetHeight = vh;
+    let sourceX = 0;
+    let sourceY = 0;
+
+    // Force portrait: crop sides if landscape
+    if (vw > vh) {
+      targetWidth = Math.floor(vh * (9 / 16));
+      sourceX = Math.floor((vw - targetWidth) / 2);
+    }
+
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
@@ -156,7 +170,13 @@ export function useCamera(): UseCameraReturn {
     // Mirror the capture (front camera is mirrored)
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
+    
+    // Crop center part of the video
+    ctx.drawImage(
+      video,
+      sourceX, sourceY, targetWidth, targetHeight,
+      0, 0, targetWidth, targetHeight
+    );
 
     const dataUrl = canvas.toDataURL("image/jpeg", CAMERA.JPEG_QUALITY);
 

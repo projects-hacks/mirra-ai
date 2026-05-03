@@ -105,7 +105,11 @@ async def _handle_function_call(func: dict, dg, ws: WebSocket, session: dict) ->
         "status": "running",
     }))
 
-    # Execute the tool
+    # Give the frontend a moment to capture and send a fresh selfie
+    # This enables just-in-time image capture for the current context
+    await asyncio.sleep(0.8)
+
+    # Execute the tool (will use the freshly received selfie if sent)
     result = await execute_tool(
         func_name,
         args,
@@ -135,7 +139,10 @@ async def voice_websocket(ws: WebSocket) -> None:
     sid = id(ws)
     session: dict = {"selfie": None, "user_id": None, "ready": False}
 
-    await cache.set(f"{CachePrefix.SESSION}:{sid}", {"connected": True}, ttl=3600)
+    try:
+        await cache.set(f"{CachePrefix.SESSION}:{sid}", {"connected": True}, ttl=3600)
+    except Exception:
+        pass  # Redis unavailable — session continues without caching
 
     max_retries = 3
     retry_count = 0
@@ -285,4 +292,7 @@ async def voice_websocket(ws: WebSocket) -> None:
     except Exception as e:
         logger.error(f"Voice session error: {e}")
     finally:
-        await cache.delete(f"{CachePrefix.SESSION}:{sid}")
+        try:
+            await cache.delete(f"{CachePrefix.SESSION}:{sid}")
+        except Exception:
+            pass  # Redis unavailable — skip cleanup

@@ -16,6 +16,7 @@ interface VTODisplayProps {
   isProcessing: boolean;
   currentTool: ToolName | null;
   onReset?: () => void;
+  showBaseImage?: boolean;
 }
 
 type DisplayState = 'selfie' | 'loading' | 'vto';
@@ -26,6 +27,7 @@ export default function VTODisplay({
   isProcessing,
   currentTool,
   onReset,
+  showBaseImage = true,
 }: VTODisplayProps) {
   // Determine which image to display
   const currentImage = vtoResult?.imageUrl ?? selfie;
@@ -48,19 +50,21 @@ export default function VTODisplay({
   return (
     <div className="relative w-full h-full overflow-hidden">
       {/* Base Image Layer */}
-      <div className="absolute inset-0">
-        {displayImage && (
-          <img
-            src={displayImage}
-            alt="Your appearance"
-            className={`
-              w-full h-full object-cover
-              transition-opacity duration-300 ease-in-out
-              ${isTransitioning ? 'opacity-0' : 'opacity-100'}
-            `}
-          />
-        )}
-      </div>
+      {showBaseImage && (
+        <div className="absolute inset-0">
+          {displayImage && (
+            <img
+              src={displayImage}
+              alt="Your appearance"
+              className={`
+                w-full h-full object-cover
+                transition-opacity duration-300 ease-in-out
+                ${isTransitioning ? 'opacity-0' : 'opacity-100'}
+              `}
+            />
+          )}
+        </div>
+      )}
 
       {/* Loading Overlay */}
       {displayState === 'loading' && (

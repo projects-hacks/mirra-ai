@@ -46,11 +46,16 @@ app.add_api_websocket_route("/ws/voice", voice.voice_websocket)
 
 @app.get("/health")
 async def health():
-    r = await cache.get_pool()
-    redis_ok = await r.ping()
+    redis_status = "disconnected"
+    try:
+        r = await cache.get_pool()
+        redis_ok = await r.ping()
+        redis_status = "connected" if redis_ok else "disconnected"
+    except Exception:
+        pass
     return {
-        "status": "ok" if redis_ok else "degraded",
+        "status": "ok",
         "version": "1.0.0",
         "mocks": settings.USE_MOCKS,
-        "redis": "connected" if redis_ok else "disconnected",
+        "redis": redis_status,
     }

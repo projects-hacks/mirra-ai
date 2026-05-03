@@ -20,24 +20,11 @@ export default function HomePage() {
 
   const [hasCaptured, setHasCaptured] = useState(false);
 
-  // Auto-capture selfie once camera stabilizes
-  useEffect(() => {
-    if (cameraReady && !hasCaptured) {
-      const timer = setTimeout(() => {
-        const selfie = capture();
-        if (selfie) {
-          dispatch({ type: "SET_SELFIE", payload: selfie });
-          setHasCaptured(true);
-        }
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [cameraReady, hasCaptured, capture, dispatch]);
+  // We no longer auto-capture the selfie. The selfie is captured exactly when the user taps to speak.
 
-  // Show a local welcome message immediately after selfie capture
-  // (before WS connects, so the user doesn't see a "stuck" screen)
+  // Show a local welcome message immediately after camera is ready
   useEffect(() => {
-    if (hasCaptured && state.messages.length === 0) {
+    if (cameraReady && state.messages.length === 0) {
       dispatch({
         type: "ADD_MESSAGE",
         payload: {
@@ -48,7 +35,21 @@ export default function HomePage() {
         },
       });
     }
-  }, [hasCaptured, state.messages.length, dispatch]);
+  }, [cameraReady, state.messages.length, dispatch]);
+
+  // Just-In-Time Capture: Take a fresh selfie when a tool starts running
+  useEffect(() => {
+    if (state.currentTool && cameraReady) {
+      const freshSelfie = capture();
+      if (freshSelfie) {
+        dispatch({ type: "SET_SELFIE", payload: freshSelfie });
+        const ws = (window as any).__mirraWS;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'selfie', data: freshSelfie }));
+        }
+      }
+    }
+  }, [state.currentTool, cameraReady, capture, dispatch]);
 
   // Voice connection is user-initiated (first mic tap), not auto-connect.
   // This avoids a reconnect storm when no backend is available.
@@ -58,14 +59,32 @@ export default function HomePage() {
       return;
     }
 
+    // Capture a fresh selfie exactly when the user taps the mic
+    let currentSelfie = state.selfie;
+    if (cameraReady) {
+      const freshSelfie = capture();
+      if (freshSelfie) {
+        dispatch({ type: "SET_SELFIE", payload: freshSelfie });
+        currentSelfie = freshSelfie;
+      }
+    }
+
     // Connect on first tap if not yet connected
-    if (!voice.isConnected && state.selfie) {
-      voice.connect(state.selfie);
-      return; // connect will auto-start listening once open
+    if (!voice.isConnected && currentSelfie) {
+      voice.connect(currentSelfie);
+      return;
+    }
+
+    // If already connected, push the fresh selfie to the backend
+    if (voice.isConnected && currentSelfie) {
+      const ws = (window as any).__mirraWS;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'selfie', data: currentSelfie }));
+      }
     }
 
     voice.startListening();
-  }, [voice, state.selfie]);
+  }, [voice, state.selfie, cameraReady, capture, dispatch]);
 
   const handleRecapture = useCallback(() => {
     const selfie = capture();

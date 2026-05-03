@@ -27,6 +27,11 @@ export default function CameraLayer({
   cameraError,
   isUsingCameraKit,
 }: CameraLayerProps) {
+  // Only freeze the mirror for VTO tasks that generate images. 
+  // Data analysis tasks like 'analyze_skin' should keep the live camera visible.
+  const isVtoTask = currentTool?.startsWith("try_on") || currentTool === "generate_proof_card";
+  const shouldFreeze = !!vtoResult || (isProcessing && isVtoTask);
+
   return (
     <div className="absolute inset-0 z-0">
       {/* JS Camera Kit Container (renders its own UI with face detection) */}
@@ -34,7 +39,11 @@ export default function CameraLayer({
         <div
           ref={containerRef}
           className="absolute inset-0 w-full h-full"
-          style={{ display: selfie ? "none" : "block" }}
+          style={{ 
+            opacity: shouldFreeze ? 0 : 1,
+            visibility: shouldFreeze ? "hidden" : "visible",
+            transition: "opacity 0.3s ease, visibility 0.3s ease"
+          }}
         />
       )}
 
@@ -48,18 +57,21 @@ export default function CameraLayer({
           className="absolute inset-0 w-full h-full object-cover"
           style={{
             transform: "scaleX(-1)",
-            display: selfie ? "none" : "block",
+            opacity: shouldFreeze ? 0 : 1,
+            visibility: shouldFreeze ? "hidden" : "visible",
+            transition: "opacity 0.3s ease, visibility 0.3s ease"
           }}
         />
       )}
 
       {/* VTO Display with smooth transitions */}
-      {selfie && (
+      {(vtoResult || isProcessing) && selfie && (
         <VTODisplay
           selfie={selfie}
           vtoResult={vtoResult}
           isProcessing={isProcessing}
           currentTool={currentTool}
+          showBaseImage={shouldFreeze}
         />
       )}
 

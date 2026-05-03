@@ -75,7 +75,6 @@ def _decode_selfie(b64: str) -> bytes:
     # Strip data URL prefix if present (e.g., "data:image/jpeg;base64,")
     if b64.startswith("data:"):
         b64 = b64.split(",", 1)[1] if "," in b64 else b64
-    
     image_bytes = base64.b64decode(b64)
     validate(image_bytes)
     return image_bytes
