@@ -172,6 +172,7 @@ class ToolName(StrEnum):
     CHECK_CALENDAR = "check_calendar"
     CHECK_WEATHER = "check_weather"
     SEARCH_PRODUCTS = "search_products"
+    MATCH_CLOSET = "match_closet"
     GENERATE_PROOF_CARD = "generate_proof_card"
 
 

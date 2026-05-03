@@ -17,13 +17,13 @@ export default function StatusBar({
   onSignOut,
 }: StatusBarProps) {
   return (
-    <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 py-4">
+    <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4">
       {/* Left: Menu placeholder */}
-      <div className="w-10" />
+      <div className="w-8 sm:w-10" />
 
       {/* Center: Title */}
       <h1
-        className="text-xl tracking-tight"
+        className="text-lg sm:text-xl tracking-tight"
         style={{
           fontFamily: "var(--font-serif)",
           fontWeight: 600,
@@ -38,17 +38,17 @@ export default function StatusBar({
       {user ? (
         <button
           onClick={onSignOut}
-          className="context-pill text-xs"
+          className="context-pill text-xs min-h-[44px]"
           style={{ padding: "0.375rem 0.75rem" }}
         >
           <span
             className="w-2 h-2 rounded-full"
             style={{ background: isConnected ? "var(--success)" : "var(--outline)" }}
           />
-          {isConnected ? "Live" : "…"}
+          <span className="hidden sm:inline">{isConnected ? "Live" : "…"}</span>
         </button>
       ) : (
-        <button onClick={onSignIn} className="context-pill text-xs">
+        <button onClick={onSignIn} className="context-pill text-xs min-h-[44px]">
           Sign in
         </button>
       )}

@@ -52,6 +52,8 @@ export enum ToolName {
   GET_WEATHER = "get_weather",
   GET_CALENDAR = "get_calendar",
   CHECK_CLOSET = "check_closet",
+  MATCH_CLOSET = "match_closet",
+  GENERATE_PROOF_CARD = "generate_proof_card",
 }
 
 // ── Loading Text per Tool ───────────────────────────
@@ -68,6 +70,8 @@ export const LOADING_TEXT: Record<string, string> = {
   [ToolName.GET_WEATHER]: "Checking the weather…",
   [ToolName.GET_CALENDAR]: "Checking your schedule…",
   [ToolName.CHECK_CLOSET]: "Looking through your closet…",
+  [ToolName.MATCH_CLOSET]: "Matching your closet to the occasion…",
+  [ToolName.GENERATE_PROOF_CARD]: "Generating your proof card…",
 };
 
 // ── Camera Config ───────────────────────────────────

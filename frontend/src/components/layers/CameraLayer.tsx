@@ -2,7 +2,8 @@
 
 import type { RefObject } from "react";
 import type { VTOResult } from "@/types";
-import { ToolName, LOADING_TEXT } from "@/lib/constants";
+import { ToolName } from "@/lib/constants";
+import VTODisplay from "@/components/vto/VTODisplay";
 
 interface CameraLayerProps {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -26,8 +27,6 @@ export default function CameraLayer({
   cameraError,
   isUsingCameraKit,
 }: CameraLayerProps) {
-  const displayImage = vtoResult?.imageUrl ?? selfie;
-
   return (
     <div className="absolute inset-0 z-0">
       {/* JS Camera Kit Container (renders its own UI with face detection) */}
@@ -54,23 +53,14 @@ export default function CameraLayer({
         />
       )}
 
-      {/* Captured Selfie / VTO Result */}
-      {displayImage && (
-        <img
-          src={displayImage}
-          alt="Preview"
-          className="absolute inset-0 w-full h-full object-cover fade-in"
+      {/* VTO Display with smooth transitions */}
+      {selfie && (
+        <VTODisplay
+          selfie={selfie}
+          vtoResult={vtoResult}
+          isProcessing={isProcessing}
+          currentTool={currentTool}
         />
-      )}
-
-      {/* Processing Overlay */}
-      {isProcessing && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 fade-in z-10">
-          <div className="processing-ring" />
-          <p className="mt-4 text-sm text-white font-medium">
-            {currentTool ? LOADING_TEXT[currentTool] : "Processing…"}
-          </p>
-        </div>
       )}
 
       {/* Camera Error */}

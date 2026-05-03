@@ -32,6 +32,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#c084fc",
+  viewportFit: "cover", // For notched devices
 };
 
 export default function RootLayout({
