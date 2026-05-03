@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { getSupabase } from "@/lib/supabase";
 import type { User } from "@/types/onboarding";
 
 // ── Props Interface ─────────────────────────────────
@@ -20,22 +19,19 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
     setError(null);
 
     try {
-      const supabase = getSupabase();
-
-      // Initiate Google OAuth flow
-      const { data, error: authError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (authError) {
-        throw authError;
+      // Call backend to initiate OAuth flow
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const response = await fetch(`${backendUrl}/api/auth/login`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to initiate authentication");
       }
-
-      // OAuth redirect will happen automatically
-      // The callback page will handle the session and redirect back
+      
+      const data = await response.json();
+      
+      // Redirect to OAuth provider (Google)
+      window.location.href = data.auth_url;
+      
     } catch (err) {
       setIsLoading(false);
 

@@ -12,66 +12,57 @@ function CallbackHandler() {
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    // Check for error params from Supabase
-    const errorParam = searchParams.get("error");
-    const errorDesc = searchParams.get("error_description");
+    // Check for auth success/error params from backend
+    const authSuccess = searchParams.get("auth_success");
+    const authError = searchParams.get("auth_error");
+    const userId = searchParams.get("user_id");
 
-    if (errorParam) {
-      setError(errorDesc ?? errorParam);
+    if (authError) {
+      setError(authError);
       setTimeout(() => router.replace("/"), 3000);
       return;
     }
 
-    // Exchange code for session (PKCE flow)
-    const supabase = getSupabase();
-    const code = searchParams.get("code");
+    if (authSuccess === "true" && userId) {
+      // Backend has already established the session
+      // Verify the session is accessible client-side
+      verifySession(userId);
+    } else {
+      setError("Invalid authentication response");
+      setTimeout(() => router.replace("/"), 3000);
+    }
+  }, [router, searchParams]);
 
-    async function handleCallback() {
-      if (!code) {
-        setError("No authorization code received");
+  async function verifySession(userId: string) {
+    try {
+      setIsVerifying(true);
+      const supabase = getSupabase();
+      
+      // Verify the user session exists
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user || user.id !== userId) {
+        setError("Failed to verify user session");
         setTimeout(() => router.replace("/"), 3000);
         return;
       }
 
-      try {
-        // Exchange the auth code for a session — this stores the session in cookies
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          setError(exchangeError.message);
-          setTimeout(() => router.replace("/"), 3000);
-          return;
-        }
-
-        // Verify the user was created and get user data
-        setIsVerifying(true);
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          setError("Failed to verify user session");
-          setTimeout(() => router.replace("/"), 3000);
-          return;
-        }
-
-        // Verify user has required fields (email is essential)
-        if (!user.email) {
-          setError("User email not found");
-          setTimeout(() => router.replace("/"), 3000);
-          return;
-        }
-
-        // Database triggers automatically create profile and user_preferences rows
-        // Session is now stored and user is verified — redirect to main page
-        // The main page will check onboarding status and show OnboardingFlow if needed
-        router.replace("/");
-      } catch (err) {
-        console.error("Auth callback error:", err);
-        setError("An unexpected error occurred during sign-in");
+      // Verify user has required fields
+      if (!user.email) {
+        setError("User email not found");
         setTimeout(() => router.replace("/"), 3000);
+        return;
       }
-    }
 
-    handleCallback();
-  }, [router, searchParams]);
+      // Session verified — redirect to main page
+      // The main page will check onboarding status and show OnboardingFlow if needed
+      router.replace("/");
+    } catch (err) {
+      console.error("Session verification error:", err);
+      setError("An unexpected error occurred during sign-in");
+      setTimeout(() => router.replace("/"), 3000);
+    }
+  }
 
   if (error) {
     return (

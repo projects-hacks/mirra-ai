@@ -42,3 +42,14 @@ htmlcov/
 # Misc
 *.bak
 *.tmp
+
+# Documentation and examples
+*.example.tsx
+*.example.ts
+**/IMPLEMENTATION_SUMMARY*.md
+**/ONBOARDING_FLOW_SUMMARY.md
+**/*_IMPLEMENTATION.md
+
+# Test files (empty test files)
+*.test.tsx
+*.test.ts

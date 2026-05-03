@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core import cache
-from app.routers import voice, vto, context, closet, onboarding
+from app.routers import voice, vto, context, closet, onboarding, auth
 
 
 @asynccontextmanager
@@ -38,6 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, tags=["Auth"])
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(vto.router, prefix="/api/vto", tags=["VTO"])
 app.include_router(context.router, prefix="/api/context", tags=["Context"])
