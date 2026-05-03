@@ -20,7 +20,7 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
 
     try {
       // Call backend to initiate OAuth flow
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
       const response = await fetch(`${backendUrl}/api/auth/login`);
       
       if (!response.ok) {
