@@ -2,8 +2,6 @@
 
 interface VoiceOrbProps {
   isListening: boolean;
-  isProcessing: boolean;
-  isConnected: boolean;
   isConnecting: boolean;
   error: string | null;
   onClick: () => void;
@@ -12,22 +10,19 @@ interface VoiceOrbProps {
 /** Voice Orb — central pulsating mic button. */
 export default function VoiceOrb({
   isListening,
-  isProcessing,
-  isConnected,
   isConnecting,
   error,
   onClick,
 }: VoiceOrbProps) {
-  const disabled = isConnecting || isProcessing;
+  // Don't disable during processing - allow interruption
+  const disabled = isConnecting;
 
-  // Status label
+  // Status label - simplified
   const label = error
     ? error
     : isConnecting
       ? "Connecting…"
-      : isProcessing
-        ? "Thinking…"
-        : isListening
+      : isListening
           ? "Listening"
           : "Tap to speak";
 

@@ -111,8 +111,6 @@ export default function HomePage() {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
         <VoiceOrb
           isListening={voice.isListening}
-          isProcessing={state.isProcessing}
-          isConnected={voice.isConnected}
           isConnecting={voice.isConnecting}
           error={voice.error}
           onClick={handleVoiceToggle}

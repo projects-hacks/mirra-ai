@@ -60,13 +60,11 @@ export default function AgentOverlay({
     }
   }, [messages]);
 
-  // Get latest agent message and tool result
+  // Get latest agent message (skip loading messages - they create "stuck" feeling)
   const lastAgent = [...messages].reverse().find((m) => m.type === "agent");
-  const lastLoading = [...messages].reverse().find((m) => m.type === "loading");
-  const lastToolResult = [...messages].reverse().find((m) => m.type === "tool_result");
 
-  // Show either loading or the last result
-  const activeMessage = lastLoading ?? lastAgent;
+  // Show only agent messages, not loading states
+  const activeMessage = lastAgent;
 
   // Product/closet cards from tool results
   const productResults = messages.filter(
