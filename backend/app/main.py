@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core import cache
-from app.routers import voice, vto, context, closet, onboarding, auth
+from app.routers import voice, vto, context, closet, onboarding
 
 
 @asynccontextmanager
@@ -23,11 +23,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-def _cors_origins() -> list[str]:
-    """Allow all origins for hackathon - returns wildcard."""
-    return ["*"]
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.ondigitalocean\.app|http://localhost:\d+",
@@ -36,7 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, tags=["Auth"])
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(vto.router, prefix="/api/vto", tags=["VTO"])
 app.include_router(context.router, prefix="/api/context", tags=["Context"])

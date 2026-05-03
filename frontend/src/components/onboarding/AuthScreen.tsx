@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { getSupabase } from "@/lib/supabase";
 import type { User } from "@/types/onboarding";
 
-// ── Props Interface ─────────────────────────────────
 interface AuthScreenProps {
   onAuthComplete: (user: User) => void;
   onError: (error: Error) => void;
 }
 
-// ── Component ───────────────────────────────────────
 export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,35 +18,31 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
     setError(null);
 
     try {
-      // Call backend to initiate OAuth flow
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      const response = await fetch(`${backendUrl}/api/auth/login`);
+      const supabase = getSupabase();
       
-      if (!response.ok) {
-        throw new Error("Failed to initiate authentication");
+      // Client-side OAuth with PKCE (handled automatically by Supabase)
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (authError) {
+        throw authError;
       }
-      
-      const data = await response.json();
-      
-      // Redirect to OAuth provider (Google)
-      window.location.href = data.auth_url;
+
+      // User will be redirected to Google OAuth
+      // Callback will handle session establishment
       
     } catch (err) {
       setIsLoading(false);
 
-      // Handle different error types
-      const errorMessage =
-        err instanceof Error ? err.message : "Authentication failed";
-
-      // Categorize errors for user-friendly messages
-      let userMessage = "Authentication failed. Please check your connection and try again.";
-
+      const errorMessage = err instanceof Error ? err.message : "Authentication failed";
+      
+      let userMessage = "Authentication failed. Please try again.";
       if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
-        userMessage = "Network error. Please check your internet connection and try again.";
-      } else if (errorMessage.includes("cancelled") || errorMessage.includes("denied")) {
-        userMessage = "Sign-in was cancelled. Please try again.";
-      } else if (errorMessage.includes("invalid")) {
-        userMessage = "Invalid credentials. Please try again.";
+        userMessage = "Network error. Please check your internet connection.";
       }
 
       setError(userMessage);
@@ -57,7 +52,6 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      {/* Glassmorphic Card */}
       <div
         className="glassmorphic-card flex flex-col items-center gap-6 text-center"
         style={{
@@ -70,15 +64,11 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
           width: "100%",
         }}
       >
-        {/* Logo/Title */}
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-bold text-white">Welcome to Mirra</h1>
-          <p className="text-sm text-white/80">
-            Your AI appearance operator
-          </p>
+          <p className="text-sm text-white/80">Your AI appearance operator</p>
         </div>
 
-        {/* Google Sign-In Button */}
         <button
           onClick={handleGoogleSignIn}
           disabled={isLoading}
@@ -87,7 +77,6 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
         >
           {isLoading ? (
             <>
-              {/* Loading Spinner */}
               <svg
                 className="h-5 w-5 animate-spin text-gray-900"
                 xmlns="http://www.w3.org/2000/svg"
@@ -112,7 +101,6 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
             </>
           ) : (
             <>
-              {/* Google Logo */}
               <svg
                 className="h-5 w-5"
                 viewBox="0 0 24 24"
@@ -140,7 +128,6 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
           )}
         </button>
 
-        {/* Error Message */}
         {error && (
           <div
             className="w-full rounded-lg bg-red-500/20 p-3 text-sm text-red-100"
@@ -157,7 +144,6 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
           </div>
         )}
 
-        {/* Privacy Notice */}
         <p className="text-xs text-white/60">
           By continuing, you agree to our Terms of Service and Privacy Policy
         </p>
