@@ -71,6 +71,8 @@ async def initiate_google_oauth(request: Request) -> AuthInitResponse:
             origin = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
             frontend_url = origin if origin else "http://localhost:3000"
         
+        # Ensure no trailing slash
+        frontend_url = frontend_url.rstrip("/")
         redirect_url = f"{frontend_url}/auth/callback"
         
         # Initiate OAuth with Supabase (PKCE handled automatically)
@@ -127,6 +129,9 @@ async def handle_oauth_callback(
         # Use the Referer header to determine where the request came from
         referer = request.headers.get("referer", "").rstrip("/") if request else ""
         frontend_url = referer if referer else "http://localhost:3000"
+    
+    # Ensure no trailing slash
+    frontend_url = frontend_url.rstrip("/")
     
     # Handle OAuth errors
     if error:
