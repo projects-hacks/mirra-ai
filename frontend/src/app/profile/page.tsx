@@ -8,30 +8,66 @@ import type { User } from "@/types";
 
 // ── Types ────────────────────────────────────────────
 interface SkinScores {
+  overall: number;
   acne?: number;
-  wrinkle?: number;
-  pore?: number;
+  wrinkles?: number;
+  pores?: number;
   moisture?: number;
   texture?: number;
   radiance?: number;
   oiliness?: number;
   firmness?: number;
   redness?: number;
-  darkCircle?: number;
-  eyeBag?: number;
-  ageSpot?: number;
-  skin_age?: number;
+  dark_circles?: number;
+  eye_bag?: number;
+  age_spot?: number;
+  droopy_upper_eyelid?: number;
+  droopy_lower_eyelid?: number;
+}
+
+interface SkinTone {
+  skin_color?: string;
+  eye_color?: string | null;
+  eye_color_name?: string | null;
+  lip_color?: string | null;
+  eyebrow_color?: string | null;
+  hair_color?: string | null;
+  hair_color_name?: string | null;
+}
+
+interface FaceShape {
+  shape?: string;
+  age?: number | null;
+  gender?: string | null;
+  facial_ratios?: Record<string, any>;
+  eye_shape?: string | null;
+  eye_size?: string | null;
+  eyelid_type?: string | null;
+  lip_shape?: string | null;
+  nose_width?: string | null;
+  nose_length?: string | null;
 }
 
 interface BodyModel {
   skin_scores?: SkinScores;
-  skin_tone?: { undertone?: string; depth?: string; hex?: string };
-  face_shape?: { shape?: string };
+  skin_tone?: SkinTone;
+  face_shape?: FaceShape;
 }
 
 interface SkinScan {
+  id: string;
   created_at: string;
   scores: SkinScores;
+  skin_age?: number | null;
+  scan_context?: string;
+  weather_at_scan?: {
+    temp_f?: number;
+    humidity?: number;
+    condition?: string;
+    location?: string;
+  } | null;
+  location_at_scan?: string | null;
+  selfie_url?: string | null;
 }
 
 interface EditableProfile {
@@ -42,14 +78,6 @@ interface EditableProfile {
 }
 
 // ── Helpers ──────────────────────────────────────────
-function avg(scores: SkinScores): number {
-  const vals = Object.entries(scores)
-    .filter(([k]) => k !== "skin_age")
-    .map(([, v]) => v as number)
-    .filter((v) => typeof v === "number");
-  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
-}
-
 function scoreColor(score: number): string {
   if (score >= 80) return "var(--success)";
   if (score >= 60) return "#f59e0b";
@@ -61,9 +89,9 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
     <div>
       <div className="flex justify-between text-xs mb-1" style={{ color: "var(--on-surface-variant)" }}>
         <span>{label}</span>
-        <span style={{ color: scoreColor(value) }}>{value}</span>
+        <span style={{ color: scoreColor(value), fontWeight: 600 }}>{value}</span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-variant)" }}>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-variant)" }}>
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${value}%`, background: scoreColor(value) }}
@@ -73,27 +101,60 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-// Inline sparkline for skin trend (last 7 scans)
-function SparkLine({ scans }: { scans: SkinScan[] }) {
+// Trend indicator
+function TrendIndicator({ scans }: { scans: SkinScan[] }) {
   if (scans.length < 2) return null;
-  const points = scans.slice(-7).map((s) => avg(s.scores));
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const w = 120;
-  const h = 32;
-  const pts = points
-    .map((v, i) => {
-      const x = (i / (points.length - 1)) * w;
-      const y = h - ((v - min) / range) * h;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
+  
+  const latest = scans[0]?.scores?.overall ?? 0;
+  const previous = scans[1]?.scores?.overall ?? 0;
+  const diff = latest - previous;
+  
+  if (Math.abs(diff) < 2) {
+    return (
+      <span className="text-xs flex items-center gap-1" style={{ color: "var(--on-surface-variant)" }}>
+        <span>→</span> Stable
+      </span>
+    );
+  }
+  
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="opacity-80">
-      <polyline fill="none" stroke="var(--primary)" strokeWidth="2" points={pts} />
-    </svg>
+    <span 
+      className="text-xs flex items-center gap-1 font-medium"
+      style={{ color: diff > 0 ? "var(--success)" : "var(--error)" }}
+    >
+      <span>{diff > 0 ? "↑" : "↓"}</span>
+      {Math.abs(diff)} pts
+    </span>
+  );
+}
+
+// Mini chart for last 7 scans
+function MiniChart({ scans }: { scans: SkinScan[] }) {
+  if (scans.length < 2) return null;
+  
+  const points = scans.slice(0, 7).reverse().map((s) => s.scores?.overall ?? 75);
+  const max = Math.max(...points, 100);
+  const min = Math.min(...points, 0);
+  const range = max - min || 1;
+  
+  return (
+    <div className="flex items-end gap-1 h-12">
+      {points.map((value, i) => {
+        const height = ((value - min) / range) * 100;
+        return (
+          <div
+            key={i}
+            className="flex-1 rounded-t transition-all"
+            style={{
+              height: `${height}%`,
+              minHeight: "4px",
+              background: scoreColor(value),
+              opacity: i === points.length - 1 ? 1 : 0.6,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -142,19 +203,38 @@ export default function ProfilePage() {
       setUser(u);
       setEditForm((f) => ({ ...f, displayName: u.displayName }));
 
-      // Parallel fetch — cast to any to bypass Supabase's strict generic inference in allSettled
+      // Parallel fetch — cast to any to bypass Supabase's strict generic inference
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const [bmRes, scansRes, closetRes, prefRes] = await Promise.allSettled([
-        supabase.from("body_model").select("skin_scores,skin_tone,face_shape").eq("user_id", u.id).single(),
-        supabase.from("skin_scans").select("created_at,scores").eq("user_id", u.id).order("created_at", { ascending: false }).limit(30),
+        supabase.from("body_model").select("*").eq("user_id", u.id).single(),
+        supabase.from("skin_scans").select("*").eq("user_id", u.id).order("created_at", { ascending: false }).limit(30),
         supabase.from("closet_items").select("id", { count: "exact", head: true }).eq("user_id", u.id),
-        supabase.from("user_preferences").select("preferred_currency,budget_min,budget_max,calendar_connected").eq("user_id", u.id).single(),
+        supabase.from("user_preferences").select("*").eq("user_id", u.id).single(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ]) as any[];
 
-      if (bmRes.status === "fulfilled" && bmRes.value?.data) setBodyModel(bmRes.value.data as BodyModel);
-      if (scansRes.status === "fulfilled" && scansRes.value?.data) setSkinScans(scansRes.value.data as SkinScan[]);
+      if (bmRes.status === "fulfilled" && bmRes.value?.data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = bmRes.value.data as any;
+        setBodyModel({
+          skin_scores: typeof data.skin_scores === 'string' ? JSON.parse(data.skin_scores) : data.skin_scores,
+          skin_tone: typeof data.skin_tone === 'string' ? JSON.parse(data.skin_tone) : data.skin_tone,
+          face_shape: typeof data.face_shape === 'string' ? JSON.parse(data.face_shape) : data.face_shape,
+        });
+      }
+      
+      if (scansRes.status === "fulfilled" && scansRes.value?.data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const scans = (scansRes.value.data as any[]).map(scan => ({
+          ...scan,
+          scores: typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores,
+          weather_at_scan: typeof scan.weather_at_scan === 'string' ? JSON.parse(scan.weather_at_scan) : scan.weather_at_scan,
+        }));
+        setSkinScans(scans);
+      }
+      
       if (closetRes.status === "fulfilled") setClosetCount((closetRes.value?.count as number) ?? 0);
+      
       if (prefRes.status === "fulfilled" && prefRes.value?.data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const p = prefRes.value.data as any;
@@ -202,9 +282,8 @@ export default function ProfilePage() {
     setIsSaving(false);
   }, [user, editForm]);
 
-  // ── Log out (uses useAuth which broadcasts to other tabs) ──
+  // ── Log out ──
   const handleLogOut = useCallback(async () => {
-    // Close any open WebSocket connections (Task 16.6)
     try {
       const ws = (window as any).__mirraWS;
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -234,12 +313,15 @@ export default function ProfilePage() {
     );
   }
 
-  const scores = bodyModel?.skin_scores ?? {};
-  const overallScore = avg(scores);
-  const scoreEntries = Object.entries(scores)
-    .filter(([k]) => k !== "skin_age")
+  const scores = bodyModel?.skin_scores ?? {} as SkinScores;
+  const overallScore = scores.overall ?? 75;
+  const latestScan = skinScans[0];
+  
+  // Top 3 concerns (lowest scores)
+  const topConcerns = Object.entries(scores)
+    .filter(([k]) => k !== "overall")
     .sort(([, a], [, b]) => (a as number) - (b as number))
-    .slice(0, 6);
+    .slice(0, 3);
 
   return (
     <div
@@ -349,20 +431,42 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── Skin Intelligence Card ── */}
+        {/* ── Skin Intelligence Card (Enhanced) ── */}
         {bodyModel && (
           <div className="glass-card space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Skin Intelligence</p>
-              <div className="flex items-center gap-2">
-                {skinScans.length >= 2 && <SparkLine scans={skinScans} />}
-                <span className="text-2xl font-bold" style={{ color: scoreColor(overallScore) }}>{overallScore}</span>
+            {/* Header with score and trend */}
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium mb-1">Skin Intelligence</p>
+                <TrendIndicator scans={skinScans} />
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold" style={{ color: scoreColor(overallScore) }}>
+                  {overallScore}
+                </div>
+                <p className="text-xs mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
+                  Overall Score
+                </p>
               </div>
             </div>
 
-            {scoreEntries.length > 0 && (
-              <div className="space-y-2">
-                {scoreEntries.map(([key, value]) => (
+            {/* Mini chart */}
+            {skinScans.length >= 2 && (
+              <div>
+                <p className="text-xs mb-2" style={{ color: "var(--on-surface-variant)" }}>
+                  Last 7 scans
+                </p>
+                <MiniChart scans={skinScans} />
+              </div>
+            )}
+
+            {/* Top 3 concerns */}
+            {topConcerns.length > 0 && (
+              <div className="space-y-2.5">
+                <p className="text-xs font-medium" style={{ color: "var(--on-surface-variant)" }}>
+                  Areas to improve
+                </p>
+                {topConcerns.map(([key, value]) => (
                   <ScoreBar
                     key={key}
                     label={key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -372,15 +476,47 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <div className="flex gap-3 flex-wrap text-xs">
-              {bodyModel.skin_tone?.undertone && (
-                <span className="context-pill">{bodyModel.skin_tone.undertone} undertone</span>
-              )}
+            {/* Latest scan context */}
+            {latestScan && (
+              <div className="flex gap-2 flex-wrap text-xs">
+                {latestScan.scan_context && (
+                  <span className="context-pill">
+                    {latestScan.scan_context === 'morning' ? '🌅' : 
+                     latestScan.scan_context === 'afternoon' ? '☀️' : 
+                     latestScan.scan_context === 'evening' ? '🌆' : '🌙'} {latestScan.scan_context}
+                  </span>
+                )}
+                {latestScan.location_at_scan && (
+                  <span className="context-pill">📍 {latestScan.location_at_scan}</span>
+                )}
+                {latestScan.weather_at_scan?.temp_f && (
+                  <span className="context-pill">🌡️ {Math.round(latestScan.weather_at_scan.temp_f)}°F</span>
+                )}
+                {latestScan.weather_at_scan?.humidity && (
+                  <span className="context-pill">💧 {latestScan.weather_at_scan.humidity}%</span>
+                )}
+              </div>
+            )}
+
+            {/* Face attributes */}
+            <div className="flex gap-2 flex-wrap text-xs">
               {bodyModel.face_shape?.shape && (
                 <span className="context-pill">{bodyModel.face_shape.shape} face</span>
               )}
-              {scores.skin_age && (
-                <span className="context-pill">Skin age {scores.skin_age}</span>
+              {bodyModel.face_shape?.age && (
+                <span className="context-pill">Age {bodyModel.face_shape.age}</span>
+              )}
+              {bodyModel.skin_tone?.skin_color && (
+                <span className="context-pill flex items-center gap-1.5">
+                  <span 
+                    className="w-3 h-3 rounded-full border"
+                    style={{ 
+                      background: bodyModel.skin_tone.skin_color,
+                      borderColor: "var(--outline)"
+                    }}
+                  />
+                  Skin tone
+                </span>
               )}
             </div>
 
@@ -394,7 +530,7 @@ export default function ProfilePage() {
               onClick={() => router.push("/skin-history")}
               className="btn-secondary w-full text-sm"
             >
-              View Skin History →
+              View Detailed History →
             </button>
           </div>
         )}
