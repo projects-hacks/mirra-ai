@@ -52,10 +52,15 @@ def _api_version(task_type: str) -> str:
 
 async def upload_image(task_type: str, image_bytes: bytes, client: httpx.AsyncClient) -> str:
     """Upload an image via the File API and return the file_id."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     version = _api_version(task_type)
     # For nested paths like "2d-vto/earring", the file endpoint uses the base path
     file_path = task_type.split("/")[0] if "/" in task_type else task_type
 
+    logger.info(f"Uploading image for {task_type}, size: {len(image_bytes)} bytes")
+    
     file_res = await client.post(
         f"{BASE}/s2s/{version}/file/{file_path}",
         json={"files": [{"content_type": "image/jpeg", "file_name": "input.jpg", "file_size": len(image_bytes)}]},
@@ -68,7 +73,10 @@ async def upload_image(task_type: str, image_bytes: bytes, client: httpx.AsyncCl
     upload_req = file_data["requests"][0]
     await client.put(upload_req["url"], content=image_bytes, headers=upload_req.get("headers", {}))
 
-    return file_data["file_id"]
+    file_id = file_data["file_id"]
+    logger.info(f"✅ Image uploaded successfully, file_id: {file_id}")
+    
+    return file_id
 
 
 async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | None = None) -> dict:
@@ -114,11 +122,24 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
             task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
 
         # Create the task
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Calling Perfect Corp API: {BASE}/s2s/{version}/task/{task_type}")
+        logger.info(f"Request payload: {task_payload}")
+        
         task_res = await client.post(
             f"{BASE}/s2s/{version}/task/{task_type}",
             json=task_payload,
             headers=HEADERS,
         )
+        
+        # Log error details before raising
+        if task_res.status_code >= 400:
+            logger.error(f"Perfect Corp API Error {task_res.status_code}")
+            logger.error(f"Response body: {task_res.text}")
+            logger.error(f"Request payload was: {task_payload}")
+        
         task_res.raise_for_status()
         task_id = task_res.json()["data"]["task_id"]
 
