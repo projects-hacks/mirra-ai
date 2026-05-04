@@ -315,7 +315,7 @@ class OnboardingService:
                 {
                     "dst_actions": [
                         "wrinkle", "pore", "texture", "acne", "redness", "oiliness",
-                        "age_spot", "radiance", "moisture", "dark_circle", "eye_bag",
+                        "age_spot", "radiance", "moisture", "dark_circle_v2", "eye_bag",
                         "droopy_upper_eyelid", "droopy_lower_eyelid", "firmness"
                     ],
                     "format": "json",
@@ -365,7 +365,7 @@ class OnboardingService:
             metric_mapping = {
                 "wrinkle": "wrinkles",
                 "pore": "pores",
-                "dark_circle": "dark_circles",
+                "dark_circle_v2": "dark_circles",  # Updated to v2
                 # These stay the same
                 "texture": "texture",
                 "acne": "acne",
@@ -416,12 +416,8 @@ class OnboardingService:
                 "hair_color_name": color_data.get("hair_color_name", None),
             }
 
-            # Extract comprehensive face attributes
-            age_gender = face_result.get("agegender", {})
-            facial_ratio = face_result.get("facialratio", {})
-            eyes_data = face_result.get("eyes", {})
-            lips_data = face_result.get("lips", {})
-            nose_data = face_result.get("nose", {})
+            # Extract comprehensive face attributes (new camelCase format)
+            # The new API returns flat structure with camelCase keys
             
             # Helper function to convert array responses to strings
             def array_to_string(value):
@@ -431,16 +427,16 @@ class OnboardingService:
                 return value
             
             face_shape_obj = {
-                "shape": face_result.get("faceshape", "Oval"),
-                "age": age_gender.get("age", None),
-                "gender": age_gender.get("gender", None),
-                "facial_ratios": facial_ratio,
-                "eye_shape": array_to_string(eyes_data.get("eyeshape", None)),
-                "eye_size": array_to_string(eyes_data.get("eyesize", None)),
-                "eyelid_type": array_to_string(eyes_data.get("eyelid", None)),
-                "lip_shape": array_to_string(lips_data.get("lipshape", None)),
-                "nose_width": array_to_string(nose_data.get("nosewidth", None)),
-                "nose_length": array_to_string(nose_data.get("noselength", None)),
+                "shape": face_result.get("faceShape", "Oval"),
+                "age": face_result.get("age", None),
+                "gender": face_result.get("gender", None),
+                "facial_ratios": {},  # Not requested in new format
+                "eye_shape": array_to_string(face_result.get("eyeShape", None)),
+                "eye_size": array_to_string(face_result.get("eyeSize", None)),
+                "eyelid_type": array_to_string(face_result.get("eyelid", None)),
+                "lip_shape": array_to_string(face_result.get("lipShape", None)),
+                "nose_width": array_to_string(face_result.get("noseWidth", None)),
+                "nose_length": array_to_string(face_result.get("noseLength", None)),
             }
 
             body_model = {

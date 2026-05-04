@@ -123,8 +123,12 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
             
             # Add features for face-attr-analysis
             if task_type == "face-attr-analysis":
-                # Face attributes API might need features parameter
-                task_payload["features"] = ["faceshape", "agegender", "facialratio", "eyes", "lips", "nose"]
+                # Face attributes API uses camelCase feature names
+                task_payload["features"] = [
+                    "faceShape", "age", "gender",
+                    "eyeShape", "eyeSize", "eyelid",
+                    "lipShape", "noseWidth", "noseLength"
+                ]
         else:
             # VTO tasks use simpler format
             task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
