@@ -158,6 +158,13 @@ function MiniChart({ scans }: Readonly<{ scans: SkinScan[] }>) {
   );
 }
 
+function getContextEmoji(context: string): string {
+  if (context === 'morning') return '🌅';
+  if (context === 'afternoon') return '☀️';
+  if (context === 'evening') return '🌆';
+  return '🌙';
+}
+
 // ── Main Component ────────────────────────────────────
 export default function ProfilePage() {
   const router = useRouter();
@@ -268,8 +275,8 @@ export default function ProfilePage() {
         {
           user_id: user.id,
           preferred_currency: editForm.preferred_currency,
-          budget_min: editForm.budget_min ? parseFloat(editForm.budget_min) : null,
-          budget_max: editForm.budget_max ? parseFloat(editForm.budget_max) : null,
+          budget_min: editForm.budget_min ? Number.parseFloat(editForm.budget_min) : null,
+          budget_max: editForm.budget_max ? Number.parseFloat(editForm.budget_max) : null,
         } as never,
         { onConflict: "user_id" }
       ),
@@ -495,8 +502,9 @@ export default function ProfilePage() {
           <div className="glass-card space-y-3">
             <p className="text-sm font-medium">Preferences</p>
             <div>
-              <label className="text-xs mb-1 block" style={{ color: "var(--on-surface-variant)" }}>Currency</label>
+              <label htmlFor="currency-select" className="text-xs mb-1 block" style={{ color: "var(--on-surface-variant)" }}>Currency</label>
               <select
+                id="currency-select"
                 className="w-full rounded-lg px-3 py-2 text-sm"
                 style={{ background: "var(--surface-variant)", color: "var(--on-surface)", border: "1px solid var(--outline)" }}
                 value={editForm.preferred_currency}
@@ -509,8 +517,9 @@ export default function ProfilePage() {
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="text-xs mb-1 block" style={{ color: "var(--on-surface-variant)" }}>Budget Min</label>
+                <label htmlFor="budget-min" className="text-xs mb-1 block" style={{ color: "var(--on-surface-variant)" }}>Budget Min</label>
                 <input
+                  id="budget-min"
                   type="number" placeholder="0"
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={{ background: "var(--surface-variant)", color: "var(--on-surface)", border: "1px solid var(--outline)" }}
@@ -519,8 +528,9 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs mb-1 block" style={{ color: "var(--on-surface-variant)" }}>Budget Max</label>
+                <label htmlFor="budget-max" className="text-xs mb-1 block" style={{ color: "var(--on-surface-variant)" }}>Budget Max</label>
                 <input
+                  id="budget-max"
                   type="number" placeholder="500"
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={{ background: "var(--surface-variant)", color: "var(--on-surface)", border: "1px solid var(--outline)" }}
@@ -582,9 +592,7 @@ export default function ProfilePage() {
               <div className="flex gap-2 flex-wrap text-xs">
                 {latestScan.scan_context && (
                   <span className="context-pill">
-                    {latestScan.scan_context === 'morning' ? '🌅' : 
-                     latestScan.scan_context === 'afternoon' ? '☀️' : 
-                     latestScan.scan_context === 'evening' ? '🌆' : '🌙'} {latestScan.scan_context}
+                    {getContextEmoji(latestScan.scan_context)} {latestScan.scan_context}
                   </span>
                 )}
                 {latestScan.location_at_scan && (

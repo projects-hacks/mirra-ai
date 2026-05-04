@@ -155,6 +155,47 @@ class ProofCardGenerator:
         else:
             return 75.0  # Default good score
     
+    def _calculate_formality_score(self, items: List[Dict], occasion: str) -> float:
+        """Calculate formality consistency score (0-100)."""
+        required_formality = self._get_required_formality(occasion)
+        
+        formality_matches = 0
+        for item in items:
+            item_formality = item.get('formality', 0.5)
+            # Check if item formality is within acceptable range
+            if abs(item_formality - required_formality) < 0.3:
+                formality_matches += 1
+        
+        return (formality_matches / len(items)) * 100 if items else 0
+    
+    def _calculate_category_completeness_score(self, items: List[Dict], occasion: str) -> float:
+        """Calculate category completeness score (0-100)."""
+        categories = {item.get('category', '') for item in items}
+        required_categories = self._get_required_categories(occasion)
+        
+        if not required_categories:
+            return 100
+        
+        completeness = len(categories & required_categories) / len(required_categories)
+        return completeness * 100
+    
+    def _calculate_price_consistency_score(self, items: List[Dict]) -> float:
+        """Calculate price consistency score (0-100)."""
+        prices = [parse_price(item.get('price', '0')) for item in items if item.get('price')]
+        
+        if len(prices) < 2:
+            return 80  # Default if not enough items
+        
+        price_range = max(prices) - min(prices)
+        avg_price = sum(prices) / len(prices)
+        
+        if avg_price > 0:
+            price_variance = price_range / avg_price
+            # Low variance = consistent quality
+            return max(0, 100 - (price_variance * 50))
+        else:
+            return 80  # Default if no prices
+    
     def _calculate_style_fit(self, items: List[Dict], context: Dict) -> float:
         """
         Calculate style coherence score (0-100)
@@ -170,42 +211,16 @@ class ProofCardGenerator:
         score = 0.0
         
         # Factor 1: Formality consistency (50% weight)
-        occasion = context.get('occasion', 'casual')
-        required_formality = self._get_required_formality(occasion)
-        
-        formality_matches = 0
-        for item in items:
-            item_formality = item.get('formality', 0.5)
-            # Check if item formality is within acceptable range
-            if abs(item_formality - required_formality) < 0.3:
-                formality_matches += 1
-        
-        formality_score = (formality_matches / len(items)) * 100
+        formality_score = self._calculate_formality_score(items, context.get('occasion', 'casual'))
         score += formality_score * 0.5
         
         # Factor 2: Category completeness (30% weight)
-        categories = {item.get('category', '') for item in items}
-        required_categories = self._get_required_categories(occasion)
+        completeness_score = self._calculate_category_completeness_score(items, context.get('occasion', 'casual'))
+        score += completeness_score * 0.3
         
-        completeness = len(categories & required_categories) / len(required_categories)
-        score += completeness * 100 * 0.3
-        
-        # Factor 3: Price consistency (20% weight) using utility
-        # Mixing very cheap and very expensive items can look off
-        prices = [parse_price(item.get('price', '0')) for item in items if item.get('price')]
-        if len(prices) >= 2:
-            price_range = max(prices) - min(prices)
-            avg_price = sum(prices) / len(prices)
-            
-            if avg_price > 0:
-                price_variance = price_range / avg_price
-                # Low variance = consistent quality
-                consistency_score = max(0, 100 - (price_variance * 50))
-                score += consistency_score * 0.2
-            else:
-                score += 80 * 0.2  # Default if no prices
-        else:
-            score += 80 * 0.2  # Default if not enough items
+        # Factor 3: Price consistency (20% weight)
+        consistency_score = self._calculate_price_consistency_score(items)
+        score += consistency_score * 0.2
         
         return min(score, 100)
     

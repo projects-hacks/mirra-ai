@@ -92,6 +92,97 @@ async def upload_image(task_type: str, image_bytes: bytes, client: httpx.AsyncCl
     return file_id
 
 
+def _build_analysis_task_payload(task_type: str, file_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    """Build task payload for analysis APIs (skin-analysis, skin-tone-analysis, face-attr-analysis)."""
+    task_payload = {"src_file_id": file_id}
+    
+    # Add dst_actions for skin-analysis
+    if task_type == "skin-analysis":
+        dst_actions = params.get("dst_actions", [])
+        if dst_actions:
+            task_payload["dst_actions"] = dst_actions
+    
+    # Add features for face-attr-analysis
+    if task_type == "face-attr-analysis":
+        # Face attributes API uses camelCase feature names
+        task_payload["features"] = [
+            "faceShape", "age", "gender",
+            "eyeShape", "eyeSize", "eyelid",
+            "lipShape", "noseWidth", "noseLength"
+        ]
+    
+    # Add other params (format, face_angle_strictness_level, etc.)
+    for key, value in params.items():
+        if key not in ["dst_actions", "features"]:  # Skip already handled params
+            task_payload[key] = value
+    
+    return task_payload
+
+
+def _build_vto_task_payload(file_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    """Build task payload for VTO tasks."""
+    return {"src_file_id": file_id, **params}
+
+
+async def _create_task(client: httpx.AsyncClient, task_type: str, task_payload: dict, version: str) -> str:
+    """Create a task and return task_id."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    task_res = await client.post(
+        f"{BASE}/s2s/{version}/task/{task_type}",
+        json=task_payload,
+        headers=HEADERS,
+    )
+    
+    # Handle HTTP errors with proper retry logic
+    if task_res.status_code >= 400:
+        logger.error(f"Perfect Corp API Error [{task_type}]: {task_res.status_code} - {task_res.text}")
+        
+        # 4xx errors are client errors (bad request, auth, etc.) - don't retry
+        if 400 <= task_res.status_code < 500:
+            raise PerfectCorpAPIError(
+                f"http_{task_res.status_code}",
+                task_res.text,
+                task_type
+            )
+        # 5xx errors are server errors - can be retried
+        else:
+            task_res.raise_for_status()
+    
+    return task_res.json()["data"]["task_id"]
+
+
+async def _poll_task_result(client: httpx.AsyncClient, task_type: str, task_id: str, version: str) -> dict:
+    """Poll for task result until success or error."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    for _ in range(30):
+        await asyncio.sleep(2)
+        poll = await client.get(
+            f"{BASE}/s2s/{version}/task/{task_type}/{task_id}",
+            headers=HEADERS,
+        )
+        poll.raise_for_status()
+        data = poll.json()["data"]
+
+        if data["task_status"] == "success":
+            logger.debug(f"Task {task_type} completed successfully")
+            return data
+        if data["task_status"] == "error":
+            error_code = data.get("error_code", "unknown")
+            error_msg = data.get("error_message", str(data))
+            logger.error(
+                f"Perfect Corp API error [{task_type}]: {error_code} - {error_msg}"
+            )
+            
+            # Raise specific exception with error code for better handling
+            raise PerfectCorpAPIError(error_code, error_msg, task_type)
+
+    raise TimeoutError(f"Task {task_id} timed out")
+
+
 async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | None = None) -> dict:
     """Execute full Perfect Corp lifecycle: upload → task → poll → result.
 
@@ -110,85 +201,15 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
 
         # Build task payload based on API type
         if task_type in ["skin-analysis", "skin-tone-analysis", "face-attr-analysis"]:
-            # Analysis APIs use simpler format with src_file_id at root level
-            task_payload = {
-                "src_file_id": file_id
-            }
-            
-            # Add dst_actions for skin-analysis
-            if task_type == "skin-analysis":
-                dst_actions = params.get("dst_actions", [])
-                if dst_actions:
-                    task_payload["dst_actions"] = dst_actions
-            
-            # Add features for face-attr-analysis
-            if task_type == "face-attr-analysis":
-                # Face attributes API uses camelCase feature names
-                task_payload["features"] = [
-                    "faceShape", "age", "gender",
-                    "eyeShape", "eyeSize", "eyelid",
-                    "lipShape", "noseWidth", "noseLength"
-                ]
-            
-            # Add other params (format, face_angle_strictness_level, etc.)
-            for key, value in params.items():
-                if key not in ["dst_actions", "features"]:  # Skip already handled params
-                    task_payload[key] = value
+            task_payload = _build_analysis_task_payload(task_type, file_id, params)
         else:
-            # VTO tasks use simpler format
-            task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
+            task_payload = _build_vto_task_payload(file_id, params)
 
         # Create the task
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        task_res = await client.post(
-            f"{BASE}/s2s/{version}/task/{task_type}",
-            json=task_payload,
-            headers=HEADERS,
-        )
-        
-        # Handle HTTP errors with proper retry logic
-        if task_res.status_code >= 400:
-            logger.error(f"Perfect Corp API Error [{task_type}]: {task_res.status_code} - {task_res.text}")
-            
-            # 4xx errors are client errors (bad request, auth, etc.) - don't retry
-            if 400 <= task_res.status_code < 500:
-                raise PerfectCorpAPIError(
-                    f"http_{task_res.status_code}",
-                    task_res.text,
-                    task_type
-                )
-            # 5xx errors are server errors - can be retried
-            else:
-                task_res.raise_for_status()
-        task_id = task_res.json()["data"]["task_id"]
+        task_id = await _create_task(client, task_type, task_payload, version)
 
         # Poll for result
-        for _ in range(30):
-            await asyncio.sleep(2)
-            poll = await client.get(
-                f"{BASE}/s2s/{version}/task/{task_type}/{task_id}",
-                headers=HEADERS,
-            )
-            poll.raise_for_status()
-            data = poll.json()["data"]
-
-            if data["task_status"] == "success":
-                logger.debug(f"Task {task_type} completed successfully")
-                return data
-            if data["task_status"] == "error":
-                import logging
-                error_code = data.get("error_code", "unknown")
-                error_msg = data.get("error_message", str(data))
-                logging.getLogger(__name__).error(
-                    f"Perfect Corp API error [{task_type}]: {error_code} - {error_msg}"
-                )
-                
-                # Raise specific exception with error code for better handling
-                raise PerfectCorpAPIError(error_code, error_msg, task_type)
-
-        raise TimeoutError(f"Task {task_id} timed out")
+        return await _poll_task_result(client, task_type, task_id, version)
 
 
 async def call_vto(

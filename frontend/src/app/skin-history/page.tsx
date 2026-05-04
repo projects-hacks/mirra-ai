@@ -142,7 +142,7 @@ function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: key
           const [x, y] = point.split(",").map(Number);
           return (
             <circle
-              key={i}
+              key={`point-${i}-${x}-${y}`}
               cx={x}
               cy={y}
               r="3"
@@ -154,6 +154,13 @@ function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: key
       </svg>
     </div>
   );
+}
+
+function getContextEmoji(context: string): string {
+  if (context === 'morning') return '🌅';
+  if (context === 'afternoon') return '☀️';
+  if (context === 'evening') return '🌆';
+  return '🌙';
 }
 
 // Scan card with details
@@ -199,9 +206,7 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
       <div className="flex gap-2 flex-wrap text-xs">
         {scan.scan_context && (
           <span className="context-pill">
-            {scan.scan_context === 'morning' ? '🌅' : 
-             scan.scan_context === 'afternoon' ? '☀️' : 
-             scan.scan_context === 'evening' ? '🌆' : '🌙'} {scan.scan_context}
+            {getContextEmoji(scan.scan_context)} {scan.scan_context}
           </span>
         )}
         {scan.location_at_scan && (
@@ -324,7 +329,7 @@ export default function SkinHistoryPage() {
         return;
       }
       
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("skin_scans")
         .select("*")
         .eq("user_id", session.user.id)
