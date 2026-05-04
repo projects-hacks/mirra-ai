@@ -1,64 +1,81 @@
 # Mirra — The Health App for How You Look
 
-> Your skin. Your closet. Your style. Tracked for life.
+> AI appearance health platform that analyzes your skin, tracks your journey, manages your closet, and builds complete looks — starting from what you already own.
 
-Apple Health tracks your body. **Mirra tracks your appearance.** Skin scores, closet inventory, style memory — one lifetime record that gets smarter every day.
+**Built for:** Perfect Corp × Startup World Cup Hackathon (May 7, 2026)
 
-## What Mirra Does
+## Three Pillars
 
-**Day 1:** Scan your face → get skin report → build your first look
-**Week 2:** Upload your closet → "You already own 80% of what you need"
-**Month 1:** Skin trend line → "Your acne is down 15% since switching products"
-**Month 3:** Seasonal shift → "Fall colors suit you better — updated palette"
-**Year 1:** "You saved $2,400 by buying 40% fewer clothes you actually wore"
+### 1. Skin Health
+Analyze your skin (14 scores) → Track changes over time → Simulate improvement (before/after) → Get real product recommendations
 
-## How It Works
+### 2. Fashion
+Manage your closet → Match outfits to occasions/weather → Try on via VTO → Fill gaps from online shopping
 
-```
-You talk to Mirra → Mirra sees your face → checks your closet → reads your calendar
-     → builds the right look → shows you wearing it → tracks what worked
-```
+### 3. Proof Card
+Before any purchase: visual receipt showing what's from your closet ($0), what's new, match scores, and total cost.
 
-- **Voice-first:** Talk, don't tap. Mirra handles the rest.
-- **Feature Discovery:** Visual menu shows all 13 features — tap any button or use voice.
-- **Owned-first:** Your closet before any store.
-- **Visual proof:** See yourself in it before you buy.
-- **Memory:** Every scan, every outfit, every outcome — remembered forever.
+## Tech Stack
 
-## Architecture
-```
-Next.js 14 + TypeScript + Tailwind (Vercel)
-  ↕
-FastAPI + Python 3.12 (Linode K8s via GitHub Actions)
-  ↕
-Deepgram Voice Agent (STT + Gemini 3.1 Pro + TTS)
-Perfect Corp APIs (Skin Analysis + Virtual Try-On)
-Supabase (Postgres + Auth + Storage)
-Google Calendar API
-```
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS (PWA) |
+| Backend | FastAPI, Python 3.12 |
+| Voice | Deepgram Voice Agent (Nova-3 STT → GPT-5-mini → Aura-2 TTS) |
+| AI/AR | Perfect Corp APIs (9 endpoints) |
+| Shopping | Serper (Google Shopping) |
+| Database | Supabase (Postgres + Auth + Storage) |
+| Context | Open-Meteo (weather) |
+
+## Perfect Corp APIs Used
+
+**Skin Intelligence:**
+- AI Skin Analysis — 14 skin concern scores
+- AI Skin Tone — Undertone, depth, hair/lip/eye colors
+- AI Face Attributes — Face shape, proportions
+- AI Skin Simulation — Before/after improvement visualization
+
+**Virtual Try-On:**
+- AI Clothes VTO — Outfit rendering
+- AI Makeup VTO — Beauty application
+- AI Earrings VTO — Earring rendering
+- AI Necklace VTO — Necklace rendering
+- AI Hairstyle VTO — Hair style change
 
 ## Quick Start
 
-### Frontend
 ```bash
-cd frontend && npm install && cp .env.example .env.local && npm run dev
+# Backend
+cd mirra-ai/backend
+cp .env.example .env  # Add API keys
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd mirra-ai/frontend
+npm install
+npm run dev
 ```
 
-### Backend
-```bash
-cd backend && python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt && cp .env.example .env && uvicorn app.main:app --reload --port 8000
+## Project Structure
+
+```
+mirra-ai/
+├── frontend/          # Next.js 14 PWA
+│   └── src/
+│       ├── app/       # Pages (/, /closet, /skin-history)
+│       ├── components/ # UI components
+│       └── hooks/     # useVoiceAgent, useCamera, useAuth
+├── backend/           # FastAPI
+│   └── app/
+│       ├── routers/   # voice.py (WS), closet.py, vto.py
+│       ├── services/  # perfectcorp.py, tool_executor.py
+│       ├── tools/     # skin_tools, fashion_tools, beauty_tools
+│       └── core/      # config, constants, prompts
+└── docs/              # PRD.md, TASKS.md
 ```
 
 ## Docs
-| Doc | Purpose |
-|---|---|
-| [system-architecture.md](docs/system-architecture.md) | System design, workflows, scalability |
-| [api-contract.md](docs/api-contract.md) | Frontend ↔ Backend API reference |
-| [deployment.md](docs/deployment.md) | Deployment guide (Vercel + Linode K8s) |
-| [feedback-loops.md](docs/feedback-loops.md) | How Mirra learns over time |
-| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Code standards (TypeScript, React, SOLID) |
-| [system-prompt.md](agent/system-prompt.md) | Mirra's AI agent configuration |
-| [technical-plan.md](agent/technical-plan.md) | Implementation details |
-| [mirra_final_prd.md](mirra_final_prd.md) | Product requirements document |
 
+- [PRD.md](docs/PRD.md) — Product requirements + API integration details
+- [TASKS.md](docs/TASKS.md) — Task tracker with completion status
