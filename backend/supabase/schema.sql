@@ -78,8 +78,9 @@ create table skin_scans (
   user_id uuid references profiles(id) on delete cascade,
   scores jsonb not null,
   skin_age int,
-  scan_context text,       -- 'morning', 'evening', 'post-workout'
+  scan_context text,       -- 'morning', 'afternoon', 'evening', 'night'
   weather_at_scan jsonb,   -- snapshot of weather when scanned
+  selfie_url text,         -- URL to selfie in Supabase Storage for before/after comparisons
   created_at timestamptz default now()
 );
 create index idx_skin_scans_user_date on skin_scans(user_id, created_at desc);

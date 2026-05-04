@@ -1,21 +1,20 @@
 {
-  "data": {
-    "task_status": "success",
-    "result": {
-      "all": 75.76,
-      "skin_age": 28,
-      "wrinkle": { "score": 82.5, "level": "low" },
-      "pore": { "score": 68.3, "level": "moderate" },
-      "texture": { "score": 78.1, "level": "low" },
-      "acne": { "score": 88.0, "level": "very_low" },
-      "moisture": { "score": 62.4, "level": "moderate" },
-      "oiliness": { "score": 55.8, "level": "moderate" },
-      "redness": { "score": 71.2, "level": "low" },
-      "radiance": { "score": 80.5, "level": "good" },
-      "firmness": { "score": 85.0, "level": "good" },
-      "dark_circle_v2": { "score": 60.1, "level": "moderate" },
-      "eye_bag": { "score": 73.4, "level": "low" },
-      "age_spot": { "score": 91.2, "level": "very_low" }
-    }
+  "task_status": "success",
+  "result": {
+    "skin_age": 28,
+    "wrinkle": { "raw_score": 82.5, "ui_score": 83 },
+    "pore": { "raw_score": 68.3, "ui_score": 68 },
+    "texture": { "raw_score": 78.1, "ui_score": 78 },
+    "acne": { "raw_score": 88.0, "ui_score": 88 },
+    "moisture": { "raw_score": 62.4, "ui_score": 62 },
+    "oiliness": { "raw_score": 55.8, "ui_score": 56 },
+    "redness": { "raw_score": 71.2, "ui_score": 71 },
+    "radiance": { "raw_score": 80.5, "ui_score": 81 },
+    "firmness": { "raw_score": 85.0, "ui_score": 85 },
+    "dark_circle": { "raw_score": 60.1, "ui_score": 60 },
+    "eye_bag": { "raw_score": 73.4, "ui_score": 73 },
+    "age_spot": { "raw_score": 91.2, "ui_score": 91 },
+    "droopy_upper_eyelid": { "raw_score": 78.5, "ui_score": 79 },
+    "droopy_lower_eyelid": { "raw_score": 82.1, "ui_score": 82 }
   }
 }

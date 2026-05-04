@@ -1,14 +1,27 @@
 {
-  "data": {
-    "task_status": "success",
-    "result": {
-      "face_shape": "oval",
-      "face_proportions": {
-        "forehead_ratio": 0.33,
-        "midface_ratio": 0.34,
-        "jawline_ratio": 0.33
-      },
-      "symmetry_score": 87.5
+  "task_status": "success",
+  "results": {
+    "faceshape": "Oval",
+    "agegender": {
+      "age": 28,
+      "gender": "female"
+    },
+    "facialratio": {
+      "face_aspect_ratio": [1, 1.46],
+      "horizontal_third": [33, 33, 33],
+      "vertical_fifth": [20, 20, 20, 20, 20]
+    },
+    "eyes": {
+      "eyeshape": ["Almond"],
+      "eyesize": "Medium",
+      "eyelid": "Double-lid"
+    },
+    "lips": {
+      "lipshape": ["Full", "Bow"]
+    },
+    "nose": {
+      "nosewidth": "Medium",
+      "noselength": "Medium"
     }
   }
 }

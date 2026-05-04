@@ -194,9 +194,9 @@ class OnboardingService:
         """Execute parallel appearance analysis.
 
         Calls three Perfect Corp APIs in parallel:
-        - skin-analysis
-        - skin-tone
-        - face-attributes
+        - skin-analysis (comprehensive skin metrics + skin_age)
+        - skin-tone-analysis (skin/eye/lip/hair colors)
+        - face-attr-analysis (face shape, features, ratios, age/gender)
 
         Args:
             user_id: User ID
@@ -209,16 +209,49 @@ class OnboardingService:
             # Decode base64 selfie
             selfie_bytes = base64.b64decode(selfie_base64.split(",")[-1])  # Handle data URL prefix
 
-            # Execute parallel API calls with circuit breaker and retry
+            # Step 1: Upload selfie to Supabase Storage
+            selfie_url = None
+            try:
+                # Check if user wants to store selfies
+                prefs_response = supabase.from_("user_preferences").select("store_selfies").eq("user_id", user_id).single().execute()
+                store_selfies = prefs_response.data.get("store_selfies", True) if prefs_response.data else True
+                
+                if store_selfies:
+                    # Upload to Supabase Storage: selfies/{user_id}/{timestamp}.jpg
+                    from datetime import datetime
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    storage_path = f"selfies/{user_id}/{timestamp}.jpg"
+                    
+                    storage_response = supabase.storage.from_("selfies").upload(
+                        storage_path,
+                        selfie_bytes,
+                        {"content-type": "image/jpeg"}
+                    )
+                    
+                    # Get public URL
+                    selfie_url = supabase.storage.from_("selfies").get_public_url(storage_path)
+                    logger.info(f"Selfie uploaded to: {selfie_url}")
+            except Exception as storage_error:
+                logger.warning(f"Failed to upload selfie to storage: {str(storage_error)}")
+                # Continue with analysis even if storage fails
+
+            # Step 2: Execute parallel API calls with circuit breaker and retry
             logger.info(f"Starting parallel analysis for user {user_id}")
 
             skin_analysis_task = _call_api_with_circuit_breaker(
                 "skin-analysis",
                 selfie_bytes,
-                {"dst_actions": ["all"], "format": "json"},
+                {
+                    "dst_actions": [
+                        "wrinkle", "pore", "texture", "acne", "redness", "oiliness",
+                        "age_spot", "radiance", "moisture", "dark_circle", "eye_bag",
+                        "droopy_upper_eyelid", "droopy_lower_eyelid", "firmness"
+                    ],
+                    "format": "json"
+                },
             )
-            skin_tone_task = _call_api_with_circuit_breaker("skin-tone", selfie_bytes)
-            face_attributes_task = _call_api_with_circuit_breaker("face-attributes", selfie_bytes)
+            skin_tone_task = _call_api_with_circuit_breaker("skin-tone-analysis", selfie_bytes)
+            face_attributes_task = _call_api_with_circuit_breaker("face-attr-analysis", selfie_bytes)
 
             # Gather results (returns exceptions instead of raising)
             results = await asyncio.gather(
@@ -231,48 +264,85 @@ class OnboardingService:
             if isinstance(skin_analysis, Exception):
                 logger.error(f"Skin analysis failed: {str(skin_analysis)}")
                 from app.core.mock_interceptor import get_mock
-
                 skin_analysis = get_mock("skin-analysis")
 
             if isinstance(skin_tone, Exception):
                 logger.error(f"Skin tone failed: {str(skin_tone)}")
                 from app.core.mock_interceptor import get_mock
-
                 skin_tone = get_mock("skin-tone")
 
             if isinstance(face_attributes, Exception):
                 logger.error(f"Face attributes failed: {str(face_attributes)}")
                 from app.core.mock_interceptor import get_mock
-
                 face_attributes = get_mock("face-attributes")
 
-            # Extract results from API responses
-            skin_result = skin_analysis.get("data", {}).get("result", {})
-            tone_result = skin_tone.get("data", {}).get("result", {})
-            face_result = face_attributes.get("data", {}).get("result", {})
+            # Step 3: Extract comprehensive results from API responses
+            skin_result = skin_analysis.get("result", {})
+            tone_result = skin_tone.get("results", {})
+            face_result = face_attributes.get("results", {})
 
-            # Build body_model structure
+            # Build comprehensive skin_scores with ALL metrics (both raw_score and ui_score)
+            skin_metrics = {}
+            for metric in ["wrinkle", "pore", "texture", "acne", "redness", "oiliness", 
+                          "age_spot", "radiance", "moisture", "dark_circle", "eye_bag",
+                          "droopy_upper_eyelid", "droopy_lower_eyelid", "firmness"]:
+                metric_data = skin_result.get(metric, {})
+                if isinstance(metric_data, dict):
+                    skin_metrics[metric] = {
+                        "raw_score": float(metric_data.get("raw_score", 75.0)),
+                        "ui_score": int(metric_data.get("ui_score", 75))
+                    }
+                else:
+                    # Fallback for mock data format
+                    skin_metrics[metric] = {
+                        "raw_score": 75.0,
+                        "ui_score": 75
+                    }
+
+            # Calculate overall score (average of ui_scores)
+            ui_scores = [m["ui_score"] for m in skin_metrics.values()]
+            overall_score = int(sum(ui_scores) / len(ui_scores)) if ui_scores else 75
+
             skin_scores = {
-                "overall": int(skin_result.get("all", 75)),
-                "moisture": int(skin_result.get("moisture", {}).get("score", 70)),
-                "acne": int(skin_result.get("acne", {}).get("score", 85)),
-                "wrinkles": int(skin_result.get("wrinkle", {}).get("score", 80)),
-                "pores": int(skin_result.get("pore", {}).get("score", 75)),
-                "dark_circles": int(skin_result.get("dark_circle_v2", {}).get("score", 70)),
+                "overall": overall_score,
+                **skin_metrics
             }
 
-            skin_tone_data = tone_result.get("skin_tone", {})
+            # Extract skin age
+            skin_age = skin_result.get("skin_age", None)
+            if skin_age:
+                skin_age = int(skin_age)
+
+            # Extract comprehensive skin tone data
+            color_data = tone_result.get("color", {})
             skin_tone_obj = {
-                "undertone": skin_tone_data.get("undertone", "neutral"),
-                "depth": skin_tone_data.get("depth", "medium"),
-                "hex": skin_tone_data.get("hex", "#D4A574"),
-                "color_season": tone_result.get("color_season", "neutral"),
+                "skin_color": color_data.get("skin_color", "#D4A574"),
+                "eye_color": color_data.get("eye_color", None),
+                "eye_color_name": color_data.get("eye_color_name", None),
+                "lip_color": color_data.get("lip_color", None),
+                "eyebrow_color": color_data.get("eyebrow_color", None),
+                "hair_color": color_data.get("hair_color", None),
+                "hair_color_name": color_data.get("hair_color_name", None),
             }
 
+            # Extract comprehensive face attributes
+            age_gender = face_result.get("agegender", {})
+            facial_ratio = face_result.get("facialratio", {})
+            eyes_data = face_result.get("eyes", {})
+            lips_data = face_result.get("lips", {})
+            nose_data = face_result.get("nose", {})
+            
             face_shape_obj = {
-                "shape": face_result.get("face_shape", "oval"),
-                "symmetry_score": float(face_result.get("symmetry_score", 85.0)),
-                "proportions": face_result.get("face_proportions", {}),
+                "shape": face_result.get("faceshape", "Oval"),
+                "age": age_gender.get("age", None),
+                "gender": age_gender.get("gender", None),
+                "facial_ratios": facial_ratio,
+                "eye_shape": eyes_data.get("eyeshape", None),
+                "eye_size": eyes_data.get("eyesize", None),
+                "eyelid_type": eyes_data.get("eyelid", None),
+                "lip_shape": lips_data.get("lipshape", None),
+                "nose_width": nose_data.get("nosewidth", None),
+                "nose_length": nose_data.get("noselength", None),
             }
 
             body_model = {
@@ -281,7 +351,7 @@ class OnboardingService:
                 "face_shape": face_shape_obj,
             }
 
-            # Store in body_model table (upsert)
+            # Store in body_model table (upsert - latest snapshot)
             supabase.from_("body_model").upsert(
                 {
                     "user_id": user_id,
@@ -291,21 +361,69 @@ class OnboardingService:
                 }
             ).execute()
 
-            # Insert skin_scans row
-            supabase.from_("skin_scans").insert({"user_id": user_id, "scores": skin_scores}).execute()
+            # Step 4: Insert comprehensive skin_scans row for time-series tracking
+            from datetime import datetime
+            import pytz
+            
+            # Get user's timezone and location
+            try:
+                profile_response = supabase.from_("profiles").select("timezone, location").eq("id", user_id).single().execute()
+                user_timezone = profile_response.data.get("timezone", "UTC") if profile_response.data else "UTC"
+                user_location = profile_response.data.get("location", None) if profile_response.data else None
+                tz = pytz.timezone(user_timezone)
+            except:
+                tz = pytz.UTC
+                user_location = None
+            
+            current_time = datetime.now(tz)
+            hour = current_time.hour
+            
+            # Determine scan context based on time of day
+            if 5 <= hour < 12:
+                scan_context = "morning"
+            elif 12 <= hour < 17:
+                scan_context = "afternoon"
+            elif 17 <= hour < 21:
+                scan_context = "evening"
+            else:
+                scan_context = "night"
+
+            # Get weather data for the scan (optional)
+            weather_data = None
+            if user_location:
+                try:
+                    from app.services.weather import get_weather
+                    weather_data = await get_weather(user_location)
+                except Exception as weather_error:
+                    logger.warning(f"Could not fetch weather data: {str(weather_error)}")
+
+            # Insert comprehensive scan record
+            supabase.from_("skin_scans").insert({
+                "user_id": user_id,
+                "scores": skin_scores,
+                "skin_age": skin_age,
+                "scan_context": scan_context,
+                "weather_at_scan": weather_data,
+                "selfie_url": selfie_url,  # Store selfie URL for before/after comparisons
+            }).execute()
 
             # Cache body_model in Redis
             await cache_set(f"body_model:{user_id}", body_model, TTL.BODY_MODEL)
 
-            # Generate greeting
-            greeting = self._generate_greeting(skin_scores)
+            # Generate greeting based on overall score
+            greeting = self._generate_greeting_from_scores(skin_scores)
 
             logger.info(f"Analysis complete for user {user_id}")
 
             return {
                 "success": True,
                 "body_model": body_model,
-                "skin_scan": {"user_id": user_id, "scores": skin_scores},
+                "skin_scan": {
+                    "user_id": user_id,
+                    "scores": skin_scores,
+                    "skin_age": skin_age,
+                    "scan_context": scan_context,
+                },
                 "greeting": greeting,
             }
 
@@ -313,29 +431,29 @@ class OnboardingService:
             logger.error(f"Onboarding analyze failed for user {user_id}: {str(e)}")
             raise
 
-    def _generate_greeting(self, skin_scores: dict[str, int]) -> str:
-        """Generate personalized greeting based on skin scores.
+    def _generate_greeting_from_scores(self, skin_scores: dict[str, Any]) -> str:
+        """Generate personalized greeting based on comprehensive skin scores.
 
         Args:
-            skin_scores: Dict of skin metric scores (0-100)
+            skin_scores: Dict of skin metric scores with raw_score and ui_score
 
         Returns:
             Personalized greeting message
         """
         overall = skin_scores.get("overall", 75)
 
-        # Find most significant concern (lowest score below threshold)
-        concerns = {
-            metric: (label, skin_scores.get(metric, 100))
-            for metric, label in SKIN_CONCERNS.items()
-        }
+        # Find most significant concern (lowest ui_score below threshold)
+        concerns = []
+        for metric, label in SKIN_CONCERNS.items():
+            if metric in skin_scores and isinstance(skin_scores[metric], dict):
+                ui_score = skin_scores[metric].get("ui_score", 100)
+                if ui_score < SKIN_CONCERN_THRESHOLD:
+                    concerns.append((label, ui_score))
 
-        # Filter concerns below threshold and sort by score
-        significant_concerns = [(name, score) for name, score in concerns.values() if score < SKIN_CONCERN_THRESHOLD]
-        significant_concerns.sort(key=lambda x: x[1])
+        concerns.sort(key=lambda x: x[1])  # Sort by score (lowest first)
 
-        if significant_concerns:
-            concern_name = significant_concerns[0][0]
+        if concerns:
+            concern_name = concerns[0][0]
             return (
                 f"Your skin's looking good overall with a score of {overall}. "
                 f"I noticed some {concern_name} we can work on together."

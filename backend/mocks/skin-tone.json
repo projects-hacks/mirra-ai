@@ -1,17 +1,14 @@
 {
-  "data": {
-    "task_status": "success",
-    "result": {
-      "skin_tone": {
-        "undertone": "warm",
-        "depth": "medium",
-        "overtone": "golden",
-        "hex": "#D4A574",
-        "lab": { "l": 70.2, "a": 12.5, "b": 25.8 }
-      },
-      "color_season": "warm_autumn",
-      "best_colors": ["#8B6914", "#C19A6B", "#556B2F", "#8B4513", "#CD853F"],
-      "avoid_colors": ["#FF69B4", "#00CED1", "#C0C0C0"]
+  "task_status": "success",
+  "results": {
+    "color": {
+      "skin_color": "#D4A574",
+      "eye_color": "#8B4513",
+      "eye_color_name": "Brown",
+      "lip_color": "#C87872",
+      "eyebrow_color": "#654321",
+      "hair_color": "#3B2F2F",
+      "hair_color_name": "Brown"
     }
   }
 }
