@@ -1,253 +1,194 @@
-/**
- * Selfie Capture Screen
- * Uses Perfect Corp Camera Kit SDK for face detection with real-time validation
- * Provides automatic face alignment, lighting detection, and quality validation
- */
-
 "use client";
 
-import { useEffect, useState } from "react";
-import { useCameraKit, type CapturedImage } from "@/hooks/useCameraKit";
-import { validateImage, resizeImageIfNeeded } from "@/utils/imageValidation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-// ── Props Interface ─────────────────────────────────
 interface SelfieCaptureScreenProps {
   onCapture: (selfie: string) => void;
   onRecapture: () => void;
 }
 
-// ── Component ───────────────────────────────────────
+type CaptureState = "loading" | "ready" | "captured" | "error";
+
+const MIN_WIDTH = 640;
+const MIN_HEIGHT = 480;
+
 export function SelfieCaptureScreen({
   onCapture,
   onRecapture,
 }: Readonly<SelfieCaptureScreenProps>) {
-  const [captureState, setCaptureState] = useState<
-    "loading" | "ready" | "capturing" | "captured" | "error"
-  >("loading");
+  const [captureState, setCaptureState] = useState<CaptureState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [capturedImageData, setCapturedImageData] = useState<string | null>(null);
 
-  const {
-    isSDKLoaded,
-    isSDKLoading,
-    isCameraOpen,
-    error: sdkError,
-    loadSDK,
-    openCamera,
-    closeCamera,
-  } = useCameraKit({
-    onOpened: () => {
-      console.log("Camera Kit opened");
-    },
-    onLoading: (progress) => {
-      console.log(`Loading: ${progress}%`);
-    },
-    onLoaded: () => {
-      console.log("Camera Kit loaded");
-      setCaptureState("ready");
-    },
-    onFaceDetectionStarted: () => {
-      console.log("Face detection started");
-      setCaptureState("capturing");
-    },
-    onFaceDetectionCaptured: (images: CapturedImage[]) => {
-      console.log("Image captured", images);
-      
-      if (images.length === 0) {
-        setErrorMessage("No image captured. Please try again.");
-        setCaptureState("error");
-        return;
-      }
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-      const capturedImage = images[0];
-      
-      // Convert to base64 if blob
-      if (typeof capturedImage.image === "string") {
-        setCapturedImageData(capturedImage.image);
-        setCaptureState("captured");
-      } else {
-        // Convert Blob to base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          setCapturedImageData(base64);
-          setCaptureState("captured");
-        };
-        reader.onerror = () => {
-          setErrorMessage("Failed to process captured image.");
-          setCaptureState("error");
-        };
-        reader.readAsDataURL(capturedImage.image);
-      }
-    },
-    onClosed: () => {
-      console.log("Camera Kit closed");
-    },
-    onError: (error) => {
-      console.error("Camera Kit error:", error);
-      setErrorMessage(error.message);
-      setCaptureState("error");
-    },
-  });
-
-  // Load SDK on mount
-  useEffect(() => {
-    console.log("[SelfieCaptureScreen] Mounting, loading SDK...");
-    loadSDK();
-  }, [loadSDK]);
-
-  // Open camera immediately when SDK is loaded (don't wait for state change)
-  useEffect(() => {
-    if (isSDKLoaded && !isCameraOpen) {
-      console.log("[SelfieCaptureScreen] SDK loaded, opening camera immediately...");
-      setCaptureState("ready"); // Set to ready immediately
-      openCamera({
-        faceDetectionMode: "skincare", // Use 'skincare' mode for onboarding
-        imageFormat: "base64",
-        language: "enu",
-      });
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-  }, [isSDKLoaded, isCameraOpen, openCamera]);
+  }, []);
 
-  // Note: We rely on onFaceDetectionCaptured event to transition to "captured" state
-  // The SDK will fire this event after the countdown (3-2-1) completes and image is captured
-
-  // Handle SDK errors
-  useEffect(() => {
-    if (sdkError) {
-      setErrorMessage(sdkError.message);
-      setCaptureState("error");
+  const mapCameraError = useCallback((err: unknown): string => {
+    if (err instanceof Error) {
+      if (err.name === "NotAllowedError") {
+        return "Camera access was denied. Please allow camera access.";
+      }
+      if (err.name === "NotFoundError") {
+        return "No camera detected. Please connect a camera.";
+      }
+      if (err.name === "NotReadableError") {
+        return "Your camera is being used by another application.";
+      }
     }
-  }, [sdkError]);
+    return "Failed to access camera. Please try again.";
+  }, []);
 
-  const handleCancel = () => {
-    closeCamera();
-    onRecapture();
-  };
-
-  const handleRetry = () => {
-    setErrorMessage(null);
+  const initCamera = useCallback(async () => {
     setCaptureState("loading");
-    setCapturedImageData(null);
-    openCamera({
-      faceDetectionMode: "skincare",
-      imageFormat: "base64",
-      language: "enu",
-    });
-  };
+    setErrorMessage(null);
 
-  const handleAnalyze = async () => {
-    if (!capturedImageData) return;
-    
-    // Validate image before sending to API
-    const validation = await validateImage(capturedImageData, 480); // SD minimum
-    
-    if (!validation.valid) {
-      console.error('Image validation failed:', validation.error);
-      
-      // Try to resize if too small
-      if (validation.error?.includes('too small')) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { min: MIN_WIDTH, ideal: 1280 },
+          height: { min: MIN_HEIGHT, ideal: 720 },
+          facingMode: "user",
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
         try {
-          console.log('Attempting to resize image...');
-          const resized = await resizeImageIfNeeded(capturedImageData, 480);
-          
-          // Validate resized image
-          const resizedValidation = await validateImage(resized, 480);
-          if (resizedValidation.valid) {
-            console.log('Image resized successfully:', resizedValidation);
-            closeCamera();
-            onCapture(resized);
-            return;
+          const playResult = videoRef.current.play();
+          if (playResult instanceof Promise) {
+            await playResult;
           }
-        } catch (resizeError) {
-          console.error('Failed to resize image:', resizeError);
+        } catch {
+          // Ignore play errors in non-browser environments
         }
       }
-      
-      // Show error to user
-      setErrorMessage(validation.error || 'Image quality too low. Please retake.');
-      setCaptureState('error');
+
+      setCaptureState("ready");
+    } catch (err) {
+      stopCamera();
+      setErrorMessage(mapCameraError(err));
+      setCaptureState("error");
+    }
+  }, [mapCameraError, stopCamera]);
+
+  useEffect(() => {
+    initCamera();
+    return () => stopCamera();
+  }, [initCamera, stopCamera]);
+
+  const handleCapture = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.videoWidth < MIN_WIDTH || video.videoHeight < MIN_HEIGHT) {
+      stopCamera();
+      setErrorMessage("Camera resolution too low. Please switch to a higher resolution camera.");
+      setCaptureState("error");
       return;
     }
-    
-    console.log('Image validation passed:', validation);
-    closeCamera();
-    onCapture(capturedImageData);
-  };
 
-  const handleRecaptureImage = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+
+    setCapturedImageData(dataUrl);
+    setCaptureState("captured");
+  }, [stopCamera]);
+
+  const handleUse = useCallback(() => {
+    if (!capturedImageData) return;
+    stopCamera();
+    onCapture(capturedImageData);
+  }, [capturedImageData, onCapture, stopCamera]);
+
+  const handleRetake = useCallback(() => {
     setCapturedImageData(null);
-    setCaptureState("loading");
-    openCamera({
-      faceDetectionMode: "skincare",
-      imageFormat: "base64",
-      language: "enu",
-    });
-  };
+    setCaptureState("ready");
+    onRecapture();
+  }, [onRecapture]);
+
+  const handleRetry = useCallback(() => {
+    initCamera();
+  }, [initCamera]);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      {/* Camera Kit Mount Point */}
-      <div id="YMK-module" className="w-full max-w-md" />
+      <div className="glass-card w-full max-w-md space-y-4">
+        <div className="relative w-full aspect-[3/4] overflow-hidden rounded-2xl bg-black/20">
+          {capturedImageData ? (
+            <img
+              src={capturedImageData}
+              alt="Captured selfie"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              autoPlay
+              playsInline
+              muted
+            />
+          )}
 
-      {/* Loading Overlay - Only show during SDK loading */}
-      {isSDKLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="glass-card flex flex-col items-center gap-4 p-6">
-            <div className="relative h-16 w-16">
-              <svg
-                className="h-16 w-16 animate-spin"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
+          {captureState === "loading" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <div className="processing-ring h-16 w-16" />
             </div>
-            <div className="text-center">
-              <p
-                className="text-lg font-semibold"
-                style={{ color: "var(--on-surface)" }}
-              >
-                Initializing Camera...
-              </p>
-              <p
-                className="mt-1 text-sm"
-                style={{ color: "var(--on-surface-variant)" }}
-              >
-                This will only take a moment
-              </p>
+          )}
+        </div>
+
+        {captureState === "ready" && (
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Position Your Face</h2>
+            <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+              Center your face in the frame and ensure good lighting.
+            </p>
+            <button onClick={handleCapture} className="btn-primary w-full">
+              Start Initial Scan
+            </button>
+          </div>
+        )}
+
+        {captureState === "captured" && capturedImageData && (
+          <div className="text-center space-y-3">
+            <h2 className="text-xl font-semibold">How does this look?</h2>
+            <div className="flex gap-3">
+              <button onClick={handleRetake} className="btn-secondary flex-1">
+                Retake
+              </button>
+              <button onClick={handleUse} className="btn-primary flex-1">
+                Use This
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Error Overlay */}
       {captureState === "error" && errorMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="glass-card flex w-full max-w-md flex-col items-center gap-4 p-6">
+          <div className="glass-card flex w-full max-w-md flex-col items-center gap-4 p-6 text-center">
             <div
               className="flex h-16 w-16 items-center justify-center rounded-full"
               style={{ background: "var(--error)", color: "white" }}
             >
-              <svg
-                className="h-8 w-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -256,92 +197,19 @@ export function SelfieCaptureScreen({
                 />
               </svg>
             </div>
-            <div className="text-center">
-              <h3
-                className="text-xl font-semibold"
-                style={{ color: "var(--on-surface)" }}
-              >
-                Camera Error
-              </h3>
-              <p
-                className="mt-2 text-sm"
-                style={{ color: "var(--on-surface-variant)" }}
-              >
+            <div>
+              <h3 className="text-xl font-semibold">Camera Error</h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--on-surface-variant)" }}>
                 {errorMessage}
               </p>
             </div>
-            <div className="flex w-full gap-3">
-              <button
-                onClick={handleCancel}
-                className="btn-secondary flex-1"
-                aria-label="Cancel"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRetry}
-                className="btn-primary flex-1"
-                aria-label="Try again"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Instructions Overlay (when ready) */}
-      {captureState === "ready" && (
-        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-6">
-          <div className="glass-card max-w-md text-center">
-            <p
-              className="text-sm font-medium"
-              style={{ color: "var(--on-surface)" }}
-            >
-              Position your face in the frame. The camera will guide you to the perfect angle.
-            </p>
-            <button
-              onClick={handleCancel}
-              className="btn-secondary mt-3 w-full"
-              aria-label="Cancel"
-            >
-              Cancel
+            <button onClick={handleRetry} className="btn-primary w-full">
+              Try Again
             </button>
           </div>
         </div>
       )}
 
-      {/* Captured Image Confirmation */}
-      {captureState === "captured" && (
-        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-6">
-          <div className="glass-card max-w-md text-center">
-            <p
-              className="text-sm font-medium mb-4"
-              style={{ color: "var(--on-surface)" }}
-            >
-              Great! Ready to analyze your skin?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleRecaptureImage}
-                className="btn-secondary flex-1"
-                aria-label="Retake photo"
-              >
-                Retake
-              </button>
-              <button
-                onClick={handleAnalyze}
-                className="btn-primary flex-1"
-                aria-label="Analyze skin"
-              >
-                Analyze
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Privacy Notice */}
       <div className="fixed left-0 right-0 top-6 z-40 flex justify-center px-6">
         <div
           className="flex items-center gap-2 rounded-full px-4 py-2 text-xs"
@@ -351,12 +219,7 @@ export function SelfieCaptureScreen({
             backdropFilter: "blur(10px)",
           }}
         >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

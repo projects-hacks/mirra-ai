@@ -4,7 +4,7 @@
  */
 
 import { getSupabase } from "@/lib/supabase";
-import { retryWithBackoff } from "@/lib/retry";
+import { retryWithBackoff } from "@/lib/api";
 
 // ── Constants ──────────────────────────────────────
 const STORAGE_BUCKET = "closet-items";

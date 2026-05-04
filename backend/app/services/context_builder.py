@@ -7,7 +7,7 @@ HYBRID APPROACH: Fetches Perfect Corp color analysis if available (cached)
 
 from datetime import datetime
 from app.services.matching_engine import MatchContext
-from app.core.constants import Occasion, Season
+from app.core.closet_constants import Occasion, Season
 from app.services import calendar, weather
 from app.services.color_analyzer import get_user_color_profile
 
@@ -104,25 +104,25 @@ def _infer_occasion_from_event(event: dict) -> str:
     
     # Keyword matching
     if any(kw in summary for kw in ['wedding', 'ceremony', 'gala']):
-        return 'wedding'
-    elif any(kw in summary for kw in ['meeting', 'interview', 'presentation']):
-        return 'meeting'
+        return 'formal'
+    elif any(kw in summary for kw in ['meeting', 'interview', 'presentation', 'office', 'work', 'standup']):
+        return 'work'
     elif any(kw in summary for kw in ['date', 'dinner', 'romantic']):
         return 'date'
     elif any(kw in summary for kw in ['brunch', 'lunch', 'breakfast']):
-        return 'brunch'
-    elif any(kw in summary for kw in ['office', 'work', 'standup']):
-        return 'office'
-    elif any(kw in summary for kw in ['concert', 'show', 'performance']):
-        return 'concert'
+        return 'casual'
+    elif any(kw in summary for kw in ['concert', 'show', 'performance', 'party', 'celebration']):
+        return 'party'
+    elif any(kw in summary for kw in ['gym', 'workout', 'run', 'training', 'yoga']):
+        return 'athletic'
     else:
         return 'casual'
 
 
 def _determine_formality(occasion: str) -> str:
     """Determine formality level from occasion"""
-    formal_occasions = ['wedding', 'formal', 'gala', 'ceremony']
-    business_occasions = ['meeting', 'office', 'interview', 'presentation']
+    formal_occasions = ['formal', 'party']
+    business_occasions = ['work']
     
     occasion_lower = occasion.lower()
     

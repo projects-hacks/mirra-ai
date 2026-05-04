@@ -11,8 +11,8 @@ import {
 } from "react";
 import type { AppState, AppAction, Message, VTOResult } from "@/types";
 import { ToolName } from "@/lib/constants";
-import { ErrorBoundary } from "./ErrorBoundary";
-import { ToastProvider } from "../ui/Toast";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
+import { ToastProvider } from "@/components/ui/Toast";
 
 // ── Storage Keys ────────────────────────────────────
 const STORAGE_KEYS = {

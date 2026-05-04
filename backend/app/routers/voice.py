@@ -13,6 +13,7 @@ from app.core.constants import (
     DeepgramMessageType, WSClientMessageType, WSServerMessageType,
     ToolName, CachePrefix,
 )
+from app.core.llm_config import build_deepgram_think_provider
 from app.services.tool_executor import execute_tool
 
 logger = logging.getLogger(__name__)
@@ -46,27 +47,10 @@ def _function_definitions() -> list[dict]:
     ]
 
 
-def _build_think_provider() -> dict:
-    """Build the think provider config for Deepgram Voice Agent.
-
-    Uses Deepgram's managed LLM — no external API key needed.
-    Optimized for real-time voice: latency matters more than raw quality.
-
-    Latency tiers (from Deepgram docs):
-      - gpt-4.1-mini / gpt-4o-mini (Standard) ~600ms — best balance
-      - gemini-3-flash-preview (Standard) — good alternative
-      - gpt-4.1 / gemini-3-pro-preview (Advanced) ~800ms+ — best quality
-    """
-    logger.info("LLM: Deepgram managed gpt-4.1-mini (Standard, low latency)")
-    return {
-        "type": "open_ai",
-        "model": "gpt-4.1-mini",
-        "temperature": 0.7,
-    }
-
-
 def build_agent_settings() -> dict:
     """Build the Settings message per Deepgram Voice Agent API spec."""
+    think_provider = build_deepgram_think_provider()
+    logger.info("LLM: Deepgram managed %s", think_provider.get("model"))
     settings_msg: dict = {
         "type": DeepgramMessageType.SETTINGS,
         "audio": {
@@ -77,7 +61,7 @@ def build_agent_settings() -> dict:
             "language": "en",
             "listen": {"provider": {"type": "deepgram", "model": "nova-3"}},
             "think": {
-                "provider": _build_think_provider(),
+                "provider": think_provider,
                 "prompt": SYSTEM_PROMPT,
                 "functions": _function_definitions(),
             },

@@ -4,7 +4,7 @@ import { useMemo, memo } from "react";
 import Image from "next/image";
 import MatchScore from "@/components/ui/MatchScore";
 import { useToast } from "@/components/ui/Toast";
-import { retryWithBackoff } from "@/lib/retry";
+import { retryWithBackoff } from "@/lib/api";
 
 interface ProofCardItem {
   name: string;

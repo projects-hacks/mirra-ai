@@ -2,31 +2,6 @@
 from enum import StrEnum
 
 
-# ============================================================
-# CLOSET
-# ============================================================
-
-class ItemCategory(StrEnum):
-    JACKET = "jacket"
-    DRESS = "dress"
-    TOP = "top"
-    BOTTOM = "bottom"
-    SHOES = "shoes"
-    ACCESSORY = "accessory"
-
-
-class Occasion(StrEnum):
-    OFFICE = "office"
-    MEETING = "meeting"
-    DATE = "date"
-    CASUAL = "casual"
-    BRUNCH = "brunch"
-    FORMAL = "formal"
-    WEDDING = "wedding"
-    CONCERT = "concert"
-    TRAVEL = "travel"
-
-
 class Season(StrEnum):
     SPRING = "spring"
     SUMMER = "summer"

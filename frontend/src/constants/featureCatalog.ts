@@ -11,7 +11,6 @@ import {
   Search,
   Cloud,
   Calendar,
-  ShoppingBag,
   Shuffle,
   FileCheck,
 } from "lucide-react";
@@ -33,7 +32,7 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
     requiresParams: false,
   },
   {
-    tool: ToolName.GET_SKIN_TONE,
+    tool: ToolName.ANALYZE_SKIN_TONE,
     icon: Palette,
     label: "Detect Skin Tone",
     description: "Find your skin tone and undertone",
@@ -41,7 +40,7 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
     requiresParams: false,
   },
   {
-    tool: ToolName.GET_FACE_ATTRIBUTES,
+    tool: ToolName.ANALYZE_FACE,
     icon: ScanFace,
     label: "Face Attributes",
     description: "Analyze facial features",
@@ -83,7 +82,7 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
     requiresParams: true,
   },
   {
-    tool: ToolName.TRY_ON_HAIRSTYLE,
+    tool: ToolName.CHANGE_HAIRSTYLE,
     icon: Scissors,
     label: "Change Hairstyle",
     description: "Virtual hairstyle try-on",
@@ -103,7 +102,7 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
 
   // ── Context ──────────────────────────────────────
   {
-    tool: ToolName.GET_WEATHER,
+    tool: ToolName.CHECK_WEATHER,
     icon: Cloud,
     label: "Check Weather",
     description: "Get weather for outfit planning",
@@ -111,7 +110,7 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
     requiresParams: false,
   },
   {
-    tool: ToolName.GET_CALENDAR,
+    tool: ToolName.CHECK_CALENDAR,
     icon: Calendar,
     label: "Check Calendar",
     description: "View upcoming events",
@@ -120,14 +119,6 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
   },
 
   // ── Closet ───────────────────────────────────────
-  {
-    tool: ToolName.CHECK_CLOSET,
-    icon: ShoppingBag,
-    label: "Check Closet",
-    description: "View your saved items",
-    category: FeatureCategory.CLOSET,
-    requiresParams: false,
-  },
   {
     tool: ToolName.MATCH_CLOSET,
     icon: Shuffle,

@@ -5,11 +5,9 @@ import {
   getAllCategories,
   getAllOccasions,
   getAllSeasons,
-  formatCategoryLabel,
-  formatOccasionLabel,
-  formatSeasonLabel,
   FORMALITY_DEFAULT,
 } from "@/lib/closet-constants";
+import { capitalize } from "@/utils/string";
 
 interface MetadataFormProps {
   isOpen: boolean;
@@ -255,7 +253,7 @@ export default function MetadataForm({
                 <option value="">Select category</option>
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
-                    {formatCategoryLabel(cat)}
+                    {capitalize(cat)}
                   </option>
                 ))}
               </select>
@@ -411,7 +409,7 @@ export default function MetadataForm({
                         : "bg-gray-800 text-gray-300 hover:bg-gray-700"
                     }`}
                   >
-                    {formatOccasionLabel(occasion)}
+                    {capitalize(occasion)}
                   </button>
                 ))}
               </div>
@@ -432,7 +430,7 @@ export default function MetadataForm({
                         : "bg-gray-800 text-gray-300 hover:bg-gray-700"
                     }`}
                   >
-                    {formatSeasonLabel(season)}
+                    {capitalize(season)}
                   </button>
                 ))}
               </div>

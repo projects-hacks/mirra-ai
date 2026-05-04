@@ -42,6 +42,7 @@ htmlcov/
 # Misc
 *.bak
 *.tmp
+stitch_mirra_ai_appearance_operator/
 
 # Kiro local setup
 .kiro/

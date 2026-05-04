@@ -70,7 +70,6 @@ export default function AgentOverlay({
   const productResults = messages.filter(
     (m) => m.type === "tool_result" && 
     ((m as any).tool === ToolName.SEARCH_PRODUCTS || 
-     (m as any).tool === ToolName.CHECK_CLOSET ||
      (m as any).tool === ToolName.MATCH_CLOSET)
   );
   const latestProducts = productResults.at(-1) ?? null;

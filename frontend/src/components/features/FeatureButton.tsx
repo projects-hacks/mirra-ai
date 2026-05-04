@@ -49,6 +49,7 @@ const FeatureButton = memo(function FeatureButton({
       className="glass-card group relative flex flex-col items-start gap-2 p-4 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] active:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       style={{
         minHeight: "44px",
+        minWidth: "44px",
         WebkitTapHighlightColor: "transparent",
       }}
     >

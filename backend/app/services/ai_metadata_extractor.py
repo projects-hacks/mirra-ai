@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 import httpx
 
 from app.core.config import settings
-from app.core.closet_constants import (
+from app.core.llm_config import (
     GEMINI_API_BASE_URL,
     GEMINI_MODEL_NAME,
     GEMINI_TEMPERATURE,
@@ -18,6 +18,8 @@ from app.core.closet_constants import (
     MAX_RETRIES,
     RETRY_BASE_DELAY_SECONDS,
     IMAGE_DOWNLOAD_TIMEOUT_SECONDS,
+)
+from app.core.closet_constants import (
     get_all_categories,
     get_all_occasions,
     get_all_seasons,

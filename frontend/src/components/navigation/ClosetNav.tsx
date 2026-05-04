@@ -23,7 +23,7 @@ export default function ClosetNav() {
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex flex-col items-center justify-center gap-1 px-4 py-2 min-h-[44px] min-w-[44px] rounded-lg transition-colors ${
                   isActive
                     ? 'text-purple-400'
                     : 'text-white/70 hover:text-white hover:bg-white/10'

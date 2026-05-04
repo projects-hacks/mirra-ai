@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
-import { getSupabase } from "@/lib/supabase";
+import { useEffect, useCallback, useRef, useState } from "react";
+import {
+  mapUser,
+  getSession,
+  refreshSession,
+  onAuthStateChange,
+  signInWithGoogle as authSignInWithGoogle,
+  signOut as authSignOut,
+} from "@/lib/auth";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
 import type { User } from "@/types";
 
@@ -19,24 +26,7 @@ export function useAuth() {
   const { user } = useAppState();
   const channelRef = useRef<BroadcastChannel | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Helper: map Supabase user → app User ──────────────
-  function mapUser(supaUser: {
-    id: string;
-    email?: string;
-    user_metadata?: Record<string, string>;
-  }): User {
-    return {
-      id: supaUser.id,
-      email: supaUser.email ?? "",
-      displayName:
-        supaUser.user_metadata?.full_name ??
-        supaUser.user_metadata?.name ??
-        supaUser.email?.split("@")[0] ??
-        "User",
-      avatarUrl: supaUser.user_metadata?.avatar_url,
-    };
-  }
+  const [loading, setLoading] = useState(true);
 
   // ── 17.1: Schedule proactive token refresh 5 min before expiry ──
   const scheduleTokenRefresh = useCallback((expiresAt: number | undefined) => {
@@ -62,13 +52,12 @@ export function useAuth() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshToken = useCallback(async () => {
-    const supabase = getSupabase();
-    const { data, error } = await supabase.auth.refreshSession();
+    const { data, error } = await refreshSession();
 
     if (error || !data.session) {
       // Refresh failed → sign out and redirect
       console.warn("Token refresh failed — signing out", error?.message);
-      await supabase.auth.signOut();
+      await authSignOut();
       dispatch({ type: "SET_USER", payload: null });
       localStorage.clear();
       if (typeof globalThis.window !== "undefined") globalThis.location.href = "/";
@@ -106,8 +95,6 @@ export function useAuth() {
 
   // ── Main effect: init auth, cross-tab channel, refresh timer ──
   useEffect(() => {
-    const supabase = getSupabase();
-
     // Open BroadcastChannel for cross-tab sync (Task 17.4)
     if (typeof BroadcastChannel !== "undefined") {
       channelRef.current = new BroadcastChannel(AUTH_CHANNEL);
@@ -117,21 +104,27 @@ export function useAuth() {
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const mapped = mapUser(session.user);
         dispatch({ type: "SET_USER", payload: mapped });
         scheduleTokenRefresh(session.expires_at);   // Task 17.1
       }
+      setLoading(false);
     });
 
     // Subscribe to auth state changes (handles OAuth callback, signOut, refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = onAuthStateChange(
       (_event, session) => {
-        if (session?.user) {
-          const mapped = mapUser(session.user);
+        const authSession = session as {
+          user?: { id: string; email?: string; user_metadata?: Record<string, string> };
+          expires_at?: number;
+        } | null;
+
+        if (authSession?.user) {
+          const mapped = mapUser(authSession.user);
           dispatch({ type: "SET_USER", payload: mapped });
-          scheduleTokenRefresh(session.expires_at); // Task 17.1
+          scheduleTokenRefresh(authSession.expires_at); // Task 17.1
 
           if (_event === "SIGNED_IN") {
             broadcast({ event: "SIGNED_IN", user: mapped });
@@ -156,17 +149,8 @@ export function useAuth() {
   }, [dispatch, scheduleTokenRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── signInWithGoogle ───────────────────────────────────
-  const signInWithGoogle = useCallback(async () => {
-    const supabase = getSupabase();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${globalThis.location.origin}/auth/callback`,
-        // Use implicit flow — PKCE fails when @supabase/ssr cookies are
-        // cleared between the OAuth redirect hops in a pure client-side app.
-        queryParams: { response_type: "token" },
-      },
-    });
+  const signIn = useCallback(async () => {
+    await authSignInWithGoogle();
   }, []);
 
   // ── signOut: disconnect WS + clear state + broadcast to other tabs ────
@@ -179,9 +163,8 @@ export function useAuth() {
       }
     } catch { /* ignore */ }
 
-    const supabase = getSupabase();
     broadcast({ event: "SIGNED_OUT" });
-    await supabase.auth.signOut();
+    await authSignOut();
     dispatch({ type: "SET_USER", payload: null });
     dispatch({ type: "RESET" });
     localStorage.clear();
@@ -190,8 +173,8 @@ export function useAuth() {
 
   return {
     user,
-    isAuthenticated: !!user,
-    signInWithGoogle,
+    signIn,
     signOut,
+    loading,
   };
 }

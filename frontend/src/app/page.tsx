@@ -14,7 +14,7 @@ import FeatureMenu from "@/components/features/FeatureMenu";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 import RecommendationsCard from "@/components/closet/RecommendationsCard";
 
 export default function HomePage() {

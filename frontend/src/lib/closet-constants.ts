@@ -61,14 +61,3 @@ export function getAllSeasons(): string[] {
   return Object.values(Season);
 }
 
-export function formatCategoryLabel(category: string): string {
-  return category.charAt(0).toUpperCase() + category.slice(1);
-}
-
-export function formatOccasionLabel(occasion: string): string {
-  return occasion.charAt(0).toUpperCase() + occasion.slice(1);
-}
-
-export function formatSeasonLabel(season: string): string {
-  return season.charAt(0).toUpperCase() + season.slice(1);
-}

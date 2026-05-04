@@ -10,7 +10,7 @@ HYBRID COLOR MATCHING:
 
 from dataclasses import dataclass
 from typing import List, Dict
-from app.core.constants import ItemCategory, Occasion, Season
+from app.core.closet_constants import ClothingCategory, Occasion, Season
 from app.services.color_analyzer import calculate_color_compatibility
 
 
@@ -31,7 +31,7 @@ class MatchResult:
     """Result of matching a single item"""
     item_id: str
     item_name: str
-    category: ItemCategory
+    category: ClothingCategory
     score: float  # 0-100
     reasons: List[str]
     image_url: str | None = None
@@ -47,7 +47,7 @@ class MatchingEngine:
         self,
         closet_items: List[Dict],
         context: MatchContext
-    ) -> Dict[ItemCategory, List[MatchResult]]:
+    ) -> Dict[ClothingCategory, List[MatchResult]]:
         """
         Match closet items to context and return top matches per category
         
@@ -58,13 +58,13 @@ class MatchingEngine:
         Returns:
             Dictionary mapping category to list of match results
         """
-        matches_by_category: Dict[ItemCategory, List[MatchResult]] = {}
+        matches_by_category: Dict[ClothingCategory, List[MatchResult]] = {}
 
         for item in closet_items:
             score = self._score_item(item, context)
             
             if score > 0:  # Only include items with positive scores
-                category = ItemCategory(item.get('category', 'top'))
+                category = self._parse_category(item.get("category"))
                 
                 match = MatchResult(
                     item_id=item['id'],
@@ -88,7 +88,7 @@ class MatchingEngine:
 
     def identify_gaps(
         self,
-        matches: Dict[ItemCategory, List[MatchResult]],
+        matches: Dict[ClothingCategory, List[MatchResult]],
         context: MatchContext
     ) -> List[str]:
         """
@@ -104,13 +104,22 @@ class MatchingEngine:
         gaps = []
         
         # Required categories based on occasion
-        required_categories = self._get_required_categories(context.occasion)
+        required_groups = self._get_required_category_groups(context.occasion)
         
-        for category in required_categories:
-            if category not in matches or not matches[category]:
-                gaps.append(f"No {category.value} for {context.occasion.value}")
-            elif matches[category][0].score < 50:
-                gaps.append(f"Low-scoring {category.value} (consider alternatives)")
+        for group in required_groups:
+            group_categories = CATEGORY_GROUPS[group]
+            group_matches: List[MatchResult] = []
+            for category, match_list in matches.items():
+                if category in group_categories:
+                    group_matches.extend(match_list)
+
+            group_label = group.replace("_", " ")
+            if not group_matches:
+                gaps.append(f"No {group_label} for {context.occasion.value}")
+            else:
+                top_score = max((m.score for m in group_matches), default=0)
+                if top_score < 50:
+                    gaps.append(f"Low-scoring {group_label} (consider alternatives)")
         
         return gaps
 
@@ -157,10 +166,10 @@ class MatchingEngine:
     def _is_occasion_compatible(self, target: Occasion, item_occasions: List[str]) -> bool:
         """Check if occasion is compatible with item occasions"""
         compatibility_map = {
-            Occasion.FORMAL: [Occasion.WEDDING.value, Occasion.MEETING.value],
-            Occasion.MEETING: [Occasion.OFFICE.value, Occasion.FORMAL.value],
-            Occasion.DATE: [Occasion.CASUAL.value, Occasion.BRUNCH.value],
-            Occasion.CASUAL: [Occasion.BRUNCH.value, Occasion.TRAVEL.value],
+            Occasion.FORMAL: [Occasion.PARTY.value, Occasion.WORK.value],
+            Occasion.WORK: [Occasion.FORMAL.value, Occasion.CASUAL.value],
+            Occasion.DATE: [Occasion.PARTY.value, Occasion.CASUAL.value],
+            Occasion.CASUAL: [Occasion.ATHLETIC.value, Occasion.PARTY.value],
         }
         
         compatible = compatibility_map.get(target, [])
@@ -228,19 +237,62 @@ class MatchingEngine:
         
         return reasons
 
-    def _get_required_categories(self, occasion: Occasion) -> List[ItemCategory]:
-        """Get required categories for an occasion"""
+    def _get_required_category_groups(self, occasion: Occasion) -> List[str]:
+        """Get required category groups for an occasion."""
         category_map = {
-            Occasion.FORMAL: [ItemCategory.DRESS, ItemCategory.SHOES, ItemCategory.ACCESSORY],
-            Occasion.WEDDING: [ItemCategory.DRESS, ItemCategory.SHOES, ItemCategory.ACCESSORY],
-            Occasion.MEETING: [ItemCategory.TOP, ItemCategory.BOTTOM, ItemCategory.SHOES],
-            Occasion.OFFICE: [ItemCategory.TOP, ItemCategory.BOTTOM, ItemCategory.SHOES],
-            Occasion.DATE: [ItemCategory.TOP, ItemCategory.BOTTOM, ItemCategory.SHOES],
-            Occasion.CASUAL: [ItemCategory.TOP, ItemCategory.BOTTOM],
-            Occasion.BRUNCH: [ItemCategory.TOP, ItemCategory.BOTTOM],
+            Occasion.FORMAL: ["dress", "shoes", "accessories"],
+            Occasion.PARTY: ["tops", "bottoms", "shoes", "accessories"],
+            Occasion.WORK: ["tops", "bottoms", "shoes"],
+            Occasion.DATE: ["tops", "bottoms", "shoes"],
+            Occasion.ATHLETIC: ["tops", "bottoms", "shoes"],
+            Occasion.CASUAL: ["tops", "bottoms"],
         }
         
-        return category_map.get(occasion, [ItemCategory.TOP, ItemCategory.BOTTOM])
+        return category_map.get(occasion, ["tops", "bottoms"])
+
+    def _parse_category(self, raw_category: str | None) -> ClothingCategory:
+        """Parse a raw category string into a ClothingCategory enum."""
+        if not raw_category:
+            return ClothingCategory.TOP
+        try:
+            return ClothingCategory(raw_category)
+        except ValueError:
+            return ClothingCategory.TOP
+
+
+CATEGORY_GROUPS: Dict[str, set[ClothingCategory]] = {
+    "tops": {
+        ClothingCategory.TOP,
+        ClothingCategory.SHIRT,
+        ClothingCategory.BLOUSE,
+        ClothingCategory.SWEATER,
+        ClothingCategory.BLAZER,
+        ClothingCategory.JACKET,
+        ClothingCategory.COAT,
+    },
+    "bottoms": {
+        ClothingCategory.PANTS,
+        ClothingCategory.JEANS,
+        ClothingCategory.SHORTS,
+        ClothingCategory.SKIRT,
+    },
+    "shoes": {
+        ClothingCategory.SHOES,
+        ClothingCategory.SNEAKERS,
+        ClothingCategory.BOOTS,
+    },
+    "dress": {
+        ClothingCategory.DRESS,
+    },
+    "accessories": {
+        ClothingCategory.ACCESSORY,
+        ClothingCategory.JEWELRY,
+        ClothingCategory.BAG,
+        ClothingCategory.BELT,
+        ClothingCategory.HAT,
+        ClothingCategory.SCARF,
+    },
+}
 
 
 # Singleton instance

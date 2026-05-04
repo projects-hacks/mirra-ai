@@ -3,10 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { CAMERA } from "@/lib/constants";
 
-/* ── Perfect Corp JS Camera Kit types (OLD API - DEPRECATED) ── */
-// DEPRECATED: This hook uses the old photo mode API
-// The new Camera Kit SDK (useCameraKit.ts) should be used instead
-// This is kept only for backward compatibility with the main app interface
+/* ── Native camera capture types ──────────────────── */
 
 interface YMKInstance {
   capture: () => void;
@@ -15,8 +12,7 @@ interface YMKInstance {
   stopCamera: () => void;
 }
 
-// Note: We don't declare window.YMK here to avoid conflicts with useCameraKit.ts
-// The main app should be migrated to use the new Camera Kit SDK
+// Note: Keep this hook focused on native getUserMedia capture.
 
 interface UseCameraReturn {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -48,11 +44,6 @@ export function useCamera(): UseCameraReturn {
     let cancelled = false;
 
     async function initCamera() {
-      // DEPRECATED: Old photo mode API - should migrate to new Camera Kit SDK
-      // For now, skip Camera Kit and use native camera directly
-      // The YMK global is reserved for the new Camera Kit SDK (v2.4)
-
-      // Fallback: native getUserMedia
       await startNativeCamera();
     }
 

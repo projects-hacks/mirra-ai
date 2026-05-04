@@ -41,10 +41,10 @@ export const PARAMETER_CONFIGS: Partial<Record<ToolName, ParameterConfig>> = {
       },
     ],
   },
-  [ToolName.TRY_ON_HAIRSTYLE]: {
+  [ToolName.CHANGE_HAIRSTYLE]: {
     fields: [
       {
-        name: "hairstyle_url",
+        name: "ref_hair_url",
         type: "url",
         label: "Hairstyle Image URL",
         placeholder: "https://example.com/hairstyle.jpg",
@@ -63,7 +63,7 @@ export const PARAMETER_CONFIGS: Partial<Record<ToolName, ParameterConfig>> = {
       },
     ],
   },
-  [ToolName.GET_WEATHER]: {
+  [ToolName.CHECK_WEATHER]: {
     fields: [
       {
         name: "location",

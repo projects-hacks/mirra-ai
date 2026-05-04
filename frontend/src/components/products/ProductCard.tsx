@@ -2,7 +2,7 @@
 
 import { useState, memo } from "react";
 import { useToast } from "@/components/ui/Toast";
-import { retryWithBackoff } from "@/lib/retry";
+import { retryWithBackoff } from "@/lib/api";
 import Image from "next/image";
 
 interface ProductCardProps {
