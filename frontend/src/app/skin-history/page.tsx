@@ -243,7 +243,7 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
           {allMetrics.slice(0, 3).map(([key, value]) => (
             <div key={key} className="flex items-center justify-between text-xs">
               <span style={{ color: "var(--on-surface-variant)" }}>
-                {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                {key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
               </span>
               <div className="flex items-center gap-2">
                 <div 
@@ -273,7 +273,7 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
           {allMetrics.map(([key, value]) => (
             <div key={key} className="flex items-center justify-between text-xs">
               <span style={{ color: "var(--on-surface-variant)" }}>
-                {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                {key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
               </span>
               <div className="flex items-center gap-2">
                 <div 
