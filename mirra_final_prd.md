@@ -410,7 +410,7 @@ The Retention Mechanic: The Proof Card isn't just a receipt; it is a "Look Diary
 - [ ] Hair Style + Hair Color VTO
 - [ ] Earrings + Necklace VTO
 - [ ] Voice customization ("swap earrings for gold")
-- [ ] Google Calendar + Weather context integration (real OAuth2)
+- [x] Google Calendar + Weather context integration (real OAuth2) ✅
 - [ ] Skin trajectory with trend data ("moisture down 12% this month")
 - [ ] Side-by-side: owned items vs. new items
 - [ ] Shareable Proof Card
