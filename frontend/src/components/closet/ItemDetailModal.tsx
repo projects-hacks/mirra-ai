@@ -2,50 +2,41 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import {
-  getAllCategories,
-  getAllOccasions,
-  getAllSeasons,
-  formatCategoryLabel,
-  formatOccasionLabel,
-  formatSeasonLabel,
-} from '@/lib/closet-constants';
 
 interface ItemDetailModalProps {
   isOpen: boolean;
   itemId: string | null;
   onClose: () => void;
-  onUpdate?: () => void;
+  onUpdate: () => void;
 }
 
 interface ClosetItem {
   id: string;
-  user_id: string;
   name: string;
   category: string;
   subcategory?: string;
   color: string;
   color_hex?: string;
   brand?: string;
+  image_url?: string;
   price?: number;
   purchase_date?: string;
-  image_url?: string;
+  times_worn: number;
+  last_worn?: string;
   occasions?: string[];
   seasons?: string[];
   formality?: number;
-  last_worn?: string;
-  times_worn: number;
+  notes?: string;
   is_favorite: boolean;
   is_archived: boolean;
-  notes?: string;
   created_at: string;
 }
 
 interface OutfitLog {
   id: string;
   occasion: string;
-  outcome: string;
   created_at: string;
+  outcome: string;
 }
 
 export default function ItemDetailModal({
@@ -56,11 +47,13 @@ export default function ItemDetailModal({
 }: ItemDetailModalProps) {
   const [item, setItem] = useState<ClosetItem | null>(null);
   const [outfitLogs, setOutfitLogs] = useState<OutfitLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedItem, setEditedItem] = useState<Partial<ClosetItem>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Fetch item details and outfit logs
+  // Fetch item details
   useEffect(() => {
     if (!isOpen || !itemId) return;
 
@@ -70,46 +63,33 @@ export default function ItemDetailModal({
         setError(null);
 
         const supabase = getSupabase();
-        const { data: { user } } = await supabase.auth.getUser();
         const { data: { session } } = await supabase.auth.getSession();
 
-        if (!user || !session) {
-          setError('Please sign in to view item details');
-          return;
+        if (!session) {
+          throw new Error('Not authenticated');
         }
 
         // Fetch item details
-        const itemResult = await supabase
+        const { data: itemData, error: itemError } = await supabase
           .from('closet_items')
           .select('*')
           .eq('id', itemId)
-          .eq('user_id', user.id)
           .single();
 
-        if (itemResult.error) {
-          throw new Error('Failed to fetch item details');
-        }
-
-        setItem(itemResult.data);
+        if (itemError) throw itemError;
+        setItem(itemData);
+        setEditedItem(itemData);
 
         // Fetch outfit logs that include this item
-        const logsResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/outfit-history?user_id=${user.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
+        const { data: logsData, error: logsError } = await supabase
+          .from('outfit_logs')
+          .select('id, occasion, created_at, outcome')
+          .contains('items', [{ id: itemId }])
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-        if (logsResponse.ok) {
-          const logsData = await logsResponse.json();
-          // Filter logs that include this item
-          const itemLogs = (logsData.outfit_logs || []).filter((log: any) =>
-            log.items?.some((logItem: any) => logItem.id === itemId)
-          );
-          setOutfitLogs(itemLogs);
-        }
+        if (logsError) throw logsError;
+        setOutfitLogs(logsData || []);
       } catch (err) {
         console.error('Error fetching item details:', err);
         setError(err instanceof Error ? err.message : 'Failed to load item details');
@@ -121,17 +101,15 @@ export default function ItemDetailModal({
     fetchItemDetails();
   }, [isOpen, itemId]);
 
-  // Calculate cost per wear
+  // Calculate cost-per-wear
   const calculateCPW = () => {
     if (!item?.price || item.times_worn === 0) return null;
     return (item.price / item.times_worn).toFixed(2);
   };
 
   // Format date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -139,34 +117,31 @@ export default function ItemDetailModal({
   };
 
   // Handle favorite toggle
-  const handleFavoriteToggle = async () => {
+  const handleToggleFavorite = async () => {
     if (!item) return;
 
     try {
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        alert('Please sign in to update items');
-        return;
-      }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/closet/${item.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ is_favorite: !item.is_favorite }),
-        }
-      );
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/closet/${item.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          is_favorite: !item.is_favorite,
+        }),
+      });
 
       if (!response.ok) throw new Error('Failed to update favorite status');
 
-      setItem({ ...item, is_favorite: !item.is_favorite });
-      onUpdate?.();
+      const updatedItem = await response.json();
+      setItem(updatedItem);
+      onUpdate();
     } catch (err) {
       console.error('Error toggling favorite:', err);
       alert('Failed to update favorite status');
@@ -174,34 +149,31 @@ export default function ItemDetailModal({
   };
 
   // Handle archive toggle
-  const handleArchiveToggle = async () => {
+  const handleToggleArchive = async () => {
     if (!item) return;
 
     try {
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        alert('Please sign in to update items');
-        return;
-      }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/closet/${item.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ is_archived: !item.is_archived }),
-        }
-      );
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/closet/${item.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          is_archived: !item.is_archived,
+        }),
+      });
 
       if (!response.ok) throw new Error('Failed to update archive status');
 
-      setItem({ ...item, is_archived: !item.is_archived });
-      onUpdate?.();
+      const updatedItem = await response.json();
+      setItem(updatedItem);
+      onUpdate();
     } catch (err) {
       console.error('Error toggling archive:', err);
       alert('Failed to update archive status');
@@ -212,34 +184,22 @@ export default function ItemDetailModal({
   const handleDelete = async () => {
     if (!item) return;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${item.name}"? This action cannot be undone.`
-    );
-
-    if (!confirmed) return;
-
     try {
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        alert('Please sign in to delete items');
-        return;
-      }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/closet/${item.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/closet/${item.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
       if (!response.ok) throw new Error('Failed to delete item');
 
-      onUpdate?.();
+      onUpdate();
       onClose();
     } catch (err) {
       console.error('Error deleting item:', err);
@@ -247,311 +207,522 @@ export default function ItemDetailModal({
     }
   };
 
+  // Handle save edit
+  const handleSaveEdit = async () => {
+    if (!item) return;
+
+    try {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/closet/${item.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(editedItem),
+      });
+
+      if (!response.ok) throw new Error('Failed to update item');
+
+      const updatedItem = await response.json();
+      setItem(updatedItem);
+      setIsEditing(false);
+      onUpdate();
+    } catch (err) {
+      console.error('Error updating item:', err);
+      alert('Failed to update item');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="glass-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div
+        className="glass-panel max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        style={{ background: 'var(--surface-container)' }}
+      >
         {loading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-white/70">Loading item details...</p>
+            <p style={{ color: 'var(--on-surface-variant)' }}>Loading item details...</p>
           </div>
         ) : error ? (
           <div className="p-12 text-center">
-            <span className="material-symbols-outlined text-red-400 text-5xl mb-4">error</span>
-            <h2 className="text-xl font-semibold text-white mb-2">Error</h2>
-            <p className="text-white/70 mb-4">{error}</p>
-            <button onClick={onClose} className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors">
+            <span className="material-symbols-outlined text-[64px] mb-4" style={{ color: 'var(--error)' }}>
+              error
+            </span>
+            <p style={{ color: 'var(--error)' }} className="mb-4">
+              {error}
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 rounded-lg"
+              style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+            >
               Close
             </button>
           </div>
         ) : item ? (
-          <div className="p-6">
+          <>
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-white mb-2">{item.name}</h2>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">
-                    {formatCategoryLabel(item.category)}
-                  </span>
-                  {item.subcategory && (
-                    <span className="px-3 py-1 bg-white/10 text-white/70 rounded-full text-sm">
-                      {item.subcategory}
-                    </span>
-                  )}
-                  {item.is_favorite && (
-                    <span className="px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full text-sm flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">favorite</span>
-                      Favorite
-                    </span>
-                  )}
-                  {item.is_archived && (
-                    <span className="px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-sm flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">archive</span>
-                      Archived
-                    </span>
-                  )}
-                </div>
-              </div>
+            <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--outline-variant)' }}>
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--on-surface)' }}>
+                {isEditing ? 'Edit Item' : item.name}
+              </h2>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                aria-label="Close"
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
               >
-                <span className="material-symbols-outlined text-white">close</span>
+                <span className="material-symbols-outlined" style={{ color: 'var(--on-surface)' }}>
+                  close
+                </span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left Column - Image and Actions */}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column - Image */}
               <div>
-                {/* Image */}
                 {item.image_url ? (
                   <img
                     src={item.image_url}
                     alt={item.name}
-                    className="w-full aspect-square object-cover rounded-lg bg-white/5 mb-4"
+                    className="w-full rounded-lg object-cover"
+                    style={{ maxHeight: '500px' }}
                   />
                 ) : (
-                  <div className="w-full aspect-square bg-white/5 rounded-lg flex items-center justify-center mb-4">
-                    <span className="material-symbols-outlined text-white/30 text-6xl">
+                  <div
+                    className="w-full rounded-lg flex items-center justify-center"
+                    style={{ height: '500px', background: 'var(--surface-variant)' }}
+                  >
+                    <span className="material-symbols-outlined text-[128px]" style={{ color: 'var(--on-surface-variant)', opacity: 0.3 }}>
                       checkroom
                     </span>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleFavoriteToggle}
-                    className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                      item.is_favorite
-                        ? 'bg-pink-500/20 text-pink-300 hover:bg-pink-500/30'
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined">
-                      {item.is_favorite ? 'favorite' : 'favorite_border'}
-                    </span>
-                    {item.is_favorite ? 'Favorited' : 'Favorite'}
-                  </button>
-                  <button
-                    onClick={handleArchiveToggle}
-                    className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                      item.is_archived
-                        ? 'bg-gray-500/20 text-gray-300 hover:bg-gray-500/30'
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined">
-                      {item.is_archived ? 'unarchive' : 'archive'}
-                    </span>
-                    {item.is_archived ? 'Unarchive' : 'Archive'}
-                  </button>
-                  <button
-                    onClick={() => setIsEditMode(true)}
-                    className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined">edit</span>
-                    Edit
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="px-4 py-3 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined">delete</span>
-                    Delete
-                  </button>
-                </div>
+                {!isEditing && (
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={handleToggleFavorite}
+                      className="flex-1 px-4 py-2 rounded-lg border transition-colors"
+                      style={{
+                        borderColor: 'var(--outline)',
+                        background: item.is_favorite ? 'var(--primary)' : 'transparent',
+                        color: item.is_favorite ? 'var(--on-primary)' : 'var(--on-surface)',
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {item.is_favorite ? 'favorite' : 'favorite_border'}
+                      </span>
+                      {item.is_favorite ? ' Favorited' : ' Favorite'}
+                    </button>
+                    <button
+                      onClick={handleToggleArchive}
+                      className="flex-1 px-4 py-2 rounded-lg border transition-colors"
+                      style={{
+                        borderColor: 'var(--outline)',
+                        color: 'var(--on-surface)',
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {item.is_archived ? 'unarchive' : 'archive'}
+                      </span>
+                      {item.is_archived ? ' Unarchive' : ' Archive'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Right Column - Details */}
               <div className="space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Details</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-white/50">palette</span>
-                      <span className="text-white/70">Color:</span>
-                      <div className="flex items-center gap-2">
-                        {item.color_hex && (
-                          <div
-                            className="w-5 h-5 rounded border border-white/20"
-                            style={{ backgroundColor: item.color_hex }}
-                          />
-                        )}
-                        <span className="text-white">{item.color}</span>
-                      </div>
+                {isEditing ? (
+                  <>
+                    {/* Edit Form */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editedItem.name || ''}
+                        onChange={(e) => setEditedItem({ ...editedItem, name: e.target.value })}
+                        className="w-full px-4 py-2 rounded-lg border"
+                        style={{
+                          background: 'var(--surface-variant)',
+                          borderColor: 'var(--outline)',
+                          color: 'var(--on-surface)',
+                        }}
+                      />
                     </div>
-                    {item.brand && (
-                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-white/50">label</span>
-                        <span className="text-white/70">Brand:</span>
-                        <span className="text-white">{item.brand}</span>
-                      </div>
-                    )}
-                    {item.formality !== undefined && (
-                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-white/50">style</span>
-                        <span className="text-white/70">Formality:</span>
-                        <span className="text-white">
-                          {item.formality < 0.3
-                            ? 'Casual'
-                            : item.formality < 0.7
-                            ? 'Smart Casual'
-                            : 'Formal'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Purchase Info */}
-                {(item.price || item.purchase_date) && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">Purchase Info</h3>
-                    <div className="space-y-2">
-                      {item.price && (
-                        <div className="flex items-center gap-3">
-                          <span className="material-symbols-outlined text-white/50">
-                            payments
-                          </span>
-                          <span className="text-white/70">Price:</span>
-                          <span className="text-white">${item.price.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {item.purchase_date && (
-                        <div className="flex items-center gap-3">
-                          <span className="material-symbols-outlined text-white/50">
-                            calendar_today
-                          </span>
-                          <span className="text-white/70">Purchased:</span>
-                          <span className="text-white">{formatDate(item.purchase_date)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Wear Stats */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Wear Statistics</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-white/50">
-                        counter_1
-                      </span>
-                      <span className="text-white/70">Times Worn:</span>
-                      <span className="text-white font-semibold">{item.times_worn}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-white/50">schedule</span>
-                      <span className="text-white/70">Last Worn:</span>
-                      <span className="text-white">{formatDate(item.last_worn)}</span>
-                    </div>
-                    {calculateCPW() && (
-                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-white/50">
-                          trending_down
-                        </span>
-                        <span className="text-white/70">Cost Per Wear:</span>
-                        <span className="text-green-300 font-semibold">${calculateCPW()}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Occasions & Seasons */}
-                {((item.occasions && item.occasions.length > 0) ||
-                  (item.seasons && item.seasons.length > 0)) && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">Suitable For</h3>
-                    {item.occasions && item.occasions.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-white/70 text-sm mb-2">Occasions:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {item.occasions.map((occasion) => (
-                            <span
-                              key={occasion}
-                              className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm"
-                            >
-                              {formatOccasionLabel(occasion)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {item.seasons && item.seasons.length > 0 && (
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-white/70 text-sm mb-2">Seasons:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {item.seasons.map((season) => (
-                            <span
-                              key={season}
-                              className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
-                            >
-                              {formatSeasonLabel(season)}
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Category
+                        </label>
+                        <input
+                          type="text"
+                          value={editedItem.category || ''}
+                          onChange={(e) => setEditedItem({ ...editedItem, category: e.target.value })}
+                          className="w-full px-4 py-2 rounded-lg border"
+                          style={{
+                            background: 'var(--surface-variant)',
+                            borderColor: 'var(--outline)',
+                            color: 'var(--on-surface)',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Brand
+                        </label>
+                        <input
+                          type="text"
+                          value={editedItem.brand || ''}
+                          onChange={(e) => setEditedItem({ ...editedItem, brand: e.target.value })}
+                          className="w-full px-4 py-2 rounded-lg border"
+                          style={{
+                            background: 'var(--surface-variant)',
+                            borderColor: 'var(--outline)',
+                            color: 'var(--on-surface)',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Color
+                        </label>
+                        <input
+                          type="text"
+                          value={editedItem.color || ''}
+                          onChange={(e) => setEditedItem({ ...editedItem, color: e.target.value })}
+                          className="w-full px-4 py-2 rounded-lg border"
+                          style={{
+                            background: 'var(--surface-variant)',
+                            borderColor: 'var(--outline)',
+                            color: 'var(--on-surface)',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Price
+                        </label>
+                        <input
+                          type="number"
+                          value={editedItem.price || ''}
+                          onChange={(e) => setEditedItem({ ...editedItem, price: parseFloat(e.target.value) })}
+                          className="w-full px-4 py-2 rounded-lg border"
+                          style={{
+                            background: 'var(--surface-variant)',
+                            borderColor: 'var(--outline)',
+                            color: 'var(--on-surface)',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                        Notes
+                      </label>
+                      <textarea
+                        value={editedItem.notes || ''}
+                        onChange={(e) => setEditedItem({ ...editedItem, notes: e.target.value })}
+                        rows={3}
+                        className="w-full px-4 py-2 rounded-lg border"
+                        style={{
+                          background: 'var(--surface-variant)',
+                          borderColor: 'var(--outline)',
+                          color: 'var(--on-surface)',
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveEdit}
+                        className="flex-1 px-4 py-2 rounded-lg"
+                        style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedItem(item);
+                        }}
+                        className="flex-1 px-4 py-2 rounded-lg border"
+                        style={{ borderColor: 'var(--outline)', color: 'var(--on-surface)' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* View Mode */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                        Details
+                      </h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span style={{ color: 'var(--on-surface-variant)' }}>Category:</span>
+                          <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                            {item.category}
+                          </span>
+                        </div>
+                        {item.subcategory && (
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--on-surface-variant)' }}>Subcategory:</span>
+                            <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                              {item.subcategory}
                             </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span style={{ color: 'var(--on-surface-variant)' }}>Color:</span>
+                          <div className="flex items-center gap-2">
+                            {item.color_hex && (
+                              <div
+                                className="w-4 h-4 rounded-full border"
+                                style={{ background: item.color_hex, borderColor: 'var(--outline)' }}
+                              />
+                            )}
+                            <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                              {item.color}
+                            </span>
+                          </div>
+                        </div>
+                        {item.brand && (
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--on-surface-variant)' }}>Brand:</span>
+                            <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                              {item.brand}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Purchase Info */}
+                    {(item.price || item.purchase_date) && (
+                      <div>
+                        <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Purchase Information
+                        </h3>
+                        <div className="space-y-2">
+                          {item.price && (
+                            <div className="flex justify-between">
+                              <span style={{ color: 'var(--on-surface-variant)' }}>Price:</span>
+                              <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                                ${item.price.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {item.purchase_date && (
+                            <div className="flex justify-between">
+                              <span style={{ color: 'var(--on-surface-variant)' }}>Purchase Date:</span>
+                              <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                                {formatDate(item.purchase_date)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wear Stats */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                        Wear Statistics
+                      </h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span style={{ color: 'var(--on-surface-variant)' }}>Times Worn:</span>
+                          <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                            {item.times_worn}
+                          </span>
+                        </div>
+                        {item.last_worn && (
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--on-surface-variant)' }}>Last Worn:</span>
+                            <span style={{ color: 'var(--on-surface)' }} className="font-medium">
+                              {formatDate(item.last_worn)}
+                            </span>
+                          </div>
+                        )}
+                        {calculateCPW() && (
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--on-surface-variant)' }}>Cost Per Wear:</span>
+                            <span style={{ color: 'var(--success)' }} className="font-medium">
+                              ${calculateCPW()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Occasions & Seasons */}
+                    {(item.occasions?.length || item.seasons?.length) && (
+                      <div>
+                        <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Suitable For
+                        </h3>
+                        {item.occasions && item.occasions.length > 0 && (
+                          <div className="mb-2">
+                            <span className="text-xs" style={{ color: 'var(--on-surface-variant)' }}>
+                              Occasions:
+                            </span>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {item.occasions.map((occasion) => (
+                                <span
+                                  key={occasion}
+                                  className="px-2 py-1 rounded-full text-xs"
+                                  style={{
+                                    background: 'var(--primary-container)',
+                                    color: 'var(--on-primary-container)',
+                                  }}
+                                >
+                                  {occasion}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {item.seasons && item.seasons.length > 0 && (
+                          <div>
+                            <span className="text-xs" style={{ color: 'var(--on-surface-variant)' }}>
+                              Seasons:
+                            </span>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {item.seasons.map((season) => (
+                                <span
+                                  key={season}
+                                  className="px-2 py-1 rounded-full text-xs"
+                                  style={{
+                                    background: 'var(--secondary-container)',
+                                    color: 'var(--on-secondary-container)',
+                                  }}
+                                >
+                                  {season}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Outfit History */}
+                    {outfitLogs.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Worn In ({outfitLogs.length} outfits)
+                        </h3>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {outfitLogs.map((log) => (
+                            <div
+                              key={log.id}
+                              className="p-3 rounded-lg"
+                              style={{ background: 'var(--surface-variant)' }}
+                            >
+                              <div className="flex justify-between items-center">
+                                <span style={{ color: 'var(--on-surface)' }} className="font-medium capitalize">
+                                  {log.occasion}
+                                </span>
+                                <span style={{ color: 'var(--on-surface-variant)' }} className="text-xs">
+                                  {formatDate(log.created_at)}
+                                </span>
+                              </div>
+                              <span
+                                className="text-xs capitalize"
+                                style={{ color: 'var(--on-surface-variant)' }}
+                              >
+                                {log.outcome}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* Notes */}
-                {item.notes && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">Notes</h3>
-                    <p className="text-white/70 text-sm">{item.notes}</p>
-                  </div>
+                    {/* Notes */}
+                    {item.notes && (
+                      <div>
+                        <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--on-surface-variant)' }}>
+                          Notes
+                        </h3>
+                        <p style={{ color: 'var(--on-surface)' }} className="text-sm">
+                          {item.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-4 border-t" style={{ borderColor: 'var(--outline-variant)' }}>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex-1 px-4 py-2 rounded-lg"
+                        style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+                      >
+                        <span className="material-symbols-outlined text-sm">edit</span> Edit
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2 rounded-lg border"
+                        style={{ borderColor: 'var(--error)', color: 'var(--error)' }}
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
-
-            {/* Outfit History */}
-            {outfitLogs.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Worn in {outfitLogs.length} {outfitLogs.length === 1 ? 'Outfit' : 'Outfits'}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {outfitLogs.slice(0, 6).map((log) => (
-                    <div key={log.id} className="p-3 bg-white/5 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <span className="text-white font-medium capitalize">
-                          {log.occasion || 'Casual'}
-                        </span>
-                        <span className="text-white/50 text-sm">{formatDate(log.created_at)}</span>
-                      </div>
-                      <span
-                        className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
-                          log.outcome === 'wore' || log.outcome === 'loved'
-                            ? 'bg-green-500/20 text-green-300'
-                            : 'bg-gray-500/20 text-gray-300'
-                        }`}
-                      >
-                        {log.outcome}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {outfitLogs.length > 6 && (
-                  <p className="text-white/50 text-sm mt-3 text-center">
-                    +{outfitLogs.length - 6} more outfits
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          </>
         ) : null}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="glass-panel p-6 max-w-md w-full" style={{ background: 'var(--surface-container)' }}>
+            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--on-surface)' }}>
+              Delete Item?
+            </h3>
+            <p style={{ color: 'var(--on-surface-variant)' }} className="mb-6">
+              Are you sure you want to delete "{item?.name}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-2 rounded-lg"
+                style={{ background: 'var(--error)', color: 'var(--on-error)' }}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border"
+                style={{ borderColor: 'var(--outline)', color: 'var(--on-surface)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
