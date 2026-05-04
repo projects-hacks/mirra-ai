@@ -30,7 +30,6 @@ export function SelfieCaptureScreen({
     isSDKLoaded,
     isSDKLoading,
     isCameraOpen,
-    loadingProgress,
     error: sdkError,
     loadSDK,
     openCamera,
