@@ -11,13 +11,18 @@ interface PhotoUploadModalProps {
 }
 
 interface ExtractedMetadata {
-  category?: string;
+  category: string;
   subcategory?: string;
-  color?: string;
-  color_hex?: string;
+  primary_color: string;
+  color_hex: string;
+  secondary_colors?: string[];
   brand?: string;
+  material?: string;
+  pattern?: string;
+  formality?: number;
   occasions?: string[];
-  confidence?: number;
+  seasons?: string[];
+  confidence_scores?: Record<string, number>;
 }
 
 type CaptureMode = "camera" | "upload" | null;

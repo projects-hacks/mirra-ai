@@ -5,16 +5,22 @@ import { getSupabase } from "@/lib/supabase";
 import ClosetGrid from "@/components/closet/ClosetGrid";
 import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
 import MetadataForm from "@/components/closet/MetadataForm";
+import ClosetStatistics from "@/components/closet/ClosetStatistics";
 
 interface ClosetItem {
   id: string;
   name: string;
   category: string;
   color: string;
-  image_url: string;
+  imageUrl: string;
   brand?: string;
-  price?: number;
-  times_worn?: number;
+  purchasePrice?: number;
+  timesWorn?: number;
+  lastWorn?: string;
+  occasions?: string[];
+  seasons?: string[];
+  formality?: number;
+  createdAt?: string;
 }
 
 interface ExtractedMetadata {
@@ -102,7 +108,7 @@ export default function ClosetPage() {
 
   // Handle photo upload completion
   const handleUploadComplete = useCallback(
-    (imageUrl: string, metadata: ExtractedMetadata) => {
+    (imageUrl: string, metadata: any) => {
       setUploadedImageUrl(imageUrl);
       setExtractedMetadata(metadata);
       setIsUploadModalOpen(false);
@@ -225,6 +231,9 @@ export default function ClosetPage() {
           </div>
         </div>
       </div>
+
+      {/* Closet Statistics */}
+      {items.length > 0 && <ClosetStatistics />}
 
       {/* Closet Grid */}
       <ClosetGrid
