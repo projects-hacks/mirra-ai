@@ -168,11 +168,19 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
   // Close camera
   const closeCamera = useCallback(() => {
-    if (!window.YMK) return;
+    if (!window.YMK) {
+      console.warn('Camera Kit SDK not available for closing');
+      return;
+    }
 
     try {
-      window.YMK.closeCameraKit();
+      if (typeof window.YMK.closeCameraKit === 'function') {
+        window.YMK.closeCameraKit();
+      } else {
+        console.warn('closeCameraKit method not available');
+      }
     } catch (err) {
+      console.error('Error closing camera:', err);
       const error = err instanceof Error ? err : new Error('Failed to close camera');
       setError(error);
       events.onError?.(error);
@@ -185,18 +193,32 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       // Remove event listeners
       if (window.YMK) {
         eventHandlersRef.current.forEach((handler, event) => {
-          window.YMK!.removeEventListener(event, handler);
+          try {
+            window.YMK!.removeEventListener(event, handler);
+          } catch (err) {
+            console.error(`Error removing event listener ${event}:`, err);
+          }
         });
       }
 
       // Close camera if open
       if (isCameraOpen && window.YMK) {
-        window.YMK.closeCameraKit();
+        try {
+          if (typeof window.YMK.closeCameraKit === 'function') {
+            window.YMK.closeCameraKit();
+          }
+        } catch (err) {
+          console.error('Error closing camera on unmount:', err);
+        }
       }
 
       // Remove SDK script
       if (sdkScriptRef.current && sdkScriptRef.current.parentNode) {
-        sdkScriptRef.current.parentNode.removeChild(sdkScriptRef.current);
+        try {
+          sdkScriptRef.current.parentNode.removeChild(sdkScriptRef.current);
+        } catch (err) {
+          console.error('Error removing SDK script:', err);
+        }
       }
 
       // Cleanup global
