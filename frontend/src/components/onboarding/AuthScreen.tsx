@@ -25,6 +25,11 @@ export function AuthScreen({ onAuthComplete, onError }: Readonly<AuthScreenProps
         provider: "google",
         options: {
           redirectTo: `${globalThis.location.origin}/auth/callback`,
+          scopes: 'openid profile email https://www.googleapis.com/auth/calendar.readonly',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 

@@ -181,7 +181,6 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
-  const [calendarMessage, setCalendarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editForm, setEditForm] = useState<EditableProfile>({
     displayName: "",
     preferred_currency: "USD",
@@ -193,24 +192,6 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       const supabase = getSupabase();
-
-      // Check for calendar OAuth callback messages
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('calendar_success')) {
-        setCalendarMessage({ type: 'success', text: 'Calendar connected successfully!' });
-        // Clear URL params
-        window.history.replaceState({}, '', '/profile');
-      } else if (urlParams.get('calendar_error')) {
-        const error = urlParams.get('calendar_error');
-        setCalendarMessage({ 
-          type: 'error', 
-          text: error === 'connection_failed' 
-            ? 'Failed to connect calendar. Please try again.' 
-            : 'Calendar connection was cancelled.'
-        });
-        // Clear URL params
-        window.history.replaceState({}, '', '/profile');
-      }
 
       // Session check
       const { data: { session } } = await supabase.auth.getSession();
@@ -322,13 +303,19 @@ export default function ProfilePage() {
   }, [signOut]);
 
   // ── Connect calendar ────────────────────────────
-  const handleConnectCalendar = useCallback(() => {
+  const handleConnectCalendar = useCallback(async () => {
     if (!user) return;
     
-    // Redirect to backend OAuth endpoint
-    const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/calendar/oauth/authorize?user_id=${user.id}`;
-    window.location.href = authUrl;
-  }, [user]);
+    // Calendar is connected during sign-in, so we need to prompt re-authentication
+    const confirmed = confirm(
+      "To connect your calendar, you'll need to sign out and sign in again. " +
+      "You'll be prompted to grant calendar access during sign-in. Continue?"
+    );
+    
+    if (confirmed) {
+      await signOut();
+    }
+  }, [user, signOut]);
 
   // ── Disconnect calendar ────────────────────────────
   const handleDisconnectCalendar = useCallback(async () => {
@@ -726,18 +713,6 @@ export default function ProfilePage() {
 
         {/* ── Calendar ── */}
         <div className="glass-card">
-          {calendarMessage && (
-            <div 
-              className="mb-3 p-3 rounded-lg text-sm"
-              style={{ 
-                background: calendarMessage.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                color: calendarMessage.type === 'success' ? 'var(--success)' : 'var(--error)',
-                border: `1px solid ${calendarMessage.type === 'success' ? 'var(--success)' : 'var(--error)'}`
-              }}
-            >
-              {calendarMessage.text}
-            </div>
-          )}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Google Calendar</p>
@@ -748,6 +723,11 @@ export default function ProfilePage() {
                 />
                 {calendarConnected ? "Connected" : "Not connected"}
               </p>
+              {!calendarConnected && (
+                <p className="text-xs mt-1" style={{ color: "var(--on-surface-muted)" }}>
+                  Calendar access is granted during sign-in
+                </p>
+              )}
             </div>
           {calendarConnected ? (
             <button onClick={handleDisconnectCalendar} className="btn-secondary text-sm" style={{ color: "var(--error)" }}>

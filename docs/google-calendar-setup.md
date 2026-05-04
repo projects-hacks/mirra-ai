@@ -1,127 +1,134 @@
 # Google Calendar OAuth Setup
 
-This guide explains how to set up Google Calendar integration for Mirra AI.
+This guide explains how to add Google Calendar integration to your existing Supabase OAuth setup.
 
 ## Prerequisites
 
-- Google Cloud Console account
-- Access to your Mirra backend environment variables
+- You already have Google OAuth configured for Supabase authentication
+- Your OAuth client ID: `195473160973-841qpfkfg91hwtf9peit52uubg83lf2z.apps.googleusercontent.com`
 
-## Step 1: Create Google Cloud Project
+## Step 1: Add Calendar API Scope
+
+Since you're already using Google OAuth for authentication, you just need to add the Calendar API scope:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the **Google Calendar API**:
+2. Select your existing project
+3. Enable the **Google Calendar API** (if not already enabled):
    - Navigate to "APIs & Services" > "Library"
    - Search for "Google Calendar API"
    - Click "Enable"
 
-## Step 2: Configure OAuth Consent Screen
+4. Update OAuth consent screen scopes:
+   - Go to "APIs & Services" > "OAuth consent screen"
+   - Click "Edit App"
+   - In the "Scopes" section, add:
+     - `https://www.googleapis.com/auth/calendar.readonly`
+   - Save changes
 
-1. Go to "APIs & Services" > "OAuth consent screen"
-2. Choose "External" user type (or "Internal" if using Google Workspace)
-3. Fill in the required fields:
-   - **App name**: Mirra AI
-   - **User support email**: Your email
-   - **Developer contact**: Your email
-4. Add scopes:
-   - Click "Add or Remove Scopes"
-   - Add: `https://www.googleapis.com/auth/calendar.readonly`
-5. Add test users (for development):
-   - Add your email and any test user emails
-6. Save and continue
+## Step 2: Update Supabase OAuth Configuration
 
-## Step 3: Create OAuth Credentials
+You need to request the calendar scope when users sign in with Google:
 
-1. Go to "APIs & Services" > "Credentials"
-2. Click "Create Credentials" > "OAuth client ID"
-3. Choose "Web application"
-4. Configure:
-   - **Name**: Mirra Backend
-   - **Authorized JavaScript origins**: 
-     - `http://localhost:8000` (development)
-     - Your production backend URL
-   - **Authorized redirect URIs**:
-     - `http://localhost:8000/api/calendar/oauth/callback` (development)
-     - `https://your-backend.com/api/calendar/oauth/callback` (production)
-5. Click "Create"
-6. **Save the Client ID and Client Secret** - you'll need these!
+### Option A: Request Calendar Scope During Sign-In (Recommended)
 
-## Step 4: Configure Environment Variables
+Update your Supabase sign-in call to request calendar access:
 
-Add these to your backend `.env` file:
-
-```bash
-# Google Calendar OAuth
-GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret-here
+```typescript
+const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: 'google',
+  options: {
+    scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+    queryParams: {
+      access_type: 'offline',
+      prompt: 'consent',
+    },
+  },
+})
 ```
 
-## Step 5: Test the Integration
+### Option B: Separate Calendar Connection Flow
 
-1. Start your backend server:
-   ```bash
-   cd backend
-   uvicorn app.main:app --reload
-   ```
+Keep authentication separate and add calendar connection as an optional feature in the profile page (current implementation).
 
-2. Start your frontend:
-   ```bash
-   cd frontend
-   npm run dev
-   ```
+## Step 3: Configure Backend
 
-3. Navigate to Profile page and click "Connect" under Google Calendar
-4. You should be redirected to Google's OAuth consent screen
-5. Grant calendar read permissions
-6. You'll be redirected back to your profile with a success message
+The backend is already configured to use your OAuth client. No additional setup needed since Supabase handles the OAuth flow.
 
-## User Flow
+## Step 4: Store Calendar Tokens
 
-1. **User clicks "Connect"** → Redirected to Google OAuth
-2. **User grants permissions** → Google redirects to backend callback
-3. **Backend receives tokens** → Stores in database
-4. **User redirected to profile** → Shows "Connected" status
+When a user connects their calendar, we need to store the OAuth tokens. This is handled automatically by the backend when the user clicks "Connect" in their profile.
 
-## Security Notes
+The tokens are stored in the `user_preferences` table under `google_calendar_token`.
 
-- OAuth tokens are stored encrypted in the database
-- Only `calendar.readonly` scope is requested (read-only access)
-- Tokens are user-specific and isolated
-- Refresh tokens allow long-term access without re-authentication
+## Implementation Approach
+
+We have two options:
+
+### Option 1: Request Calendar Access During Sign-In
+**Pros:**
+- Single OAuth flow
+- User grants all permissions at once
+- Simpler UX
+
+**Cons:**
+- Users must grant calendar access to use the app
+- Can't make calendar optional
+
+### Option 2: Separate Calendar Connection (Current Implementation)
+**Pros:**
+- Calendar is optional
+- Users can connect/disconnect anytime
+- Better privacy - only request when needed
+
+**Cons:**
+- Requires separate OAuth flow
+- More complex implementation
+
+## Current Implementation (Option 2)
+
+The current implementation uses a separate OAuth flow for calendar:
+
+1. User signs in with Supabase (gets basic profile access)
+2. Later, user can optionally connect calendar from profile page
+3. Separate OAuth flow requests only calendar.readonly scope
+4. Tokens stored per-user in database
+
+## Recommended: Switch to Option 1
+
+For better UX, I recommend requesting calendar access during sign-in:
+
+1. Update `AuthScreen.tsx` to request calendar scope
+2. After sign-in, extract calendar tokens from Supabase session
+3. Store tokens in `user_preferences` table
+4. Remove separate OAuth flow
+
+Would you like me to implement Option 1 (request calendar during sign-in)?
+
+## Environment Variables
+
+No additional environment variables needed! Your existing Supabase configuration handles OAuth:
+
+```bash
+# Already configured in Supabase
+SUPABASE_URL=your-supabase-url
+SUPABASE_KEY=your-supabase-key
+```
+
+## Testing
+
+1. Sign out and sign in again with Google
+2. Grant calendar permissions when prompted
+3. Navigate to profile page
+4. Calendar should show as "Connected"
 
 ## Troubleshooting
 
-### "OAuth not configured" error
-- Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set in `.env`
-- Restart the backend server after adding environment variables
+### Calendar not connecting
+- Verify Google Calendar API is enabled in Google Cloud Console
+- Check that calendar scope is added to OAuth consent screen
+- Ensure user granted calendar permissions during sign-in
 
-### "Redirect URI mismatch" error
-- Ensure the redirect URI in Google Cloud Console exactly matches your backend URL
-- Check for trailing slashes and http vs https
+### "Calendar not configured" error
+- User needs to sign out and sign in again to grant calendar permissions
+- Or use the separate "Connect" button in profile page
 
-### "Access denied" error
-- Verify the user's email is added as a test user in OAuth consent screen
-- Check that Google Calendar API is enabled for your project
-
-### Calendar events not showing
-- Verify the user has events in their Google Calendar
-- Check Redis cache (events are cached for 5 minutes)
-- Look at backend logs for API errors
-
-## Production Deployment
-
-For production:
-
-1. Update OAuth consent screen to "Published" status
-2. Add production redirect URI to Google Cloud Console
-3. Update `CORS_ORIGIN` in backend config to match your frontend URL
-4. Use HTTPS for all URLs
-5. Consider implementing token refresh logic for long-lived sessions
-
-## API Endpoints
-
-- `GET /api/calendar/oauth/authorize?user_id={user_id}` - Initiate OAuth flow
-- `GET /api/calendar/oauth/callback` - OAuth callback handler
-- `POST /api/calendar/disconnect` - Disconnect calendar
-- `GET /api/context/calendar` - Get today's events (requires authentication)
