@@ -84,7 +84,7 @@ function scoreColor(score: number): string {
   return "var(--error)";
 }
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
+function ScoreBar({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div>
       <div className="flex justify-between text-xs mb-1" style={{ color: "var(--on-surface-variant)" }}>
@@ -102,7 +102,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 }
 
 // Trend indicator
-function TrendIndicator({ scans }: { scans: SkinScan[] }) {
+function TrendIndicator({ scans }: Readonly<{ scans: SkinScan[] }>) {
   if (scans.length < 2) return null;
   
   const latest = scans[0]?.scores?.overall ?? 0;
@@ -129,7 +129,7 @@ function TrendIndicator({ scans }: { scans: SkinScan[] }) {
 }
 
 // Mini chart for last 7 scans
-function MiniChart({ scans }: { scans: SkinScan[] }) {
+function MiniChart({ scans }: Readonly<{ scans: SkinScan[] }>) {
   if (scans.length < 2) return null;
   
   const points = scans.slice(0, 7).reverse().map((s) => s.scores?.overall ?? 75);
@@ -143,7 +143,7 @@ function MiniChart({ scans }: { scans: SkinScan[] }) {
         const height = ((value - min) / range) * 100;
         return (
           <div
-            key={i}
+            key={`chart-${i}-${value}`}
             className="flex-1 rounded-t transition-all"
             style={{
               height: `${height}%`,

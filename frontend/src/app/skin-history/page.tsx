@@ -72,7 +72,7 @@ function formatTime(dateStr: string): string {
 // ── Components ───────────────────────────────────────
 
 // Line chart for score trends
-function TrendChart({ scans, metric }: { scans: SkinScan[]; metric: keyof SkinScores }) {
+function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: keyof SkinScores }>) {
   if (scans.length < 2) return null;
   
   const points = scans.slice(0, 30).reverse().map((s) => s.scores[metric] ?? 75);
@@ -157,7 +157,7 @@ function TrendChart({ scans, metric }: { scans: SkinScan[]; metric: keyof SkinSc
 }
 
 // Scan card with details
-function ScanCard({ scan, isLatest }: { scan: SkinScan; isLatest: boolean }) {
+function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boolean }>) {
   const [expanded, setExpanded] = useState(false);
   
   const allMetrics = Object.entries(scan.scores)

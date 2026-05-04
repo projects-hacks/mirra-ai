@@ -24,6 +24,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# JWT auth middleware — validates Bearer token on all non-public REST routes
+# Must be added BEFORE CORS middleware
+app.add_middleware(JWTAuthMiddleware)
+
+# CORS middleware should be added last in the middleware chain
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.ondigitalocean\.app|http://localhost:\d+",
@@ -31,10 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# JWT auth middleware — validates Bearer token on all non-public REST routes
-# Added AFTER CORS so 401 responses still include Access-Control-Allow-Origin
-app.add_middleware(JWTAuthMiddleware)
 
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])

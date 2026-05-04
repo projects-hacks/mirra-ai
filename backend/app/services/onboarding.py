@@ -289,11 +289,11 @@ class OnboardingService:
                 
                 if store_selfies:
                     # Upload to Supabase Storage: selfies/{user_id}/{timestamp}.jpg
-                    from datetime import datetime
-                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    from datetime import datetime, timezone
+                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
                     storage_path = f"selfies/{user_id}/{timestamp}.jpg"
                     
-                    storage_response = supabase.storage.from_("selfies").upload(
+                    supabase.storage.from_("selfies").upload(
                         storage_path,
                         selfie_bytes,
                         {"content-type": "image/jpeg"}
@@ -518,14 +518,15 @@ class OnboardingService:
                     if not scan_location:
                         scan_location = profile_response.data.get("location", None) if profile_response.data else None
                     logger.debug(f"Using profile location as fallback: {scan_location}, {scan_timezone}")
-                except:
+                except Exception as e:
+                    logger.warning(f"Could not fetch profile location: {str(e)}")
                     scan_timezone = "UTC"
                     scan_location = None
             
             # Determine time of day context using scan timezone
             try:
                 tz = pytz.timezone(scan_timezone)
-            except:
+            except Exception:
                 tz = pytz.UTC
             
             current_time = datetime.now(tz)
