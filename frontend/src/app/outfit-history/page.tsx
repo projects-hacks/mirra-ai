@@ -1,0 +1,458 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { getSupabase } from '@/lib/supabase';
+
+interface OutfitLog {
+  id: string;
+  proof_card_id: string | null;
+  occasion: string;
+  weather: any;
+  items: any[];
+  outcome: 'pending' | 'wore' | 'skipped' | 'returned' | 'loved';
+  rating: number | null;
+  feedback: string | null;
+  compliments: boolean;
+  photos: string[];
+  created_at: string;
+}
+
+interface OutfitSummary {
+  wore: number;
+  skipped: number;
+  returned: number;
+  loved: number;
+  pending: number;
+  total: number;
+}
+
+export default function OutfitHistoryPage() {
+  const router = useRouter();
+  const [outfitLogs, setOutfitLogs] = useState<OutfitLog[]>([]);
+  const [summary, setSummary] = useState<OutfitSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Filter states
+  const [outcomeFilter, setOutcomeFilter] = useState<string>('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>('all');
+
+  // Fetch user ID
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = getSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      } else {
+        router.push('/');
+      }
+    };
+    fetchUser();
+  }, [router]);
+
+  // Fetch outfit history and summary
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const supabase = getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          router.push('/');
+          return;
+        }
+
+        // Fetch outfit logs
+        const logsResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/outfit-history?user_id=${userId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        if (!logsResponse.ok) {
+          throw new Error('Failed to fetch outfit history');
+        }
+
+        const logsData = await logsResponse.json();
+        setOutfitLogs(logsData.outfit_logs || []);
+
+        // Fetch summary
+        const summaryResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/outfit-history/summary?user_id=${userId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        if (!summaryResponse.ok) {
+          throw new Error('Failed to fetch outfit summary');
+        }
+
+        const summaryData = await summaryResponse.json();
+        setSummary(summaryData);
+
+      } catch (err) {
+        console.error('Error fetching outfit history:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load outfit history');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, router]);
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Get outcome badge color
+  const getOutcomeBadgeClass = (outcome: string) => {
+    switch (outcome) {
+      case 'wore':
+        return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'loved':
+        return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+      case 'skipped':
+        return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
+      case 'returned':
+        return 'bg-red-500/20 text-red-300 border-red-500/30';
+      case 'pending':
+        return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+      default:
+        return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    }
+  };
+
+  // Get outcome icon
+  const getOutcomeIcon = (outcome: string) => {
+    switch (outcome) {
+      case 'wore':
+        return 'check_circle';
+      case 'loved':
+        return 'favorite';
+      case 'skipped':
+        return 'cancel';
+      case 'returned':
+        return 'undo';
+      case 'pending':
+        return 'schedule';
+      default:
+        return 'help';
+    }
+  };
+
+  // Calculate date range
+  const getDateRange = (range: string): { start: string | null; end: string | null } => {
+    const now = new Date();
+    const end = now.toISOString();
+    
+    switch (range) {
+      case 'week': {
+        const start = new Date(now);
+        start.setDate(start.getDate() - 7);
+        return { start: start.toISOString(), end };
+      }
+      case 'month': {
+        const start = new Date(now);
+        start.setMonth(start.getMonth() - 1);
+        return { start: start.toISOString(), end };
+      }
+      case 'year': {
+        const start = new Date(now);
+        start.setFullYear(start.getFullYear() - 1);
+        return { start: start.toISOString(), end };
+      }
+      default:
+        return { start: null, end: null };
+    }
+  };
+
+  // Apply filters to outfit logs
+  const filteredLogs = useMemo(() => {
+    let filtered = [...outfitLogs];
+
+    // Apply outcome filter
+    if (outcomeFilter !== 'all') {
+      filtered = filtered.filter((log) => log.outcome === outcomeFilter);
+    }
+
+    // Apply date range filter
+    if (dateRangeFilter !== 'all') {
+      const { start } = getDateRange(dateRangeFilter);
+      if (start) {
+        filtered = filtered.filter((log) => new Date(log.created_at) >= new Date(start));
+      }
+    }
+
+    return filtered;
+  }, [outfitLogs, outcomeFilter, dateRangeFilter]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-panel p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white/70">Loading outfit history...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-panel p-8 text-center">
+            <span className="material-symbols-outlined text-red-400 text-5xl mb-4">error</span>
+            <h2 className="text-xl font-semibold text-white mb-2">Error Loading History</h2>
+            <p className="text-white/70 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <span className="material-symbols-outlined text-white">arrow_back</span>
+            </button>
+            <h1 className="text-3xl font-bold text-white">Outfit History</h1>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        {summary && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div className="glass-panel p-4 text-center">
+              <div className="text-2xl font-bold text-green-300">{summary.wore}</div>
+              <div className="text-sm text-white/70">Wore</div>
+            </div>
+            <div className="glass-panel p-4 text-center">
+              <div className="text-2xl font-bold text-pink-300">{summary.loved}</div>
+              <div className="text-sm text-white/70">Loved</div>
+            </div>
+            <div className="glass-panel p-4 text-center">
+              <div className="text-2xl font-bold text-yellow-300">{summary.skipped}</div>
+              <div className="text-sm text-white/70">Skipped</div>
+            </div>
+            <div className="glass-panel p-4 text-center">
+              <div className="text-2xl font-bold text-red-300">{summary.returned}</div>
+              <div className="text-sm text-white/70">Returned</div>
+            </div>
+            <div className="glass-panel p-4 text-center">
+              <div className="text-2xl font-bold text-gray-300">{summary.pending}</div>
+              <div className="text-sm text-white/70">Pending</div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="glass-panel p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Outcome Filter */}
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">
+                Filter by Outcome
+              </label>
+              <select
+                value={outcomeFilter}
+                onChange={(e) => setOutcomeFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">All Outcomes</option>
+                <option value="wore">Wore</option>
+                <option value="loved">Loved</option>
+                <option value="skipped">Skipped</option>
+                <option value="returned">Returned</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+
+            {/* Date Range Filter */}
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">
+                Filter by Date
+              </label>
+              <select
+                value={dateRangeFilter}
+                onChange={(e) => setDateRangeFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">All Time</option>
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="year">Last Year</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Clear Filters */}
+          {(outcomeFilter !== 'all' || dateRangeFilter !== 'all') && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-white/70">
+                Showing {filteredLogs.length} of {outfitLogs.length} outfits
+              </p>
+              <button
+                onClick={() => {
+                  setOutcomeFilter('all');
+                  setDateRangeFilter('all');
+                }}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Outfit Logs */}
+        {filteredLogs.length === 0 ? (
+          <div className="glass-panel p-12 text-center">
+            <span className="material-symbols-outlined text-white/30 text-6xl mb-4">history</span>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              {outfitLogs.length === 0 ? 'No Outfit History Yet' : 'No Matching Outfits'}
+            </h2>
+            <p className="text-white/70 mb-6">
+              {outfitLogs.length === 0
+                ? 'Your outfit history will appear here once you start approving proof cards.'
+                : 'Try adjusting your filters to see more results.'}
+            </p>
+            {outfitLogs.length === 0 ? (
+              <button
+                onClick={() => router.push('/')}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg font-medium transition-all"
+              >
+                Start Styling
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setOutcomeFilter('all');
+                  setDateRangeFilter('all');
+                }}
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredLogs.map((log) => (
+              <div key={log.id} className="glass-panel p-6 hover:bg-white/10 transition-colors">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold text-white capitalize">
+                        {log.occasion || 'Casual Outfit'}
+                      </h3>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getOutcomeBadgeClass(
+                          log.outcome
+                        )}`}
+                      >
+                        <span className="material-symbols-outlined text-sm">
+                          {getOutcomeIcon(log.outcome)}
+                        </span>
+                        {log.outcome.charAt(0).toUpperCase() + log.outcome.slice(1)}
+                      </span>
+                    </div>
+                    <p className="text-white/70 text-sm">{formatDate(log.created_at)}</p>
+                  </div>
+
+                  {log.rating && (
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={`material-symbols-outlined text-sm ${
+                            i < log.rating! ? 'text-yellow-400' : 'text-white/20'
+                          }`}
+                        >
+                          star
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Items */}
+                <div className="mb-4">
+                  <p className="text-white/70 text-sm mb-2">
+                    {log.items.length} {log.items.length === 1 ? 'item' : 'items'}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {log.items.slice(0, 5).map((item, index) => (
+                      <div
+                        key={index}
+                        className="px-3 py-1 bg-white/5 rounded-lg text-sm text-white/80"
+                      >
+                        {item.name || item.category}
+                      </div>
+                    ))}
+                    {log.items.length > 5 && (
+                      <div className="px-3 py-1 bg-white/5 rounded-lg text-sm text-white/60">
+                        +{log.items.length - 5} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Feedback */}
+                {log.feedback && (
+                  <div className="mb-4">
+                    <p className="text-white/90 text-sm italic">"{log.feedback}"</p>
+                  </div>
+                )}
+
+                {/* Compliments Badge */}
+                {log.compliments && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500/20 text-pink-300 rounded-lg text-sm">
+                    <span className="material-symbols-outlined text-sm">thumb_up</span>
+                    Received compliments
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

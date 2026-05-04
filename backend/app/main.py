@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core import cache
 from app.core.auth_middleware import JWTAuthMiddleware
-from app.routers import voice, vto, context, closet, onboarding, profile, calendar_auth, closet_analytics
+from app.routers import voice, vto, context, closet, onboarding, profile, calendar_auth, closet_analytics, proof_cards, outfit_history
 
 
 @asynccontextmanager
@@ -43,6 +43,8 @@ app.include_router(vto.router, prefix="/api/vto", tags=["VTO"])
 app.include_router(context.router, prefix="/api/context", tags=["Context"])
 app.include_router(closet.router, prefix="/api/closet", tags=["Closet"])
 app.include_router(closet_analytics.router)  # Already has prefix="/api/closet"
+app.include_router(proof_cards.router, prefix="/api/proof-cards", tags=["Proof Cards"])
+app.include_router(outfit_history.router, prefix="/api/outfit-history", tags=["Outfit History"])
 app.include_router(calendar_auth.router, prefix="/api/calendar", tags=["Calendar"])
 app.add_api_websocket_route("/ws/voice", voice.voice_websocket)
 

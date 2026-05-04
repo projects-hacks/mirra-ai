@@ -256,11 +256,19 @@ export default function PhotoUploadModal({
       }
 
       const data = await response.json();
-      return data.metadata || {};
+      return data.metadata || {
+        category: '',
+        primary_color: '',
+        color_hex: '#000000'
+      };
     } catch (err) {
       console.error("Metadata extraction error:", err);
       // Return empty metadata on error - user can fill manually
-      return {};
+      return {
+        category: '',
+        primary_color: '',
+        color_hex: '#000000'
+      };
     }
   }, []);
 

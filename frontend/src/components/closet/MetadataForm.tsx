@@ -169,7 +169,7 @@ export default function MetadataForm({
   );
 
   // Get confidence indicator
-  const getConfidenceIndicator = (field: string): JSX.Element | null => {
+  const getConfidenceIndicator = (field: string): React.ReactElement | null => {
     if (!initialMetadata?.confidence_scores) return null;
 
     const confidence = initialMetadata.confidence_scores[field];
