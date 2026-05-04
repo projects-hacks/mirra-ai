@@ -24,6 +24,23 @@ class ClosetItemCreate(BaseModel):
     occasions: list[str] = []
 
 
+class ClosetItemUpdate(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    subcategory: str | None = None
+    color: str | None = None
+    color_hex: str | None = None
+    brand: str | None = None
+    price: float | None = None
+    purchase_date: str | None = None
+    occasions: list[str] | None = None
+    seasons: list[str] | None = None
+    formality: float | None = None
+    notes: str | None = None
+    is_favorite: bool | None = None
+    is_archived: bool | None = None
+
+
 class ExtractMetadataRequest(BaseModel):
     image_url: HttpUrl
     user_context: Optional[Dict[str, Any]] = None
@@ -56,6 +73,32 @@ async def add_item(item: ClosetItemCreate):
 async def delete_item(item_id: str):
     supabase.table("closet_items").delete().eq("id", item_id).execute()
     return {"deleted": True}
+
+
+@router.patch("/{item_id}")
+async def update_item(item_id: str, item: ClosetItemUpdate):
+    """
+    Update a closet item.
+    
+    Args:
+        item_id: The ID of the item to update
+        item: The fields to update
+        
+    Returns:
+        The updated item
+    """
+    # Filter out None values
+    update_data = {k: v for k, v in item.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = supabase.table("closet_items").update(update_data).eq("id", item_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return result.data[0]
 
 
 @router.post("/extract-metadata", response_model=ExtractMetadataResponse)

@@ -6,6 +6,7 @@ import ClosetGrid from "@/components/closet/ClosetGrid";
 import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
 import MetadataForm from "@/components/closet/MetadataForm";
 import ClosetStatistics from "@/components/closet/ClosetStatistics";
+import ItemDetailModal from "@/components/closet/ItemDetailModal";
 
 interface ClosetItem {
   id: string;
@@ -50,6 +51,8 @@ export default function ClosetPage() {
   // Modal states
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isMetadataFormOpen, setIsMetadataFormOpen] = useState(false);
+  const [isItemDetailModalOpen, setIsItemDetailModalOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
   // Upload flow state
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -184,8 +187,8 @@ export default function ClosetPage() {
 
   // Handle item selection
   const handleSelectItem = useCallback((item: any) => {
-    // TODO: Open item detail modal (Task 11.1)
-    console.log("Selected item:", item);
+    setSelectedItemId(item.id);
+    setIsItemDetailModalOpen(true);
   }, []);
 
   if (isLoading) {
@@ -256,6 +259,17 @@ export default function ClosetPage() {
         initialMetadata={extractedMetadata}
         onSubmit={handleMetadataSubmit}
         onCancel={handleMetadataCancel}
+      />
+
+      {/* Item Detail Modal */}
+      <ItemDetailModal
+        isOpen={isItemDetailModalOpen}
+        itemId={selectedItemId}
+        onClose={() => {
+          setIsItemDetailModalOpen(false);
+          setSelectedItemId(null);
+        }}
+        onUpdate={fetchClosetItems}
       />
     </div>
   );
