@@ -373,17 +373,24 @@ class OnboardingService:
             lips_data = face_result.get("lips", {})
             nose_data = face_result.get("nose", {})
             
+            # Helper function to convert array responses to strings
+            def array_to_string(value):
+                """Convert array to string (join with comma) or return as-is if not array."""
+                if isinstance(value, list) and value:
+                    return ", ".join(str(v) for v in value)
+                return value
+            
             face_shape_obj = {
                 "shape": face_result.get("faceshape", "Oval"),
                 "age": age_gender.get("age", None),
                 "gender": age_gender.get("gender", None),
                 "facial_ratios": facial_ratio,
-                "eye_shape": eyes_data.get("eyeshape", None),
-                "eye_size": eyes_data.get("eyesize", None),
-                "eyelid_type": eyes_data.get("eyelid", None),
-                "lip_shape": lips_data.get("lipshape", None),
-                "nose_width": nose_data.get("nosewidth", None),
-                "nose_length": nose_data.get("noselength", None),
+                "eye_shape": array_to_string(eyes_data.get("eyeshape", None)),
+                "eye_size": array_to_string(eyes_data.get("eyesize", None)),
+                "eyelid_type": array_to_string(eyes_data.get("eyelid", None)),
+                "lip_shape": array_to_string(lips_data.get("lipshape", None)),
+                "nose_width": array_to_string(nose_data.get("nosewidth", None)),
+                "nose_length": array_to_string(nose_data.get("noselength", None)),
             }
 
             body_model = {
