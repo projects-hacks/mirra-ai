@@ -9,7 +9,7 @@ Provides analytics endpoints for closet items including:
 from fastapi import APIRouter, HTTPException, Query
 from typing import Any
 
-from app.services.supabase_client import get_supabase_client
+from app.services.supabase_client import supabase
 from app.services.cost_per_wear_calculator import CostPerWearCalculator
 
 router = APIRouter(prefix="/api/closet", tags=["closet-analytics"])
@@ -37,8 +37,6 @@ async def get_closet_analytics(
         - most_worn_items: Top 5 most worn items
         - total_savings: Savings from wearing vs buying new
     """
-    supabase = get_supabase_client()
-
     # Fetch all closet items for user
     response = supabase.table("closet_items").select("*").eq("user_id", user_id).execute()
 
