@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     GOOGLE_AI_STUDIO_KEY: str = ""
 
     # Google Calendar
-    GOOGLE_CALENDAR_CREDENTIALS: str = ""  # JSON string
+    GOOGLE_CALENDAR_CREDENTIALS: str = ""  # JSON string (legacy, for global credentials)
+    GOOGLE_CLIENT_ID: str = ""  # OAuth client ID
+    GOOGLE_CLIENT_SECRET: str = ""  # OAuth client secret
 
     # Serper (Google Shopping)
     SERPER_API_KEY: str = ""

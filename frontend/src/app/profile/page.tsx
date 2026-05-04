@@ -181,6 +181,7 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
+  const [calendarMessage, setCalendarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editForm, setEditForm] = useState<EditableProfile>({
     displayName: "",
     preferred_currency: "USD",
@@ -192,6 +193,24 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       const supabase = getSupabase();
+
+      // Check for calendar OAuth callback messages
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('calendar_success')) {
+        setCalendarMessage({ type: 'success', text: 'Calendar connected successfully!' });
+        // Clear URL params
+        window.history.replaceState({}, '', '/profile');
+      } else if (urlParams.get('calendar_error')) {
+        const error = urlParams.get('calendar_error');
+        setCalendarMessage({ 
+          type: 'error', 
+          text: error === 'connection_failed' 
+            ? 'Failed to connect calendar. Please try again.' 
+            : 'Calendar connection was cancelled.'
+        });
+        // Clear URL params
+        window.history.replaceState({}, '', '/profile');
+      }
 
       // Session check
       const { data: { session } } = await supabase.auth.getSession();
@@ -301,6 +320,15 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
     await signOut();
   }, [signOut]);
+
+  // ── Connect calendar ────────────────────────────
+  const handleConnectCalendar = useCallback(() => {
+    if (!user) return;
+    
+    // Redirect to backend OAuth endpoint
+    const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/calendar/oauth/authorize?user_id=${user.id}`;
+    window.location.href = authUrl;
+  }, [user]);
 
   // ── Disconnect calendar ────────────────────────────
   const handleDisconnectCalendar = useCallback(async () => {
@@ -697,26 +725,40 @@ export default function ProfilePage() {
         </div>
 
         {/* ── Calendar ── */}
-        <div className="glass-card flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Google Calendar</p>
-            <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--on-surface-variant)" }}>
-              <span
-                className="w-2 h-2 rounded-full inline-block"
-                style={{ background: calendarConnected ? "var(--success)" : "var(--outline)" }}
-              />
-              {calendarConnected ? "Connected" : "Not connected"}
-            </p>
-          </div>
+        <div className="glass-card">
+          {calendarMessage && (
+            <div 
+              className="mb-3 p-3 rounded-lg text-sm"
+              style={{ 
+                background: calendarMessage.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                color: calendarMessage.type === 'success' ? 'var(--success)' : 'var(--error)',
+                border: `1px solid ${calendarMessage.type === 'success' ? 'var(--success)' : 'var(--error)'}`
+              }}
+            >
+              {calendarMessage.text}
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Google Calendar</p>
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--on-surface-variant)" }}>
+                <span
+                  className="w-2 h-2 rounded-full inline-block"
+                  style={{ background: calendarConnected ? "var(--success)" : "var(--outline)" }}
+                />
+                {calendarConnected ? "Connected" : "Not connected"}
+              </p>
+            </div>
           {calendarConnected ? (
             <button onClick={handleDisconnectCalendar} className="btn-secondary text-sm" style={{ color: "var(--error)" }}>
               Disconnect
             </button>
           ) : (
-            <button className="btn-primary text-sm" disabled>
+            <button onClick={handleConnectCalendar} className="btn-primary text-sm">
               Connect
             </button>
           )}
+          </div>
         </div>
 
         {/* ── Danger Zone ── */}
