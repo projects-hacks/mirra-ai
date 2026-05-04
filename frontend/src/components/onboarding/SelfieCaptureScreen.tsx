@@ -108,34 +108,8 @@ export function SelfieCaptureScreen({
     }
   }, [isSDKLoaded, isCameraOpen, openCamera]);
 
-  // Fallback: Check if Camera Kit captured but didn't fire event
-  // The SDK might show a preview without firing faceDetectionCaptured
-  useEffect(() => {
-    if (captureState === "capturing") {
-      // After 5 seconds of "capturing" state, assume capture succeeded
-      // and show the confirmation UI
-      const timer = setTimeout(() => {
-        console.log("[SelfieCaptureScreen] Capture timeout - assuming success, showing confirmation");
-        setCaptureState("captured");
-        // Try to extract image from Camera Kit DOM if available
-        const ymkModule = document.getElementById("YMK-module");
-        if (ymkModule) {
-          const canvas = ymkModule.querySelector("canvas");
-          if (canvas) {
-            try {
-              const base64 = canvas.toDataURL("image/jpeg");
-              setCapturedImageData(base64);
-              console.log("[SelfieCaptureScreen] Extracted image from canvas");
-            } catch (err) {
-              console.error("[SelfieCaptureScreen] Failed to extract canvas:", err);
-            }
-          }
-        }
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [captureState]);
+  // Note: We rely on onFaceDetectionCaptured event to transition to "captured" state
+  // The SDK will fire this event after the countdown (3-2-1) completes and image is captured
 
   // Handle SDK errors
   useEffect(() => {
