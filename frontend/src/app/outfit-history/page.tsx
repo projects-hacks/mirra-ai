@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import ClosetNav from '@/components/navigation/ClosetNav';
+import OutfitHistoryCard from '@/components/closet/OutfitHistoryCard';
+import { SkeletonOutfitHistory } from '@/components/common/SkeletonLoader';
 
 interface OutfitLog {
   id: string;
@@ -210,13 +212,27 @@ export default function OutfitHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-24">
         <div className="max-w-4xl mx-auto">
-          <div className="glass-panel p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-white/70">Loading outfit history...</p>
+          {/* Header Skeleton */}
+          <div className="mb-6">
+            <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-4"></div>
           </div>
+          
+          {/* Summary Cards Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="glass-panel p-4 text-center">
+                <div className="h-8 w-12 bg-white/10 rounded animate-pulse mx-auto mb-2"></div>
+                <div className="h-4 w-16 bg-white/10 rounded animate-pulse mx-auto"></div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Outfit Logs Skeleton */}
+          <SkeletonOutfitHistory count={5} />
         </div>
+        <ClosetNav />
       </div>
     );
   }
@@ -376,80 +392,33 @@ export default function OutfitHistoryPage() {
         ) : (
           <div className="space-y-4">
             {filteredLogs.map((log) => (
-              <div key={log.id} className="glass-panel p-6 hover:bg-white/10 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-white capitalize">
-                        {log.occasion || 'Casual Outfit'}
-                      </h3>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getOutcomeBadgeClass(
-                          log.outcome
-                        )}`}
-                      >
-                        <span className="material-symbols-outlined text-sm">
-                          {getOutcomeIcon(log.outcome)}
-                        </span>
-                        {log.outcome.charAt(0).toUpperCase() + log.outcome.slice(1)}
-                      </span>
-                    </div>
-                    <p className="text-white/70 text-sm">{formatDate(log.created_at)}</p>
-                  </div>
+              <OutfitHistoryCard
+                key={log.id}
+                log={log}
+                onUpdate={() => {
+                  // Refresh data after update
+                  const fetchData = async () => {
+                    const supabase = getSupabase();
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) return;
 
-                  {log.rating && (
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className={`material-symbols-outlined text-sm ${
-                            i < log.rating! ? 'text-yellow-400' : 'text-white/20'
-                          }`}
-                        >
-                          star
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                    const logsResponse = await fetch(
+                      `${process.env.NEXT_PUBLIC_API_URL}/api/outfit-history?user_id=${userId}`,
+                      { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+                    );
+                    const logsData = await logsResponse.json();
+                    setOutfitLogs(logsData.outfit_logs || []);
 
-                {/* Items */}
-                <div className="mb-4">
-                  <p className="text-white/70 text-sm mb-2">
-                    {log.items.length} {log.items.length === 1 ? 'item' : 'items'}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {log.items.slice(0, 5).map((item, index) => (
-                      <div
-                        key={index}
-                        className="px-3 py-1 bg-white/5 rounded-lg text-sm text-white/80"
-                      >
-                        {item.name || item.category}
-                      </div>
-                    ))}
-                    {log.items.length > 5 && (
-                      <div className="px-3 py-1 bg-white/5 rounded-lg text-sm text-white/60">
-                        +{log.items.length - 5} more
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Feedback */}
-                {log.feedback && (
-                  <div className="mb-4">
-                    <p className="text-white/90 text-sm italic">"{log.feedback}"</p>
-                  </div>
-                )}
-
-                {/* Compliments Badge */}
-                {log.compliments && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500/20 text-pink-300 rounded-lg text-sm">
-                    <span className="material-symbols-outlined text-sm">thumb_up</span>
-                    Received compliments
-                  </div>
-                )}
-              </div>
+                    const summaryResponse = await fetch(
+                      `${process.env.NEXT_PUBLIC_API_URL}/api/outfit-history/summary?user_id=${userId}`,
+                      { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+                    );
+                    const summaryData = await summaryResponse.json();
+                    setSummary(summaryData);
+                  };
+                  fetchData();
+                }}
+              />
             ))}
           </div>
         )}
