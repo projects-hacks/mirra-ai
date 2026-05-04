@@ -6,6 +6,7 @@ import { getSupabase } from '@/lib/supabase';
 import ClosetNav from '@/components/navigation/ClosetNav';
 import { SkeletonLookDiary } from '@/components/common/SkeletonLoader';
 import { EmptyLookDiary, EmptySearchResults } from '@/components/common/EmptyState';
+import LookDiaryCard from '@/components/closet/LookDiaryCard';
 
 interface ProofCard {
   id: string;
@@ -352,65 +353,29 @@ export default function LookDiaryPage() {
                 {/* Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {group.cards.map((card) => (
-                    <div key={card.id} className="glass-panel overflow-hidden hover:scale-105 transition-transform">
-                      {/* Image */}
-                      {card.result_image_url ? (
-                        <div className="aspect-[3/4] bg-white/5">
-                          <img
-                            src={card.result_image_url}
-                            alt={card.look_name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="aspect-[3/4] bg-white/5 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-white/30 text-6xl">
-                            checkroom
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Info */}
-                      <div className="p-4">
-                        <h3 className="text-lg font-semibold text-white mb-2">
-                          {card.look_name || 'Untitled Look'}
-                        </h3>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded text-xs capitalize">
-                            {card.occasion || 'Casual'}
-                          </span>
-                          {card.approved && (
-                            <span className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs flex items-center gap-1">
-                              <span className="material-symbols-outlined text-xs">check_circle</span>
-                              Approved
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Match Scores */}
-                        <div className="space-y-2 mb-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/70">Tone Match</span>
-                            <span className="text-white font-semibold">{card.tone_match}%</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/70">Style Fit</span>
-                            <span className="text-white font-semibold">{card.style_fit}%</span>
-                          </div>
-                        </div>
-
-                        {/* Items Count */}
-                        <div className="flex items-center justify-between text-sm text-white/70">
-                          <span>{card.owned_items.length} owned items</span>
-                          {card.new_items.length > 0 && (
-                            <span>{card.new_items.length} new items</span>
-                          )}
-                        </div>
-
-                        {/* Date */}
-                        <p className="text-white/50 text-xs mt-2">{formatDate(card.created_at)}</p>
-                      </div>
-                    </div>
+                    <LookDiaryCard
+                      key={card.id}
+                      proofCard={{
+                        id: card.id,
+                        result_image_url: card.result_image_url,
+                        look_name: card.look_name || 'Untitled Look',
+                        occasion: card.occasion || 'casual',
+                        created_at: card.created_at,
+                        tone_match_score: card.tone_match / 100,
+                        style_fit_score: card.style_fit / 100,
+                        owned_items: card.owned_items,
+                        new_items: card.new_items,
+                        weather: card.weather,
+                        calendar_event: typeof card.calendar_event === 'string' 
+                          ? undefined 
+                          : card.calendar_event,
+                        is_favorite: false,
+                      }}
+                      onFavoriteToggle={async (id, isFavorite) => {
+                        // TODO: Implement favorite toggle API call
+                        console.log('Toggle favorite:', id, isFavorite);
+                      }}
+                    />
                   ))}
                 </div>
               </div>
