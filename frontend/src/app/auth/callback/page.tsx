@@ -41,7 +41,7 @@ function CallbackHandler() {
                 token_uri: "https://oauth2.googleapis.com/token",
                 scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
               }),
-            }, {
+            } as never, {
               onConflict: "user_id"
             });
             
