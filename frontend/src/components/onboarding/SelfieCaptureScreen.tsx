@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { useCameraKit, type CapturedImage } from "@/hooks/useCameraKit";
+import { validateImage, resizeImageIfNeeded } from "@/utils/imageValidation";
 
 // ── Props Interface ─────────────────────────────────
 interface SelfieCaptureScreenProps {
@@ -135,11 +136,43 @@ export function SelfieCaptureScreen({
     });
   };
 
-  const handleAnalyze = () => {
-    if (capturedImageData) {
-      closeCamera();
-      onCapture(capturedImageData);
+  const handleAnalyze = async () => {
+    if (!capturedImageData) return;
+    
+    // Validate image before sending to API
+    const validation = await validateImage(capturedImageData, 480); // SD minimum
+    
+    if (!validation.valid) {
+      console.error('Image validation failed:', validation.error);
+      
+      // Try to resize if too small
+      if (validation.error?.includes('too small')) {
+        try {
+          console.log('Attempting to resize image...');
+          const resized = await resizeImageIfNeeded(capturedImageData, 480);
+          
+          // Validate resized image
+          const resizedValidation = await validateImage(resized, 480);
+          if (resizedValidation.valid) {
+            console.log('Image resized successfully:', resizedValidation);
+            closeCamera();
+            onCapture(resized);
+            return;
+          }
+        } catch (resizeError) {
+          console.error('Failed to resize image:', resizeError);
+        }
+      }
+      
+      // Show error to user
+      setErrorMessage(validation.error || 'Image quality too low. Please retake.');
+      setCaptureState('error');
+      return;
     }
+    
+    console.log('Image validation passed:', validation);
+    closeCamera();
+    onCapture(capturedImageData);
   };
 
   const handleRecaptureImage = () => {
