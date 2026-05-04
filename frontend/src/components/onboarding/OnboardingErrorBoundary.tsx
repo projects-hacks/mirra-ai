@@ -56,7 +56,7 @@ export class OnboardingErrorBoundary extends Component<Props, State> {
       sentry.captureException(error, {
         contexts: {
           react: {
-            componentStack: errorInfo.componentStack,
+            componentStack: errorInfo.componentStack || "",
           },
         },
       });

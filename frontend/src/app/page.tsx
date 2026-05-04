@@ -204,6 +204,7 @@ export default function HomePage() {
           onClick={handleVoiceToggle}
         />
       </div>
+      </div>
     </ErrorBoundary>
   );
 }
