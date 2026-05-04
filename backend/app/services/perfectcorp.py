@@ -117,7 +117,7 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
             
             # Add dst_actions for skin-analysis
             if task_type == "skin-analysis":
-                dst_actions = params.pop("dst_actions", [])
+                dst_actions = params.get("dst_actions", [])
                 if dst_actions:
                     task_payload["dst_actions"] = dst_actions
             
@@ -129,6 +129,11 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
                     "eyeShape", "eyeSize", "eyelid",
                     "lipShape", "noseWidth", "noseLength"
                 ]
+            
+            # Add other params (format, face_angle_strictness_level, etc.)
+            for key, value in params.items():
+                if key not in ["dst_actions", "features"]:  # Skip already handled params
+                    task_payload[key] = value
         else:
             # VTO tasks use simpler format
             task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
