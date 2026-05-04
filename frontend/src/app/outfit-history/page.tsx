@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
+import ClosetNav from '@/components/navigation/ClosetNav';
 
 interface OutfitLog {
   id: string;
@@ -241,7 +242,7 @@ export default function OutfitHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-24">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -453,6 +454,8 @@ export default function OutfitHistoryPage() {
           </div>
         )}
       </div>
+
+      <ClosetNav />
     </div>
   );
 }

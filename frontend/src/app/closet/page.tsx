@@ -7,6 +7,7 @@ import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
 import MetadataForm from "@/components/closet/MetadataForm";
 import ClosetStatistics from "@/components/closet/ClosetStatistics";
 import ItemDetailModal from "@/components/closet/ItemDetailModal";
+import ClosetNav from "@/components/navigation/ClosetNav";
 
 interface ClosetItem {
   id: string;
@@ -222,7 +223,7 @@ export default function ClosetPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 pb-24">
       {/* Header with item count */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -271,6 +272,9 @@ export default function ClosetPage() {
         }}
         onUpdate={fetchClosetItems}
       />
+
+      {/* Navigation */}
+      <ClosetNav />
     </div>
   );
 }

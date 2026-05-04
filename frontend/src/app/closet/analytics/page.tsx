@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import ClosetNav from "@/components/navigation/ClosetNav";
 
 // ── Types ────────────────────────────────────────────
 interface AnalyticsData {
@@ -132,7 +133,7 @@ export default function ClosetAnalyticsPage() {
 
   return (
     <div
-      className="min-h-screen pb-12"
+      className="min-h-screen pb-24"
       style={{ background: "var(--bg)", color: "var(--on-surface)" }}
     >
       {/* Header */}
@@ -413,6 +414,8 @@ export default function ClosetAnalyticsPage() {
           </div>
         )}
       </div>
+
+      <ClosetNav />
     </div>
   );
 }
