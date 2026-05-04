@@ -422,13 +422,20 @@ class OnboardingService:
             # Helper function to convert array/dict responses to strings
             def array_to_string(value):
                 """Convert array to string (join with comma) or dict to string, or return as-is."""
-                if isinstance(value, list) and value:
+                if value is None:
+                    return None
+                if isinstance(value, list):
+                    if not value:
+                        return None
                     return ", ".join(str(v) for v in value)
                 elif isinstance(value, dict):
+                    if not value:
+                        return None
                     # For dict responses (like eyelid), format as readable string
                     parts = [f"{k}: {v}" for k, v in value.items() if v]
                     return ", ".join(parts) if parts else None
-                return value
+                # Already a string or other type
+                return str(value) if value else None
             
             face_shape_obj = {
                 "shape": face_result.get("faceShape", "Oval"),
