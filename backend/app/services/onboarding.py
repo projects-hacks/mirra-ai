@@ -419,11 +419,15 @@ class OnboardingService:
             # Extract comprehensive face attributes (new camelCase format)
             # The new API returns flat structure with camelCase keys
             
-            # Helper function to convert array responses to strings
+            # Helper function to convert array/dict responses to strings
             def array_to_string(value):
-                """Convert array to string (join with comma) or return as-is if not array."""
+                """Convert array to string (join with comma) or dict to string, or return as-is."""
                 if isinstance(value, list) and value:
                     return ", ".join(str(v) for v in value)
+                elif isinstance(value, dict):
+                    # For dict responses (like eyelid), format as readable string
+                    parts = [f"{k}: {v}" for k, v in value.items() if v]
+                    return ", ".join(parts) if parts else None
                 return value
             
             face_shape_obj = {
