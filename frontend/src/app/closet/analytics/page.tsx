@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import ClosetNav from "@/components/navigation/ClosetNav";
+import { SkeletonAnalyticsCard } from "@/components/common/SkeletonLoader";
+import { EmptyAnalytics } from "@/components/common/EmptyState";
 
 // ── Types ────────────────────────────────────────────
 interface AnalyticsData {
@@ -106,27 +108,103 @@ export default function ClosetAnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="processing-ring" />
+      <div
+        className="min-h-screen pb-24"
+        style={{ background: "var(--bg)", color: "var(--on-surface)" }}
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
+          style={{
+            background: "rgba(var(--bg-rgb, 10,10,20),0.85)",
+            backdropFilter: "blur(16px)",
+          }}
+        >
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "var(--on-surface-variant)" }}
+          >
+            ← Back
+          </button>
+          <h1 className="text-base font-semibold tracking-tight">
+            Closet Analytics
+          </h1>
+          <div className="w-12" />
+        </div>
+
+        <div className="max-w-4xl mx-auto px-5 space-y-6 pt-4">
+          {/* Overview Cards Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="glass-card p-4">
+                <div className="h-3 w-20 bg-white/10 rounded animate-pulse mb-2"></div>
+                <div className="h-8 w-16 bg-white/10 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Analytics Cards Skeleton */}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonAnalyticsCard key={i} />
+          ))}
+        </div>
+
+        <ClosetNav />
       </div>
     );
   }
 
   if (error || !analytics) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg mb-4" style={{ color: "var(--error)" }}>
-            {error || "Failed to load analytics"}
-          </p>
+      <div
+        className="min-h-screen pb-24"
+        style={{ background: "var(--bg)", color: "var(--on-surface)" }}
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
+          style={{
+            background: "rgba(var(--bg-rgb, 10,10,20),0.85)",
+            backdropFilter: "blur(16px)",
+          }}
+        >
           <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-lg"
-            style={{ background: "var(--primary)", color: "white" }}
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "var(--on-surface-variant)" }}
           >
-            Retry
+            ← Back
           </button>
+          <h1 className="text-base font-semibold tracking-tight">
+            Closet Analytics
+          </h1>
+          <div className="w-12" />
         </div>
+
+        <div className="max-w-4xl mx-auto px-5 pt-4">
+          {analytics && analytics.total_items === 0 ? (
+            <EmptyAnalytics />
+          ) : (
+            <div className="glass-card p-8 text-center">
+              <span className="material-symbols-outlined text-[64px] mb-4" style={{ color: "var(--error)" }}>
+                error
+              </span>
+              <p className="text-lg mb-4" style={{ color: "var(--error)" }}>
+                {error || "Failed to load analytics"}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 rounded-lg"
+                style={{ background: "var(--primary)", color: "white" }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
+
+        <ClosetNav />
       </div>
     );
   }

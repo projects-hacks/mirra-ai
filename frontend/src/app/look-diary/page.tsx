@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import ClosetNav from '@/components/navigation/ClosetNav';
+import { SkeletonLookDiary } from '@/components/common/SkeletonLoader';
+import { EmptyLookDiary, EmptySearchResults } from '@/components/common/EmptyState';
 
 interface ProofCard {
   id: string;
@@ -188,13 +190,26 @@ export default function LookDiaryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-24">
         <div className="max-w-6xl mx-auto">
-          <div className="glass-panel p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-white/70">Loading your look diary...</p>
+          {/* Header Skeleton */}
+          <div className="mb-6">
+            <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-4"></div>
           </div>
+          
+          {/* Filters Skeleton */}
+          <div className="glass-panel p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-10 bg-white/10 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Look Diary Skeleton */}
+          <SkeletonLookDiary count={6} />
         </div>
+        <ClosetNav />
       </div>
     );
   }
@@ -313,38 +328,17 @@ export default function LookDiaryPage() {
 
         {/* Timeline View */}
         {filteredCards.length === 0 ? (
-          <div className="glass-panel p-12 text-center">
-            <span className="material-symbols-outlined text-white/30 text-6xl mb-4">
-              photo_library
-            </span>
-            <h2 className="text-xl font-semibold text-white mb-2">
-              {proofCards.length === 0 ? 'No Looks Yet' : 'No Matching Looks'}
-            </h2>
-            <p className="text-white/70 mb-6">
-              {proofCards.length === 0
-                ? 'Your look diary will appear here once you start creating outfits.'
-                : 'Try adjusting your filters to see more results.'}
-            </p>
-            {proofCards.length === 0 ? (
-              <button
-                onClick={() => router.push('/')}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg font-medium transition-all"
-              >
-                Start Styling
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setOccasionFilter('all');
-                  setDateRangeFilter('all');
-                  setApprovalFilter('all');
-                }}
-                className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
+          proofCards.length === 0 ? (
+            <EmptyLookDiary onStartStyling={() => router.push('/')} />
+          ) : (
+            <EmptySearchResults
+              onClearFilters={() => {
+                setOccasionFilter('all');
+                setDateRangeFilter('all');
+                setApprovalFilter('all');
+              }}
+            />
+          )
         ) : (
           <div className="space-y-8">
             {groupedByMonth.map((group) => (
