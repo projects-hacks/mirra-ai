@@ -17,6 +17,9 @@ interface ClosetItemCardProps {
     owned?: boolean;
   };
   onSelect?: (item: ClosetItemCardProps["item"]) => void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (itemId: string) => void;
 }
 
 /**
@@ -27,12 +30,17 @@ interface ClosetItemCardProps {
 const ClosetItemCard = memo(function ClosetItemCard({
   item,
   onSelect,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: Readonly<ClosetItemCardProps>) {
   const handleClick = useCallback(() => {
-    if (onSelect) {
+    if (selectionMode && onToggleSelect) {
+      onToggleSelect(item.id);
+    } else if (onSelect) {
       onSelect(item);
     }
-  }, [item, onSelect]);
+  }, [item, onSelect, selectionMode, onToggleSelect]);
 
   const formattedPrice = useMemo(() => {
     if (!item.purchasePrice) return null;
@@ -46,10 +54,29 @@ const ClosetItemCard = memo(function ClosetItemCard({
   return (
     <button
       type="button"
-      className="glass-panel rounded-DEFAULT overflow-hidden relative group cursor-pointer hover:scale-105 transition-transform duration-300"
+      className={`glass-panel rounded-DEFAULT overflow-hidden relative group cursor-pointer hover:scale-105 transition-transform duration-300 ${
+        isSelected ? 'ring-2 ring-purple-500' : ''
+      }`}
       onClick={handleClick}
       aria-label={`Select ${item.name}`}
     >
+      {/* Selection Checkbox */}
+      {selectionMode && (
+        <div className="absolute top-3 right-3 z-20">
+          <div
+            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+              isSelected
+                ? 'bg-purple-500 border-purple-500'
+                : 'bg-white/10 border-white/50'
+            }`}
+          >
+            {isSelected && (
+              <span className="material-symbols-outlined text-white text-sm">check</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Badge */}
       <div className="absolute top-3 left-3 z-10 flex gap-2">
         <span

@@ -69,6 +69,55 @@ async def add_item(item: ClosetItemCreate):
     return result.data[0] if result.data else {"error": "Failed to create"}
 
 
+@router.patch("/batch")
+async def batch_update_items(
+    item_ids: list[str],
+    action: str,
+    value: bool | None = None
+):
+    """
+    Perform batch operations on multiple closet items.
+    
+    Args:
+        item_ids: List of item IDs to update
+        action: Action to perform (archive, unarchive, favorite, unfavorite, delete)
+        value: Optional value for the action (for favorite/archive)
+        
+    Returns:
+        Updated items or deletion confirmation
+    """
+    if not item_ids:
+        raise HTTPException(status_code=400, detail="No item IDs provided")
+    
+    try:
+        if action == "delete":
+            # Delete all items
+            supabase.table("closet_items").delete().in_("id", item_ids).execute()
+            return {"deleted": True, "count": len(item_ids)}
+        
+        # Determine update data based on action
+        update_data = {}
+        if action == "archive":
+            update_data = {"is_archived": True}
+        elif action == "unarchive":
+            update_data = {"is_archived": False}
+        elif action == "favorite":
+            update_data = {"is_favorite": True}
+        elif action == "unfavorite":
+            update_data = {"is_favorite": False}
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
+        
+        # Update all items
+        result = supabase.table("closet_items").update(update_data).in_("id", item_ids).execute()
+        
+        return {"updated": True, "count": len(result.data), "items": result.data}
+        
+    except Exception as e:
+        logger.error(f"Error performing batch operation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/{item_id}")
 async def delete_item(item_id: str):
     supabase.table("closet_items").delete().eq("id", item_id).execute()

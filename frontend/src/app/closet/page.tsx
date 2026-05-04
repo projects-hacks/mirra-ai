@@ -7,6 +7,7 @@ import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
 import MetadataForm from "@/components/closet/MetadataForm";
 import ClosetStatistics from "@/components/closet/ClosetStatistics";
 import ItemDetailModal from "@/components/closet/ItemDetailModal";
+import BatchActionToolbar from "@/components/closet/BatchActionToolbar";
 import ClosetNav from "@/components/navigation/ClosetNav";
 
 interface ClosetItem {
@@ -54,6 +55,11 @@ export default function ClosetPage() {
   const [isMetadataFormOpen, setIsMetadataFormOpen] = useState(false);
   const [isItemDetailModalOpen, setIsItemDetailModalOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  
+  // Selection mode states
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Upload flow state
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -188,9 +194,114 @@ export default function ClosetPage() {
 
   // Handle item selection
   const handleSelectItem = useCallback((item: any) => {
+    if (selectionMode) {
+      return; // In selection mode, clicking is handled by toggle
+    }
     setSelectedItemId(item.id);
     setIsItemDetailModalOpen(true);
+  }, [selectionMode]);
+
+  // Toggle selection mode
+  const toggleSelectionMode = useCallback(() => {
+    setSelectionMode(!selectionMode);
+    setSelectedItems(new Set());
+  }, [selectionMode]);
+
+  // Toggle item selection
+  const toggleItemSelection = useCallback((itemId: string) => {
+    setSelectedItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
   }, []);
+
+  // Batch operations
+  const handleBatchOperation = useCallback(
+    async (action: string) => {
+      if (selectedItems.size === 0) return;
+
+      try {
+        const supabase = getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          throw new Error("Not authenticated");
+        }
+
+        const response = await fetch("/api/closet/batch", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            item_ids: Array.from(selectedItems),
+            action,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to ${action} items`);
+        }
+
+        // Refresh items
+        await fetchClosetItems();
+        
+        // Reset selection
+        setSelectedItems(new Set());
+        setSelectionMode(false);
+      } catch (err) {
+        console.error(`Error performing ${action}:`, err);
+        alert(`Failed to ${action} items`);
+      }
+    },
+    [selectedItems, fetchClosetItems]
+  );
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedItems.size === 0) return;
+
+    try {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+
+      const response = await fetch("/api/closet/batch", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          item_ids: Array.from(selectedItems),
+          action: "delete",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete items");
+      }
+
+      // Refresh items
+      await fetchClosetItems();
+      
+      // Reset selection
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      console.error("Error deleting items:", err);
+      alert("Failed to delete items");
+    }
+  }, [selectedItems, fetchClosetItems]);
 
   if (isLoading) {
     return (
@@ -233,6 +344,19 @@ export default function ClosetPage() {
               {items.length} {items.length === 1 ? "item" : "items"} in your wardrobe
             </p>
           </div>
+          <button
+            onClick={toggleSelectionMode}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              selectionMode
+                ? "bg-purple-600 text-white"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">
+              {selectionMode ? "close" : "checklist"}
+            </span>
+            {selectionMode ? " Cancel" : " Select"}
+          </button>
         </div>
       </div>
 
@@ -244,6 +368,22 @@ export default function ClosetPage() {
         items={items}
         onAddItem={() => setIsUploadModalOpen(true)}
         onSelectItem={handleSelectItem}
+        selectionMode={selectionMode}
+        selectedItems={selectedItems}
+        onToggleSelect={toggleItemSelection}
+      />
+
+      {/* Batch Action Toolbar */}
+      <BatchActionToolbar
+        selectedCount={selectedItems.size}
+        onArchive={() => handleBatchOperation("archive")}
+        onUnarchive={() => handleBatchOperation("unarchive")}
+        onFavorite={() => handleBatchOperation("favorite")}
+        onDelete={() => setShowDeleteConfirm(true)}
+        onCancel={() => {
+          setSelectionMode(false);
+          setSelectedItems(new Set());
+        }}
       />
 
       {/* Photo Upload Modal */}
@@ -275,6 +415,36 @@ export default function ClosetPage() {
 
       {/* Navigation */}
       <ClosetNav />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="glass-panel p-6 max-w-md w-full" style={{ background: 'var(--surface-container)' }}>
+            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--on-surface)' }}>
+              Delete {selectedItems.size} {selectedItems.size === 1 ? 'Item' : 'Items'}?
+            </h3>
+            <p style={{ color: 'var(--on-surface-variant)' }} className="mb-6">
+              Are you sure you want to delete {selectedItems.size} {selectedItems.size === 1 ? 'item' : 'items'}? This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBatchDelete}
+                className="flex-1 px-4 py-2 rounded-lg"
+                style={{ background: 'var(--error)', color: 'var(--on-error)' }}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border"
+                style={{ borderColor: 'var(--outline)', color: 'var(--on-surface)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

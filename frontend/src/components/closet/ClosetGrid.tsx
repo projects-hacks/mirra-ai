@@ -24,6 +24,9 @@ interface ClosetGridProps {
   }>;
   onAddItem?: () => void;
   onSelectItem?: (item: any) => void;
+  selectionMode?: boolean;
+  selectedItems?: Set<string>;
+  onToggleSelect?: (itemId: string) => void;
 }
 
 type SortOption = "recent" | "worn" | "cpw" | "alpha" | "most_worn";
@@ -45,6 +48,9 @@ const ClosetGrid = memo(function ClosetGrid({
   items,
   onAddItem,
   onSelectItem,
+  selectionMode = false,
+  selectedItems = new Set(),
+  onToggleSelect,
 }: ClosetGridProps) {
   const [activeCategory, setActiveCategory] = useState("All Items");
   const [searchQuery, setSearchQuery] = useState("");
@@ -490,6 +496,9 @@ const ClosetGrid = memo(function ClosetGrid({
                           key={item.id}
                           item={item}
                           onSelect={onSelectItem}
+                          selectionMode={selectionMode}
+                          isSelected={selectedItems.has(item.id)}
+                          onToggleSelect={onToggleSelect}
                         />
                       ))}
                     </div>
@@ -505,6 +514,9 @@ const ClosetGrid = memo(function ClosetGrid({
                   key={item.id}
                   item={item}
                   onSelect={onSelectItem}
+                  selectionMode={selectionMode}
+                  isSelected={selectedItems.has(item.id)}
+                  onToggleSelect={onToggleSelect}
                 />
               ))}
             </div>
