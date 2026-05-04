@@ -99,19 +99,19 @@ async def _retry_with_backoff(
         try:
             result = await fn()
             if attempt > 0:
-                logger.info(f"{task_name} succeeded on attempt {attempt + 1}")
+                logger.info(f"✓ {task_name} succeeded after {attempt} retry(ies)")
             return result
         except Exception as e:
             last_exception = e
             if attempt < max_retries:
                 delay = base_delay * (2**attempt)
                 logger.warning(
-                    f"{task_name} failed on attempt {attempt + 1}/{max_retries + 1}, "
-                    f"retrying in {delay}s: {str(e)}"
+                    f"✗ {task_name} failed (attempt {attempt + 1}/{max_retries + 1}), "
+                    f"retrying in {delay}s..."
                 )
                 await asyncio.sleep(delay)
             else:
-                logger.error(f"{task_name} failed after {max_retries + 1} attempts: {str(e)}")
+                logger.error(f"✗ {task_name} failed after {max_retries + 1} attempt(s): {str(e)}")
 
     raise last_exception  # type: ignore
 
@@ -131,7 +131,7 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
         Exception: If circuit breaker is open or all retries fail
     """
     if _circuit_breaker.is_open():
-        logger.error(f"Circuit breaker open for {task_type}, too many failures")
+        logger.error(f"Circuit breaker open for {task_type}")
         raise Exception(f"Circuit breaker open for {task_type}, service temporarily unavailable")
 
     try:
@@ -144,7 +144,7 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
                 
                 # Only retry if error is retryable
                 if isinstance(e, PerfectCorpAPIError) and not e.is_retryable():
-                    logger.warning(f"Non-retryable error for {task_type}: {e.error_code}")
+                    logger.debug(f"Non-retryable error for {task_type}: {e.error_code}")
                     raise  # Don't retry non-retryable errors
                 raise
         
@@ -158,14 +158,13 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
         return result
     except Exception as e:
         _circuit_breaker.record_failure()
-        logger.error(f"Perfect Corp API call failed for {task_type}: {str(e)}")
         
         # Import here to avoid circular dependency
         from app.services.perfectcorp import PerfectCorpAPIError
         
         # Log user-friendly message for non-retryable errors
         if isinstance(e, PerfectCorpAPIError):
-            logger.info(f"User-friendly message: {e.get_user_message()}")
+            logger.info(f"User message for {task_type}: {e.get_user_message()}")
         
         # Re-raise the exception instead of falling back to mock
         raise
@@ -232,7 +231,7 @@ class OnboardingService:
             
             # Auto-detect location from IP if still using default
             if profile.get("location") == "San Francisco" and ip_address:
-                logger.info(f"Profile has default location, attempting IP-based detection for {ip_address}")
+                logger.debug(f"Attempting IP-based location detection for {ip_address}")
                 
                 detected_city, detected_timezone = await self._detect_location_from_ip(ip_address)
                 
@@ -245,7 +244,7 @@ class OnboardingService:
                     
                     if update_response.data:
                         profile = update_response.data[0]
-                        logger.info(f"Updated profile location to {detected_city}, {detected_timezone}")
+                        logger.info(f"Updated profile location: {detected_city}, {detected_timezone}")
 
             # Fetch preferences
             prefs_response = (
@@ -308,7 +307,7 @@ class OnboardingService:
                 # Continue with analysis even if storage fails
 
             # Step 2: Execute parallel API calls with circuit breaker and retry
-            logger.info(f"Starting parallel analysis for user {user_id}")
+            logger.info(f"→ Starting analysis for user {user_id}")
 
             skin_analysis_task = _call_api_with_circuit_breaker(
                 "skin-analysis",
@@ -343,16 +342,18 @@ class OnboardingService:
 
             # Handle individual failures - re-raise exceptions instead of using mocks
             if isinstance(skin_analysis, Exception):
-                logger.error(f"Skin analysis failed: {str(skin_analysis)}")
+                logger.error(f"✗ Skin analysis failed: {str(skin_analysis)}")
                 raise skin_analysis
 
             if isinstance(skin_tone, Exception):
-                logger.error(f"Skin tone failed: {str(skin_tone)}")
+                logger.error(f"✗ Skin tone analysis failed: {str(skin_tone)}")
                 raise skin_tone
 
             if isinstance(face_attributes, Exception):
-                logger.error(f"Face attributes failed: {str(face_attributes)}")
+                logger.error(f"✗ Face attributes analysis failed: {str(face_attributes)}")
                 raise face_attributes
+            
+            logger.info(f"✓ All analyses completed successfully for user {user_id}")
 
             # Step 3: Extract comprehensive results from API responses
             skin_result = skin_analysis.get("result", {})
@@ -468,7 +469,7 @@ class OnboardingService:
             scan_timezone = None
             
             if ip_address:
-                logger.info(f"Detecting scan location from IP {ip_address}")
+                logger.debug(f"Detecting scan location from IP {ip_address}")
                 scan_location, scan_timezone = await self._detect_location_from_ip(ip_address)
             
             # Fall back to profile location/timezone if IP detection fails
@@ -479,7 +480,7 @@ class OnboardingService:
                         scan_timezone = profile_response.data.get("timezone", "UTC") if profile_response.data else "UTC"
                     if not scan_location:
                         scan_location = profile_response.data.get("location", None) if profile_response.data else None
-                    logger.info(f"Using profile location as fallback: {scan_location}, {scan_timezone}")
+                    logger.debug(f"Using profile location as fallback: {scan_location}, {scan_timezone}")
                 except:
                     scan_timezone = "UTC"
                     scan_location = None
@@ -509,9 +510,9 @@ class OnboardingService:
                 try:
                     from app.services.weather import get_weather
                     weather_data = await get_weather(scan_location)
-                    logger.info(f"Weather fetched for scan location {scan_location}: {weather_data}")
+                    logger.debug(f"Weather fetched for {scan_location}: {weather_data.get('condition') if weather_data else 'N/A'}")
                 except Exception as weather_error:
-                    logger.warning(f"Could not fetch weather data for {scan_location}: {str(weather_error)}")
+                    logger.warning(f"Could not fetch weather for {scan_location}: {str(weather_error)}")
 
             # Insert comprehensive scan record with actual scan location
             supabase.from_("skin_scans").insert({
@@ -530,7 +531,7 @@ class OnboardingService:
             # Generate greeting based on overall score
             greeting = self._generate_greeting_from_scores(skin_scores)
 
-            logger.info(f"Analysis complete for user {user_id}")
+            logger.info(f"✓ Analysis complete for user {user_id} (overall score: {overall_score})")
 
             return {
                 "success": True,
@@ -545,7 +546,7 @@ class OnboardingService:
             }
 
         except Exception as e:
-            logger.error(f"Onboarding analyze failed for user {user_id}: {str(e)}")
+            logger.error(f"✗ Analysis failed for user {user_id}: {str(e)}")
             raise
 
     def _generate_greeting_from_scores(self, skin_scores: dict[str, Any]) -> str:
@@ -600,21 +601,22 @@ class OnboardingService:
             # Cache closet items
             await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
 
-            logger.info(f"Seeded {len(items_to_insert)} closet items for user {user_id}")
+            logger.info(f"✓ Seeded {len(items_to_insert)} closet items for user {user_id}")
 
             return {"success": True, "item_count": len(items_to_insert)}
 
         except Exception as e:
-            logger.error(f"Closet seeding failed for user {user_id}: {str(e)}")
+            logger.error(f"✗ Closet seeding failed for user {user_id}: {str(e)}")
             # Retry once
             try:
                 logger.info(f"Retrying closet seeding for user {user_id}")
                 items_to_insert = [{"user_id": user_id, **item} for item in DEMO_CLOSET_ITEMS]
                 supabase.from_("closet_items").insert(items_to_insert).execute()
                 await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
+                logger.info(f"✓ Closet seeding succeeded on retry")
                 return {"success": True, "item_count": len(items_to_insert)}
             except Exception as retry_error:
-                logger.error(f"Closet seeding retry failed for user {user_id}: {str(retry_error)}")
+                logger.error(f"✗ Closet seeding retry failed: {str(retry_error)}")
                 raise
 
     async def complete(self, user_id: str, calendar_connected: bool = False) -> dict[str, Any]:
@@ -628,33 +630,30 @@ class OnboardingService:
             Dict with success status and updated profile
         """
         try:
-            logger.info(f"Starting onboarding completion for user {user_id}")
+            logger.info(f"→ Completing onboarding for user {user_id}")
             
             # Update profiles.onboarded = true
             profile_response = (
                 supabase.from_("profiles").update({"onboarded": True}).eq("id", user_id).execute()
             )
             
-            logger.info(f"Profile update response: {profile_response}")
-            
             if not profile_response.data:
                 logger.error(f"Profile update returned no data for user {user_id}")
                 # Verify the profile exists
                 check_response = supabase.from_("profiles").select("*").eq("id", user_id).execute()
-                logger.info(f"Profile check: {check_response.data}")
+                logger.debug(f"Profile check: {check_response.data}")
                 raise ValueError(f"Failed to update profile for user {user_id}")
 
             # Update calendar_connected if applicable
             if calendar_connected:
-                prefs_response = supabase.from_("user_preferences").update({"calendar_connected": True}).eq(
+                supabase.from_("user_preferences").update({"calendar_connected": True}).eq(
                     "user_id", user_id
                 ).execute()
-                logger.info(f"Preferences update response: {prefs_response}")
 
-            logger.info(f"Onboarding completed successfully for user {user_id}")
+            logger.info(f"✓ Onboarding completed for user {user_id}")
 
             return {"success": True, "profile": profile_response.data[0] if profile_response.data else None}
 
         except Exception as e:
-            logger.error(f"Onboarding complete failed for user {user_id}: {str(e)}", exc_info=True)
+            logger.error(f"✗ Onboarding completion failed for user {user_id}: {str(e)}", exc_info=True)
             raise

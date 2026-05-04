@@ -2,7 +2,7 @@
 from typing import Final
 
 # ── Retry Configuration ────────────────────────────
-MAX_RETRIES: Final[int] = 2
+MAX_RETRIES: Final[int] = 1  # Reduced from 2 for faster failure
 BASE_RETRY_DELAY: Final[float] = 1.0
 
 # ── Circuit Breaker Configuration ──────────────────
