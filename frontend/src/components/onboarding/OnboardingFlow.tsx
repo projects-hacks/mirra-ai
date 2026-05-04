@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
+import { getSupabase } from "@/lib/supabase";
 import { AuthScreen } from "./AuthScreen";
 import { CameraPermissionScreen } from "./CameraPermissionScreen";
 import { SelfieCaptureScreen } from "./SelfieCaptureScreen";
@@ -67,7 +68,37 @@ export function OnboardingFlow() {
     setAnalysisResults,
     setError,
     retryCurrentStep,
+    dispatch,
   } = useOnboarding();
+
+  // ── Check for existing session on mount ────────────
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      // Only check if we're on the auth step
+      if (state.currentStep !== "auth") return;
+
+      try {
+        const supabase = getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          // User is already authenticated, skip auth step
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email || "",
+            displayName: session.user.user_metadata?.full_name || session.user.email || "User",
+            avatarUrl: session.user.user_metadata?.avatar_url,
+          };
+          completeAuth(user);
+        }
+      } catch (error) {
+        console.error("Error checking existing session:", error);
+        // Don't show error, just stay on auth screen
+      }
+    };
+
+    checkExistingSession();
+  }, [state.currentStep, completeAuth]);
 
   // ── Error Handling ────────────────────────────────
   const handleError = (error: Error, step: typeof state.currentStep) => {

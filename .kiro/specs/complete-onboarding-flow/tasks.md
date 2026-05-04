@@ -222,7 +222,7 @@ This implementation plan transforms the current broken user experience into a co
     - _Requirements: 6.7, 10.1_
 
 - [ ] 13. Implement closet seeding
-  - [ ] 13.1 Define demo closet items
+  - [x] 13.1 Define demo closet items
     - Create `backend/app/data/demo_closet.py` with DEMO_CLOSET_ITEMS constant
     - Include 15 items: jacket (3), dress (2), top (3), bottom (3), shoes (2), accessory (2)
     - Ensure variety of formality levels (0.2 - 0.9)
@@ -230,7 +230,7 @@ This implementation plan transforms the current broken user experience into a co
     - Populate all required fields: name, category, subcategory, color, color_hex, brand, price, image_url, occasions, seasons, formality
     - _Requirements: 7.2, 7.3, 7.4, 7.5_
   
-  - [ ] 13.2 Create POST /api/onboarding/seed-closet endpoint
+  - [x] 13.2 Create POST /api/onboarding/seed-closet endpoint
     - Insert 15 demo items into closet_items table with user_id
     - Cache closet items in Redis with 1-hour TTL
     - Complete within 1 second
