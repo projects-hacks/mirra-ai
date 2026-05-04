@@ -1,6 +1,6 @@
 """Pydantic models for onboarding API endpoints."""
 import re
-from typing import Literal
+from typing import Literal, Any
 from pydantic import BaseModel, field_validator, Field
 
 
@@ -89,24 +89,44 @@ class SkinScores(BaseModel):
     overall: int = Field(..., ge=0, le=100, description="Overall skin score")
     moisture: int = Field(..., ge=0, le=100, description="Moisture level score")
     acne: int = Field(..., ge=0, le=100, description="Acne score")
-    wrinkles: int = Field(..., ge=0, le=100, description="Wrinkles score")
-    pores: int = Field(..., ge=0, le=100, description="Pores score")
-    dark_circles: int = Field(..., ge=0, le=100, description="Dark circles score")
+    wrinkles: int = Field(..., ge=0, le=100, description="Wrinkles score (mapped from 'wrinkle')")
+    pores: int = Field(..., ge=0, le=100, description="Pores score (mapped from 'pore')")
+    dark_circles: int = Field(..., ge=0, le=100, description="Dark circles score (mapped from 'dark_circle')")
+    # Additional comprehensive metrics
+    texture: int = Field(..., ge=0, le=100, description="Skin texture score")
+    redness: int = Field(..., ge=0, le=100, description="Redness score")
+    oiliness: int = Field(..., ge=0, le=100, description="Oiliness score")
+    age_spot: int = Field(..., ge=0, le=100, description="Age spot score")
+    radiance: int = Field(..., ge=0, le=100, description="Radiance score")
+    eye_bag: int = Field(..., ge=0, le=100, description="Eye bag score")
+    droopy_upper_eyelid: int = Field(..., ge=0, le=100, description="Droopy upper eyelid score")
+    droopy_lower_eyelid: int = Field(..., ge=0, le=100, description="Droopy lower eyelid score")
+    firmness: int = Field(..., ge=0, le=100, description="Skin firmness score")
 
 
 class SkinTone(BaseModel):
     """Skin tone analysis results."""
-    undertone: Literal['warm', 'cool', 'neutral'] = Field(..., description="Skin undertone")
-    depth: Literal['light', 'medium', 'deep'] = Field(..., description="Skin depth")
-    hex: str = Field(..., description="Hex color code")
-    color_season: str = Field(..., description="Color season classification")
+    skin_color: str = Field(..., description="Hex color code for skin")
+    eye_color: str | None = Field(None, description="Hex color code for eyes")
+    eye_color_name: str | None = Field(None, description="Eye color name")
+    lip_color: str | None = Field(None, description="Hex color code for lips")
+    eyebrow_color: str | None = Field(None, description="Hex color code for eyebrows")
+    hair_color: str | None = Field(None, description="Hex color code for hair")
+    hair_color_name: str | None = Field(None, description="Hair color name")
 
 
 class FaceShape(BaseModel):
     """Face shape analysis results."""
     shape: str = Field(..., description="Face shape classification")
-    symmetry_score: float = Field(..., description="Facial symmetry score")
-    proportions: dict[str, float] = Field(..., description="Facial proportions")
+    age: int | None = Field(None, description="Estimated age")
+    gender: str | None = Field(None, description="Detected gender")
+    facial_ratios: dict[str, Any] = Field(default_factory=dict, description="Facial proportion ratios")
+    eye_shape: str | None = Field(None, description="Eye shape classification")
+    eye_size: str | None = Field(None, description="Eye size classification")
+    eyelid_type: str | None = Field(None, description="Eyelid type")
+    lip_shape: str | None = Field(None, description="Lip shape classification")
+    nose_width: str | None = Field(None, description="Nose width classification")
+    nose_length: str | None = Field(None, description="Nose length classification")
 
 
 class BodyModel(BaseModel):

@@ -26,19 +26,39 @@ export interface SkinScores {
   wrinkles: number;
   pores: number;
   dark_circles: number;
+  // Additional comprehensive metrics from backend
+  texture: number;
+  redness: number;
+  oiliness: number;
+  age_spot: number;
+  radiance: number;
+  eye_bag: number;
+  droopy_upper_eyelid: number;
+  droopy_lower_eyelid: number;
+  firmness: number;
 }
 
 export interface SkinTone {
-  undertone: 'warm' | 'cool' | 'neutral';
-  depth: 'light' | 'medium' | 'deep';
-  hex: string;
-  colorSeason: string;
+  skin_color: string; // Hex color code
+  eye_color?: string | null;
+  eye_color_name?: string | null;
+  lip_color?: string | null;
+  eyebrow_color?: string | null;
+  hair_color?: string | null;
+  hair_color_name?: string | null;
 }
 
 export interface FaceShape {
   shape: string;
-  symmetryScore: number;
-  proportions: Record<string, number>;
+  age?: number | null;
+  gender?: string | null;
+  facial_ratios?: Record<string, any>;
+  eye_shape?: string | null;
+  eye_size?: string | null;
+  eyelid_type?: string | null;
+  lip_shape?: string | null;
+  nose_width?: string | null;
+  nose_length?: string | null;
 }
 
 export interface AnalysisResults {

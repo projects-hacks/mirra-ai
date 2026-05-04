@@ -310,27 +310,39 @@ class OnboardingService:
             tone_result = skin_tone.get("results", {})
             face_result = face_attributes.get("results", {})
 
-            # Build comprehensive skin_scores with ALL metrics (both raw_score and ui_score)
+            # Build flattened skin_scores using ui_score values (integers 0-100)
+            # Map backend metric names to frontend expectations
+            metric_mapping = {
+                "wrinkle": "wrinkles",
+                "pore": "pores",
+                "dark_circle": "dark_circles",
+                # These stay the same
+                "texture": "texture",
+                "acne": "acne",
+                "redness": "redness",
+                "oiliness": "oiliness",
+                "age_spot": "age_spot",
+                "radiance": "radiance",
+                "moisture": "moisture",
+                "eye_bag": "eye_bag",
+                "droopy_upper_eyelid": "droopy_upper_eyelid",
+                "droopy_lower_eyelid": "droopy_lower_eyelid",
+                "firmness": "firmness"
+            }
+            
             skin_metrics = {}
-            for metric in ["wrinkle", "pore", "texture", "acne", "redness", "oiliness", 
-                          "age_spot", "radiance", "moisture", "dark_circle", "eye_bag",
-                          "droopy_upper_eyelid", "droopy_lower_eyelid", "firmness"]:
-                metric_data = skin_result.get(metric, {})
+            for backend_metric, frontend_metric in metric_mapping.items():
+                metric_data = skin_result.get(backend_metric, {})
                 if isinstance(metric_data, dict):
-                    skin_metrics[metric] = {
-                        "raw_score": float(metric_data.get("raw_score", 75.0)),
-                        "ui_score": int(metric_data.get("ui_score", 75))
-                    }
+                    # Use ui_score as the flattened integer value
+                    skin_metrics[frontend_metric] = int(metric_data.get("ui_score", 75))
                 else:
                     # Fallback for mock data format
-                    skin_metrics[metric] = {
-                        "raw_score": 75.0,
-                        "ui_score": 75
-                    }
+                    skin_metrics[frontend_metric] = 75
 
-            # Calculate overall score (average of ui_scores)
-            ui_scores = [m["ui_score"] for m in skin_metrics.values()]
-            overall_score = int(sum(ui_scores) / len(ui_scores)) if ui_scores else 75
+            # Calculate overall score (average of all metric scores)
+            metric_scores = list(skin_metrics.values())
+            overall_score = int(sum(metric_scores) / len(metric_scores)) if metric_scores else 75
 
             skin_scores = {
                 "overall": overall_score,
@@ -462,23 +474,26 @@ class OnboardingService:
             raise
 
     def _generate_greeting_from_scores(self, skin_scores: dict[str, Any]) -> str:
-        """Generate personalized greeting based on comprehensive skin scores.
+        """Generate personalized greeting based on skin scores.
 
         Args:
-            skin_scores: Dict of skin metric scores with raw_score and ui_score
+            skin_scores: Dict of skin metric scores (flattened integers 0-100)
 
         Returns:
             Personalized greeting message
         """
         overall = skin_scores.get("overall", 75)
 
-        # Find most significant concern (lowest ui_score below threshold)
+        # Find most significant concern (lowest score below threshold)
         concerns = []
         for metric, label in SKIN_CONCERNS.items():
-            if metric in skin_scores and isinstance(skin_scores[metric], dict):
-                ui_score = skin_scores[metric].get("ui_score", 100)
-                if ui_score < SKIN_CONCERN_THRESHOLD:
-                    concerns.append((label, ui_score))
+            if metric in skin_scores:
+                score = skin_scores[metric]
+                # Handle both flattened (int) and nested (dict) formats for backward compatibility
+                if isinstance(score, dict):
+                    score = score.get("ui_score", 100)
+                if score < SKIN_CONCERN_THRESHOLD:
+                    concerns.append((label, score))
 
         concerns.sort(key=lambda x: x[1])  # Sort by score (lowest first)
 

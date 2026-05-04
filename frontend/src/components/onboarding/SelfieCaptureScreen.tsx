@@ -89,19 +89,22 @@ export function SelfieCaptureScreen({
 
   // Load SDK on mount
   useEffect(() => {
+    console.log("[SelfieCaptureScreen] Mounting, loading SDK...");
     loadSDK();
   }, [loadSDK]);
 
-  // Open camera when SDK is loaded
+  // Open camera immediately when SDK is loaded (don't wait for state change)
   useEffect(() => {
-    if (isSDKLoaded && !isCameraOpen && captureState === "loading") {
+    if (isSDKLoaded && !isCameraOpen) {
+      console.log("[SelfieCaptureScreen] SDK loaded, opening camera immediately...");
+      setCaptureState("ready"); // Set to ready immediately
       openCamera({
         faceDetectionMode: "skincare", // Use 'skincare' mode for onboarding
         imageFormat: "base64",
         language: "enu",
       });
     }
-  }, [isSDKLoaded, isCameraOpen, captureState, openCamera]);
+  }, [isSDKLoaded, isCameraOpen, openCamera]);
 
   // Handle SDK errors
   useEffect(() => {
@@ -131,8 +134,8 @@ export function SelfieCaptureScreen({
       {/* Camera Kit Mount Point */}
       <div id="YMK-module" className="w-full max-w-md" />
 
-      {/* Loading Overlay */}
-      {(isSDKLoading || captureState === "loading") && (
+      {/* Loading Overlay - Only show during SDK loading */}
+      {isSDKLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="glass-card flex flex-col items-center gap-4 p-6">
             <div className="relative h-16 w-16">
@@ -162,16 +165,14 @@ export function SelfieCaptureScreen({
                 className="text-lg font-semibold"
                 style={{ color: "var(--on-surface)" }}
               >
-                Loading Camera Kit
+                Initializing Camera...
               </p>
-              {loadingProgress > 0 && (
-                <p
-                  className="mt-1 text-sm"
-                  style={{ color: "var(--on-surface-variant)" }}
-                >
-                  {loadingProgress}%
-                </p>
-              )}
+              <p
+                className="mt-1 text-sm"
+                style={{ color: "var(--on-surface-variant)" }}
+              >
+                This will only take a moment
+              </p>
             </div>
           </div>
         </div>
