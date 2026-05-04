@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo } from "react";
 import Image from "next/image";
+import CostPerWearBadge from "./CostPerWearBadge";
 
 interface ClosetItemCardProps {
   item: {
@@ -12,6 +13,7 @@ interface ClosetItemCardProps {
     imageUrl: string;
     brand?: string;
     purchasePrice?: number;
+    timesWorn?: number;
     owned?: boolean;
   };
   onSelect?: (item: ClosetItemCardProps["item"]) => void;
@@ -108,9 +110,18 @@ const ClosetItemCard = memo(function ClosetItemCard({
             {item.brand}
           </p>
         )}
+        
+        {/* Cost Per Wear Badge */}
+        <div className="mt-2">
+          <CostPerWearBadge
+            price={item.purchasePrice}
+            timesWorn={item.timesWorn}
+          />
+        </div>
+        
         {item.purchasePrice && (
           <p
-            className="font-body-md text-[12px] mt-1 opacity-60"
+            className="font-body-md text-[12px] mt-2 opacity-60"
             style={{ color: "var(--on-surface-variant)" }}
           >
             {formattedPrice}
