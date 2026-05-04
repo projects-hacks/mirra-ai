@@ -6,10 +6,9 @@ Provides analytics endpoints for closet items including:
 - Wear patterns and trends
 - High CPW item identification
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Any
 
-from app.core.auth_middleware import get_current_user
 from app.services.supabase_client import get_supabase_client
 from app.services.cost_per_wear_calculator import CostPerWearCalculator
 
@@ -18,7 +17,7 @@ router = APIRouter(prefix="/api/closet", tags=["closet-analytics"])
 
 @router.get("/analytics")
 async def get_closet_analytics(
-    current_user: dict = Depends(get_current_user)
+    user_id: str = Query(..., description="User ID")
 ) -> dict[str, Any]:
     """Get comprehensive closet analytics.
 
@@ -38,7 +37,6 @@ async def get_closet_analytics(
         - most_worn_items: Top 5 most worn items
         - total_savings: Savings from wearing vs buying new
     """
-    user_id = current_user["id"]
     supabase = get_supabase_client()
 
     # Fetch all closet items for user

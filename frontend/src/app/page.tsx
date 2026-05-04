@@ -15,6 +15,7 @@ import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import RecommendationsCard from "@/components/closet/RecommendationsCard";
 
 export default function HomePage() {
   const state = useAppState();
@@ -186,6 +187,13 @@ export default function HomePage() {
 
       {/* Layer 4: Feature Menu */}
       <FeatureMenu />
+
+      {/* Recommendations Card - Show when authenticated and not processing */}
+      {user && !state.isProcessing && !state.currentTool && (
+        <div className="absolute top-24 right-4 w-80 max-w-[calc(100vw-2rem)] z-10 hidden md:block">
+          <RecommendationsCard userId={user.id} />
+        </div>
+      )}
 
       {/* Layer 3: Agent Messages + Cards */}
       <AgentOverlay
