@@ -172,6 +172,8 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditableProfile>({
     displayName: "",
     preferred_currency: "USD",
@@ -302,6 +304,105 @@ export default function ProfilePage() {
       { onConflict: "user_id" }
     );
     setCalendarConnected(false);
+  }, [user]);
+
+  // ── Re-analyze skin ────────────────────────────────
+  const handleReanalyze = useCallback(async () => {
+    if (!user) return;
+    
+    setIsReanalyzing(true);
+    setReanalyzeError(null);
+    
+    try {
+      const supabase = getSupabase();
+      
+      // Get latest selfie from skin_scans
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: latestScan, error: scanError } = await supabase
+        .from("skin_scans")
+        .select("selfie_url")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single() as any;
+      
+      if (scanError || !latestScan?.selfie_url) {
+        throw new Error("No selfie found. Please complete onboarding first.");
+      }
+      
+      // Download the selfie
+      const response = await fetch(latestScan.selfie_url);
+      if (!response.ok) {
+        throw new Error("Failed to download selfie");
+      }
+      
+      const blob = await response.blob();
+      
+      // Convert to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      
+      const selfieBase64 = await base64Promise;
+      
+      // Get client IP for location detection
+      const ipResponse = await fetch("https://api.ipify.org?format=json");
+      const ipData = await ipResponse.json();
+      const clientIp = ipData.ip;
+      
+      // Call backend analyze endpoint
+      const analyzeResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          selfie: selfieBase64,
+          ip_address: clientIp,
+        }),
+      });
+      
+      if (!analyzeResponse.ok) {
+        const errorData = await analyzeResponse.json();
+        throw new Error(errorData.detail || "Analysis failed");
+      }
+      
+      const result = await analyzeResponse.json();
+      
+      // Update local state with new data
+      if (result.body_model) {
+        setBodyModel(result.body_model);
+      }
+      
+      // Reload skin scans
+      const { data: newScans } = await supabase
+        .from("skin_scans")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      
+      if (newScans) {
+        const parsedScans = newScans.map((scan: any) => ({
+          ...scan,
+          scores: typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores,
+          weather_at_scan: typeof scan.weather_at_scan === 'string' ? JSON.parse(scan.weather_at_scan) : scan.weather_at_scan,
+        }));
+        setSkinScans(parsedScans);
+      }
+      
+      // Success!
+      setIsReanalyzing(false);
+      
+    } catch (error) {
+      console.error("Re-analyze error:", error);
+      setReanalyzeError(error instanceof Error ? error.message : "Failed to re-analyze");
+      setIsReanalyzing(false);
+    }
   }, [user]);
 
   // ── Render ─────────────────────────────────────────
@@ -526,12 +627,40 @@ export default function ProfilePage() {
               </p>
             )}
 
-            <button
-              onClick={() => router.push("/skin-history")}
-              className="btn-secondary w-full text-sm"
-            >
-              View Detailed History →
-            </button>
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push("/skin-history")}
+                className="btn-secondary flex-1 text-sm"
+              >
+                View History →
+              </button>
+              <button
+                onClick={handleReanalyze}
+                disabled={isReanalyzing}
+                className="btn-primary flex-1 text-sm flex items-center justify-center gap-2"
+              >
+                {isReanalyzing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Re-analyze
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {reanalyzeError && (
+              <p className="text-xs px-1" style={{ color: "var(--error)" }}>
+                {reanalyzeError}
+              </p>
+            )}
           </div>
         )}
 
