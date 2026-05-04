@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as React from "react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { getSupabase } from "@/lib/supabase";
 import { AuthScreen } from "./AuthScreen";
@@ -35,7 +36,82 @@ function CalendarPromptScreen() {
   );
 }
 
-function CompletionScreen() {
+function CompletionScreen({ userId }: { userId: string }) {
+  const [isCompleting, setIsCompleting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const completeOnboarding = async () => {
+      if (isCompleting) return;
+      
+      setIsCompleting(true);
+      
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        
+        // Step 1: Seed closet with demo items
+        console.log("Seeding closet with demo items...");
+        const seedResponse = await fetch(`${apiUrl}/api/onboarding/seed-closet`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
+
+        if (!seedResponse.ok) {
+          throw new Error("Failed to seed closet");
+        }
+
+        // Step 2: Mark onboarding as complete
+        console.log("Marking onboarding as complete...");
+        const completeResponse = await fetch(`${apiUrl}/api/onboarding/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, calendar_connected: false }),
+        });
+
+        if (!completeResponse.ok) {
+          throw new Error("Failed to complete onboarding");
+        }
+
+        console.log("Onboarding completed successfully!");
+
+        // Step 3: Wait for animation, then reload to show main interface
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+
+      } catch (err) {
+        console.error("Completion error:", err);
+        setError(err instanceof Error ? err.message : "Failed to complete onboarding");
+        setIsCompleting(false);
+      }
+    };
+
+    completeOnboarding();
+  }, [userId, isCompleting]);
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="glass-card text-center max-w-md">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold mb-2" style={{ color: "var(--error)" }}>
+            Completion Failed
+          </h2>
+          <p className="text-sm mb-4" style={{ color: "var(--on-surface-variant)" }}>
+            {error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="glass-card text-center">
@@ -50,9 +126,15 @@ function CompletionScreen() {
         <h2 className="text-2xl font-semibold mb-2" style={{ color: "var(--on-surface)" }}>
           All Set!
         </h2>
-        <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-sm mb-4" style={{ color: "var(--on-surface-variant)" }}>
           Got it. Let's build your first look.
         </p>
+        {isCompleting && (
+          <div className="flex items-center justify-center gap-2 text-xs" style={{ color: "var(--on-surface-muted)" }}>
+            <div className="processing-ring h-4 w-4" />
+            <span>Setting up your closet...</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -274,7 +356,7 @@ export function OnboardingFlow() {
         return <CalendarPromptScreen />;
 
       case "completion":
-        return <CompletionScreen />;
+        return <CompletionScreen userId={state.user?.id || ""} />;
 
       default:
         return (
