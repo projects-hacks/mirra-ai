@@ -43,6 +43,10 @@ htmlcov/
 *.bak
 *.tmp
 
+# Kiro local setup
+.kiro/
+.mcp/
+
 # Documentation and examples
 *.example.tsx
 *.example.ts

@@ -11,7 +11,7 @@ export type CameraKitMode = 'face' | 'body';
 export type ImageFormat = 'base64' | 'blob';
 
 export interface CameraKitConfig {
-  faceDetectionMode: 'makeup' | 'skin';
+  faceDetectionMode: 'makeup' | 'skincare';
   imageFormat: ImageFormat;
   language?: string;
 }
@@ -32,9 +32,9 @@ export interface CameraKitEvents {
   onError?: (error: Error) => void;
 }
 
-// ── Global YMK Interface (Camera Kit SDK v2.4) ────────────────────────────
+// ── Global YMK Interface (Camera Kit SDK v2.2) ────────────────────────────
 // Note: The SDK creates window.YMK, not window.YMKCameraKit
-// This is the v2.4 Camera Kit API (different from the old photo mode API)
+// This is the v2.2 Camera Kit API (different from the old photo mode API)
 
 interface YMKCameraKitSDK {
   init: (config: CameraKitConfig) => void;
@@ -47,7 +47,7 @@ interface YMKCameraKitSDK {
 declare global {
   interface Window {
     YMK?: YMKCameraKitSDK;
-    YMKAsyncInit?: () => void;
+    ymkAsyncInit?: () => void;
   }
 }
 
@@ -77,8 +77,8 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       return;
     }
 
-    // Define YMKAsyncInit before loading script
-    window.YMKAsyncInit = function() {
+    // Define ymkAsyncInit before loading script
+    window.ymkAsyncInit = function() {
       if (!window.YMK) {
         setError(new Error('YMK SDK failed to initialize'));
         setIsSDKLoading(false);
@@ -124,7 +124,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     // Load SDK script
     const script = document.createElement('script');
-    script.src = 'https://plugins-media.makeupar.com/v2.4-camera-kit/sdk.js';
+    script.src = 'https://plugins-media.makeupar.com/v2.2-camera-kit/sdk.js';
     script.async = true;
     script.onload = () => {
       // YMKAsyncInit will be called automatically by the SDK
@@ -151,7 +151,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     try {
       const defaultConfig: CameraKitConfig = {
-        faceDetectionMode: 'skin', // Use 'skin' for onboarding analysis
+        faceDetectionMode: 'skincare', // Use 'skincare' for onboarding analysis
         imageFormat: 'base64',
         language: 'enu',
         ...config,
@@ -200,7 +200,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       }
 
       // Cleanup global
-      delete window.YMKAsyncInit;
+      delete window.ymkAsyncInit;
     };
   }, [isCameraOpen]);
 
