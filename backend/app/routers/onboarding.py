@@ -118,6 +118,19 @@ async def analyze_appearance(request: Request, body: AnalyzeRequest) -> AnalyzeR
         )
     except Exception as e:
         logger.error(f"Appearance analysis failed: {str(e)}")
+        
+        # Import here to avoid circular dependency
+        from app.services.perfectcorp import PerfectCorpAPIError
+        
+        # If it's a Perfect Corp API error, return user-friendly message
+        if isinstance(e, PerfectCorpAPIError):
+            user_message = e.get_user_message()
+            logger.info(f"Returning user-friendly error: {user_message}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=user_message
+            )
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to analyze appearance"

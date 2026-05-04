@@ -43,6 +43,9 @@ class AnalyzeRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError('selfie must be non-empty')
         
+        # Store original for logging
+        original_length = len(v)
+        
         # Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
         if v.startswith('data:'):
             parts = v.split(',', 1)
@@ -52,6 +55,17 @@ class AnalyzeRequest(BaseModel):
         
         # Validate base64 format (alphanumeric + / + = padding)
         if not re.match(r'^[A-Za-z0-9+/]*={0,2}$', v):
+            raise ValueError(f'selfie must be a valid base64 string (length: {original_length}, after prefix removal: {len(v)})')
+        
+        # Warn if image seems too small (< 10KB base64 ≈ 7.5KB binary)
+        if len(v) < 13000:  # ~10KB base64
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Selfie may be too small: {len(v)} base64 chars ≈ {len(v) * 3 // 4 / 1024:.1f}KB. "
+                "Perfect Corp requires images with long side ≤ 4096px and face >60% of width."
+            )
+        
+        return v$', v):
             raise ValueError('selfie must be a valid base64 string')
         
         return v
