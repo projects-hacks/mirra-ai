@@ -19,7 +19,7 @@ export default function StatusBar({
   const router = useRouter();
 
   return (
-    <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4">
+    <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
       {/* Left: Menu placeholder */}
       <div className="w-8 sm:w-10" />
 

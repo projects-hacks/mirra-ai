@@ -15,14 +15,13 @@ import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 import ErrorBoundary from "@/components/common/ErrorBoundary";
-import RecommendationsCard from "@/components/closet/RecommendationsCard";
 
 export default function HomePage() {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const { containerRef, videoRef, capture, isReady: cameraReady, error: cameraError, isUsingCameraKit } = useCamera();
   const voice = useVoiceAgent();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signIn, signOut } = useAuth();
   const voiceSocket = (globalThis as typeof globalThis & { __mirraWS?: WebSocket }).__mirraWS;
 
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
@@ -181,19 +180,15 @@ export default function HomePage() {
       <StatusBar
         isConnected={voice.isConnected}
         user={user}
-        onSignIn={signInWithGoogle}
+        onSignIn={signIn}
         onSignOut={signOut}
       />
 
       {/* Layer 4: Feature Menu */}
       <FeatureMenu />
 
-      {/* Recommendations Card - Show when authenticated and not processing */}
-      {user && !state.isProcessing && !state.currentTool && (
-        <div className="absolute top-24 right-4 w-80 max-w-[calc(100vw-2rem)] z-10 hidden md:block">
-          <RecommendationsCard userId={user.id} />
-        </div>
-      )}
+
+
 
       {/* Layer 3: Agent Messages + Cards */}
       <AgentOverlay

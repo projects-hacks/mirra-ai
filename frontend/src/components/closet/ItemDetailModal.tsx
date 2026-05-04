@@ -53,6 +53,18 @@ export default function ItemDetailModal({
   const [editedItem, setEditedItem] = useState<Partial<ClosetItem>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Lock body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   // Fetch item details
   useEffect(() => {
     if (!isOpen || !itemId) return;

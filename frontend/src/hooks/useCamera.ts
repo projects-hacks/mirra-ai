@@ -93,6 +93,18 @@ export function useCamera(): UseCameraReturn {
     };
   }, []);
 
+  // Attach stream if videoRef mounts after stream is initialized
+  useEffect(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (video && stream && video.srcObject !== stream) {
+      video.srcObject = stream;
+      video.play()
+        .then(() => setIsReady(true))
+        .catch(console.error);
+    }
+  });
+
   const capture = useCallback((): string | null => {
     // If using Camera Kit, trigger its capture (result arrives via onCapture)
     if (isUsingCameraKit && ymkRef.current) {

@@ -14,7 +14,7 @@ export default function ClosetNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-white/10">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-white/10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-around py-2">
           {navItems.map((item) => {

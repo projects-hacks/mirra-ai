@@ -8,6 +8,7 @@ import MetadataForm from "@/components/closet/MetadataForm";
 import ClosetStatistics from "@/components/closet/ClosetStatistics";
 import ItemDetailModal from "@/components/closet/ItemDetailModal";
 import BatchActionToolbar from "@/components/closet/BatchActionToolbar";
+import RecommendationsCard from "@/components/closet/RecommendationsCard";
 import ClosetNav from "@/components/navigation/ClosetNav";
 
 interface ClosetItem {
@@ -64,6 +65,7 @@ export default function ClosetPage() {
   // Upload flow state
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [extractedMetadata, setExtractedMetadata] = useState<ExtractedMetadata | null>(null);
+  const [userId, setUserId] = useState<string>("");
 
   // Fetch closet items
   const fetchClosetItems = useCallback(async () => {
@@ -79,6 +81,8 @@ export default function ClosetPage() {
       if (!user) {
         setError("Please sign in to view your closet");
         return;
+      } else {
+        setUserId(user.id);
       }
 
       // Fetch items from API
@@ -362,6 +366,9 @@ export default function ClosetPage() {
 
       {/* Closet Statistics */}
       {items.length > 0 && <ClosetStatistics />}
+
+      {/* Outfit Recommendations — contextual, only when closet has items */}
+      {items.length >= 3 && userId && <RecommendationsCard userId={userId} occasion="casual" />}
 
       {/* Closet Grid */}
       <ClosetGrid

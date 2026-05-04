@@ -55,12 +55,7 @@ export default function PhotoUploadModal({
   const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-  // Cleanup on unmount or close
-  useEffect(() => {
-    if (!isOpen) {
-      cleanup();
-    }
-  }, [isOpen]);
+
 
   // Handle Escape key
   useEffect(() => {
@@ -94,6 +89,19 @@ export default function PhotoUploadModal({
     setUploadProgress(0);
     setIsUploading(false);
   }, [previewUrl]);
+
+  // Cleanup on unmount or close, and lock scroll
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      cleanup();
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, cleanup]);
 
   // Handle close
   const handleClose = useCallback(() => {
