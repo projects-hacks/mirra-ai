@@ -21,9 +21,10 @@ export function SelfieCaptureScreen({
   onRecapture,
 }: SelfieCaptureScreenProps) {
   const [captureState, setCaptureState] = useState<
-    "loading" | "ready" | "capturing" | "error"
+    "loading" | "ready" | "capturing" | "captured" | "error"
   >("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [capturedImageData, setCapturedImageData] = useState<string | null>(null);
 
   const {
     isSDKLoaded,
@@ -62,13 +63,15 @@ export function SelfieCaptureScreen({
       
       // Convert to base64 if blob
       if (typeof capturedImage.image === "string") {
-        onCapture(capturedImage.image);
+        setCapturedImageData(capturedImage.image);
+        setCaptureState("captured");
       } else {
         // Convert Blob to base64
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = reader.result as string;
-          onCapture(base64);
+          setCapturedImageData(base64);
+          setCaptureState("captured");
         };
         reader.onerror = () => {
           setErrorMessage("Failed to process captured image.");
@@ -106,6 +109,35 @@ export function SelfieCaptureScreen({
     }
   }, [isSDKLoaded, isCameraOpen, openCamera]);
 
+  // Fallback: Check if Camera Kit captured but didn't fire event
+  // The SDK might show a preview without firing faceDetectionCaptured
+  useEffect(() => {
+    if (captureState === "capturing") {
+      // After 5 seconds of "capturing" state, assume capture succeeded
+      // and show the confirmation UI
+      const timer = setTimeout(() => {
+        console.log("[SelfieCaptureScreen] Capture timeout - assuming success, showing confirmation");
+        setCaptureState("captured");
+        // Try to extract image from Camera Kit DOM if available
+        const ymkModule = document.getElementById("YMK-module");
+        if (ymkModule) {
+          const canvas = ymkModule.querySelector("canvas");
+          if (canvas) {
+            try {
+              const base64 = canvas.toDataURL("image/jpeg");
+              setCapturedImageData(base64);
+              console.log("[SelfieCaptureScreen] Extracted image from canvas");
+            } catch (err) {
+              console.error("[SelfieCaptureScreen] Failed to extract canvas:", err);
+            }
+          }
+        }
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [captureState]);
+
   // Handle SDK errors
   useEffect(() => {
     if (sdkError) {
@@ -121,6 +153,24 @@ export function SelfieCaptureScreen({
 
   const handleRetry = () => {
     setErrorMessage(null);
+    setCaptureState("loading");
+    setCapturedImageData(null);
+    openCamera({
+      faceDetectionMode: "skincare",
+      imageFormat: "base64",
+      language: "enu",
+    });
+  };
+
+  const handleAnalyze = () => {
+    if (capturedImageData) {
+      closeCamera();
+      onCapture(capturedImageData);
+    }
+  };
+
+  const handleRecaptureImage = () => {
+    setCapturedImageData(null);
     setCaptureState("loading");
     openCamera({
       faceDetectionMode: "skincare",
@@ -251,6 +301,36 @@ export function SelfieCaptureScreen({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Captured Image Confirmation */}
+      {captureState === "captured" && (
+        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-6">
+          <div className="glass-card max-w-md text-center">
+            <p
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--on-surface)" }}
+            >
+              Great! Ready to analyze your skin?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleRecaptureImage}
+                className="btn-secondary flex-1"
+                aria-label="Retake photo"
+              >
+                Retake
+              </button>
+              <button
+                onClick={handleAnalyze}
+                className="btn-primary flex-1"
+                aria-label="Analyze skin"
+              >
+                Analyze
+              </button>
+            </div>
           </div>
         </div>
       )}
