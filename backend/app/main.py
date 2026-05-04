@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core import cache
 from app.core.auth_middleware import JWTAuthMiddleware
-from app.routers import voice, vto, context, closet, onboarding
+from app.routers import voice, vto, context, closet, onboarding, profile
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app.add_middleware(
 app.add_middleware(JWTAuthMiddleware)
 
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
+app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
 app.include_router(vto.router, prefix="/api/vto", tags=["VTO"])
 app.include_router(context.router, prefix="/api/context", tags=["Context"])
 app.include_router(closet.router, prefix="/api/closet", tags=["Closet"])
