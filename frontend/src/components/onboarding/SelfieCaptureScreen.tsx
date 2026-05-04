@@ -19,7 +19,7 @@ interface SelfieCaptureScreenProps {
 export function SelfieCaptureScreen({
   onCapture,
   onRecapture,
-}: SelfieCaptureScreenProps) {
+}: Readonly<SelfieCaptureScreenProps>) {
   const [captureState, setCaptureState] = useState<
     "loading" | "ready" | "capturing" | "captured" | "error"
   >("loading");

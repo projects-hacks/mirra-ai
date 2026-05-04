@@ -9,7 +9,7 @@ interface AuthScreenProps {
   onError: (error: Error) => void;
 }
 
-export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
+export function AuthScreen({ onAuthComplete, onError }: Readonly<AuthScreenProps>) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ export function AuthScreen({ onAuthComplete, onError }: AuthScreenProps) {
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${globalThis.location.origin}/auth/callback`,
         },
       });
 

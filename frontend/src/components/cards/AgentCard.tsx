@@ -8,7 +8,7 @@ interface AgentCardProps {
 }
 
 /** Glassmorphic agent card that floats over the camera. */
-export default function AgentCard({ message }: AgentCardProps) {
+export default function AgentCard({ message }: Readonly<AgentCardProps>) {
   if (message.type === "loading") {
     return (
       <div className="agent-card float-in">

@@ -16,7 +16,7 @@ export default function MatchScore({
   score,
   icon = "check_circle",
   showBar = true,
-}: MatchScoreProps) {
+}: Readonly<MatchScoreProps>) {
   const percentage = Math.round(score);
   const barWidth = `${percentage}%`;
 

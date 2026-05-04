@@ -122,26 +122,21 @@ export const SKIN_CONCERNS: Array<{ key: string; label: string }> = [
  */
 export function processSkinScores(
   scores: Record<string, number> | SkinAnalysis,
-  previousScores?: Record<string, number> | SkinAnalysis
+  _previousScores?: Record<string, number> | SkinAnalysis
 ): SkinConcern[] {
   const scoresObj = scores as Record<string, number>;
-  const prevScoresObj = previousScores as Record<string, number> | undefined;
-  
+
   return SKIN_CONCERNS.map(({ key, label }) => {
     const score = scoresObj[key] ?? 0;
     const level = skinScoreStrategy.getLevel(score);
-    const color = skinScoreStrategy.getColor(level);
-    const recommendation = skinScoreStrategy.getRecommendation(key, score);
 
-    const concern: SkinConcern = {
+    return {
       key,
       label,
       score,
       level,
-      color,
-      recommendation,
+      color: skinScoreStrategy.getColor(level),
+      recommendation: skinScoreStrategy.getRecommendation(key, score),
     };
-
-    return concern;
   }).sort((a, b) => a.score - b.score); // Sort by score (worst first)
 }

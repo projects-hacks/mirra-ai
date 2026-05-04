@@ -8,6 +8,9 @@ from app.services import perfectcorp
 from app.services.supabase_client import supabase
 from app.core import cache
 from app.core.constants import VTOTaskType, CachePrefix
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def get_user_color_profile(
@@ -56,7 +59,7 @@ async def get_user_color_profile(
                 await cache.set(cache_key, color_profile, ttl=86400)  # Cache 24h
                 return color_profile
             else:
-                print(f"Color profile for user {user_id} is stale (>90 days). Will refresh if selfie available.")
+                logger.info(f"Color profile for user {user_id} is stale (>90 days). Will refresh if selfie available.")
     
     # Level 3: Perfect Corp analysis (slow, only if selfie provided OR force refresh)
     if selfie_bytes:
@@ -65,7 +68,7 @@ async def get_user_color_profile(
             await cache.set(cache_key, color_profile, ttl=86400)
             return color_profile
         except Exception as e:
-            print(f"Perfect Corp color analysis failed: {e}. Using fallback.")
+            logger.warning(f"Perfect Corp color analysis failed: {e}. Using fallback.")
             # If we have stale data, use it rather than nothing
             if supabase:
                 result = supabase.table("body_model")\
@@ -220,9 +223,11 @@ def calculate_color_compatibility(item_color: str, user_profile: Optional[Dict])
     warm_colors = ["red", "orange", "yellow", "gold", "brown", "coral", "peach"]
     cool_colors = ["blue", "purple", "pink", "silver", "grey", "lavender"]
     
-    if user_undertone == "warm" and any(c in color_lower for c in warm_colors):
-        return 75  # Good match
-    elif user_undertone == "cool" and any(c in color_lower for c in cool_colors):
+    if (
+        user_undertone == "warm" and any(c in color_lower for c in warm_colors)
+    ) or (
+        user_undertone == "cool" and any(c in color_lower for c in cool_colors)
+    ):
         return 75  # Good match
     
     # Neutral colors work for everyone

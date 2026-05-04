@@ -3,17 +3,17 @@
 import { useState } from "react";
 
 interface CalendarPromptScreenProps {
-  onConnect: () => void;
+  onConnect: () => void | Promise<void>;
   onSkip: () => void;
 }
 
-export function CalendarPromptScreen({ onConnect, onSkip }: CalendarPromptScreenProps) {
+export function CalendarPromptScreen({ onConnect, onSkip }: Readonly<CalendarPromptScreenProps>) {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      await onConnect();
+      await Promise.resolve(onConnect());
     } catch (error) {
       console.error("Calendar connection error:", error);
       setIsConnecting(false);

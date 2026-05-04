@@ -147,6 +147,7 @@ export interface AppState {
   isListening: boolean;
   isProcessing: boolean;
   isConnected: boolean;
+  isHydrated: boolean;          // true once localStorage restore is done
   messages: Message[];
   vtoResult: VTOResult | null;
   currentTool: ToolName | null;
@@ -158,6 +159,7 @@ export interface AppState {
 // ── State Actions ───────────────────────────────────
 export type AppAction =
   | { type: "SET_SELFIE"; payload: string }
+  | { type: "CLEAR_SELFIE" }                      // used when selfie is missing after hydration
   | { type: "ADD_MESSAGE"; payload: Message }
   | { type: "REMOVE_LOADING"; payload: ToolName }
   | { type: "SET_VTO_RESULT"; payload: VTOResult }
@@ -172,4 +174,13 @@ export type AppAction =
   | { type: "TOGGLE_MENU" }
   | { type: "SET_MENU_VISIBLE"; payload: boolean }
   | { type: "SET_ACTIVE_FEATURE"; payload: ToolName | null }
-  | { type: "SHOW_PARAMETER_MODAL"; payload: boolean };
+  | { type: "SHOW_PARAMETER_MODAL"; payload: boolean }
+  | {
+      type: "HYDRATE";
+      payload: {
+        messages: Message[];
+        selfie: string | null;
+        vtoResult: VTOResult | null;
+        menuVisible?: boolean;
+      };
+    };

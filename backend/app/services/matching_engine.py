@@ -166,7 +166,7 @@ class MatchingEngine:
         compatible = compatibility_map.get(target, [])
         return any(occ in item_occasions for occ in compatible)
 
-    def _is_weather_appropriate(self, item: Dict, temp: float, season: Season) -> bool:
+    def _is_weather_appropriate(self, item: Dict, temp: float, _season: Season) -> bool:
         """Check if item is appropriate for weather/season"""
         category = item.get('category', '')
         material = item.get('material', '').lower()

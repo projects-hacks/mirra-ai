@@ -12,6 +12,15 @@ interface State {
   error: Error | null;
 }
 
+type WindowWithSentry = typeof globalThis & {
+  Sentry?: {
+    captureException: (
+      error: Error,
+      context: { contexts: { react: { componentStack: string } } }
+    ) => void;
+  };
+};
+
 /**
  * Error Boundary for Onboarding Flow
  * 
@@ -42,8 +51,9 @@ export class OnboardingErrorBoundary extends Component<Props, State> {
 
     // In production, you would log to a centralized logging service
     // e.g., Sentry, LogRocket, etc.
-    if (typeof window !== "undefined" && (window as any).Sentry) {
-      (window as any).Sentry.captureException(error, {
+    const sentry = (globalThis as WindowWithSentry).Sentry;
+    if (sentry) {
+      sentry.captureException(error, {
         contexts: {
           react: {
             componentStack: errorInfo.componentStack,
@@ -62,9 +72,10 @@ export class OnboardingErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const { error } = this.state;
       // Use custom fallback if provided
-      if (this.props.fallback && this.state.error) {
-        return this.props.fallback(this.state.error, this.handleRetry);
+      if (this.props.fallback && error) {
+        return this.props.fallback(error, this.handleRetry);
       }
 
       // Default fallback UI
@@ -101,10 +112,10 @@ export class OnboardingErrorBoundary extends Component<Props, State> {
               </p>
 
               {/* Error Details (only in development) */}
-              {process.env.NODE_ENV === "development" && this.state.error && (
+              {process.env.NODE_ENV === "development" && error && (
                 <div className="mb-6 p-4 bg-black/30 rounded-lg text-left">
                   <p className="text-xs text-red-300 font-mono break-all">
-                    {this.state.error.message}
+                    {error.message}
                   </p>
                 </div>
               )}
@@ -120,9 +131,7 @@ export class OnboardingErrorBoundary extends Component<Props, State> {
 
                 <button
                   onClick={() => {
-                    if (typeof window !== "undefined") {
-                      window.location.href = "/";
-                    }
+                    globalThis.location.href = "/";
                   }}
                   className="w-full py-3 px-6 bg-white/10 text-white font-medium rounded-full hover:bg-white/20 transition-all duration-200 border border-white/20"
                 >

@@ -29,6 +29,7 @@ function getBrowserName(): string {
 function getBrowserInstructions(browser: string): string[] {
   switch (browser) {
     case "Chrome":
+    case "Edge":
       return [
         "Click the camera icon in the address bar",
         "Select 'Allow' for camera access",
@@ -46,12 +47,6 @@ function getBrowserInstructions(browser: string): string[] {
         "Select 'Allow' from the dropdown",
         "Refresh the page if needed",
       ];
-    case "Edge":
-      return [
-        "Click the camera icon in the address bar",
-        "Select 'Allow' for camera access",
-        "Refresh the page if needed",
-      ];
     default:
       return [
         "Look for the camera icon in your browser",
@@ -65,7 +60,7 @@ function getBrowserInstructions(browser: string): string[] {
 export function CameraPermissionScreen({
   onPermissionGranted,
   onPermissionDenied,
-}: CameraPermissionScreenProps) {
+}: Readonly<CameraPermissionScreenProps>) {
   const [permissionState, setPermissionState] = useState<
     "prompt" | "granted" | "denied" | "checking"
   >("checking");
@@ -81,14 +76,14 @@ export function CameraPermissionScreen({
   const checkPermissionState = async () => {
     try {
       // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (!navigator.mediaDevices?.getUserMedia) {
         setError("Camera access is not supported in this browser.");
         setPermissionState("denied");
         return;
       }
 
       // Try to query permission state (not supported in all browsers)
-      if (navigator.permissions && navigator.permissions.query) {
+      if (navigator.permissions?.query) {
         try {
           const result = await navigator.permissions.query({
             name: "camera" as PermissionName,
@@ -105,7 +100,7 @@ export function CameraPermissionScreen({
           result.addEventListener("change", () => {
             setPermissionState(result.state as "prompt" | "granted" | "denied");
           });
-        } catch (err) {
+        } catch {
           // Permission query not supported, default to prompt
           setPermissionState("prompt");
         }
@@ -143,7 +138,7 @@ export function CameraPermissionScreen({
 
       // Handle different error types
       if (err instanceof Error) {
-        const errorName = (err as any).name;
+        const errorName = err.name;
         
         if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
           setPermissionState("denied");
@@ -353,7 +348,7 @@ export function CameraPermissionScreen({
               <ol className="space-y-2">
                 {getBrowserInstructions(browser).map((instruction, index) => (
                   <li
-                    key={index}
+                    key={instruction}
                     className="flex gap-2 text-sm"
                     style={{ color: "var(--on-surface-variant)" }}
                   >

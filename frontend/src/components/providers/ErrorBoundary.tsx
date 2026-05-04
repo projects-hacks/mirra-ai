@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("Error caught by boundary:", error, errorInfo);
-    // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
+    // Hook an error tracking service in here when the client telemetry pipeline is ready.
   }
 
   render() {
@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 page.
               </p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => globalThis.location.reload()}
                 className="px-6 py-3 bg-gradient-to-r from-rose-400 to-purple-400 text-white rounded-full hover:shadow-lg transition-all"
               >
                 Refresh Page

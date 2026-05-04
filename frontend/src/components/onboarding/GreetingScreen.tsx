@@ -10,7 +10,7 @@ interface GreetingScreenProps {
 }
 
 // ── Component ───────────────────────────────────────
-export function GreetingScreen({ greeting, onContinue }: GreetingScreenProps) {
+export function GreetingScreen({ greeting, onContinue }: Readonly<GreetingScreenProps>) {
   // Auto-continue after delay
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -20,9 +20,7 @@ export function GreetingScreen({ greeting, onContinue }: GreetingScreenProps) {
     return () => clearTimeout(timer);
   }, [onContinue]);
 
-  // TODO: Implement text-to-speech with Deepgram aura-2-thalia-en voice
-  // This would require integration with the voice WebSocket system
-  // For now, we just display the greeting text
+  // Text-to-speech will plug in once the onboarding voice flow is wired up.
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">

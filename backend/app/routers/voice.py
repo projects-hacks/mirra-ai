@@ -182,7 +182,6 @@ async def voice_websocket(ws: WebSocket) -> None:
                                 elif msg_type == "InjectionRefused":
                                     logger.warning(f"Injection refused: {data.get('message')}")
                                 elif msg_type == "Error":
-                                    error_desc = data.get("description", "")
                                     error_code = data.get("code", "")
                                     
                                     # Handle CLIENT_MESSAGE_TIMEOUT gracefully
@@ -195,7 +194,7 @@ async def voice_websocket(ws: WebSocket) -> None:
                                             "content": "I'm listening! Tap the mic and tell me what you'd like to try — or use the menu above to explore features.",
                                         }))
                                         # Trigger reconnection by raising exception
-                                        raise Exception("CLIENT_MESSAGE_TIMEOUT - reconnecting")
+                                        raise RuntimeError("CLIENT_MESSAGE_TIMEOUT - reconnecting")
                                     
                                     logger.error(f"Deepgram error: {data}")
                                     await ws.send_text(json.dumps({

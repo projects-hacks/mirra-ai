@@ -24,8 +24,9 @@ const FeatureButton = memo(function FeatureButton({
   isLoading,
   isDisabled,
   onClick,
-}: FeatureButtonProps) {
+}: Readonly<FeatureButtonProps>) {
   const disabled = isDisabled || isLoading;
+  const ariaLabel = description ? `${label} - ${description}` : label;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -39,7 +40,7 @@ const FeatureButton = memo(function FeatureButton({
   return (
     <button
       role="menuitem"
-      aria-label={`${label}${description ? ` - ${description}` : ""}`}
+      aria-label={ariaLabel}
       aria-busy={isLoading}
       disabled={disabled}
       onClick={onClick}

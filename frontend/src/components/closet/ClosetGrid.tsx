@@ -35,7 +35,7 @@ const ClosetGrid = memo(function ClosetGrid({
   // Extract unique categories (memoized)
   const categories = useMemo(() => {
     const cats = new Set(items.map((item) => item.category));
-    return ["All Items", ...Array.from(cats).sort()];
+    return ["All Items", ...Array.from(cats).sort((a, b) => a.localeCompare(b))];
   }, [items]);
 
   // Filter items by category (memoized)

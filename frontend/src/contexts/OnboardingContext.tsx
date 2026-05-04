@@ -6,13 +6,13 @@ import {
   useReducer,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
   type Dispatch,
 } from "react";
 import type {
   OnboardingState,
   OnboardingAction,
-  OnboardingStep,
   User,
   AnalysisResults,
   OnboardingError,
@@ -95,12 +95,12 @@ const OnboardingContext = createContext<OnboardingContextValue | undefined>(
 );
 
 // ── Provider ────────────────────────────────────────
-export function OnboardingProvider({ children }: { children: ReactNode }) {
+export function OnboardingProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, dispatch] = useReducer(onboardingReducer, initialState);
 
   // ── Persistence Functions ───────────────────────────
   const saveProgress = useCallback(() => {
-    if (typeof window === "undefined") return;
+    if (typeof globalThis.window === "undefined") return;
 
     const progress: OnboardingProgress = {
       step: state.currentStep,
@@ -117,7 +117,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, [state.currentStep, state.user?.id, state.selfie]);
 
   const resumeProgress = useCallback(() => {
-    if (typeof window === "undefined") return;
+    if (typeof globalThis.window === "undefined") return;
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -218,28 +218,46 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   // ── Clear progress on completion ────────────────────
   useEffect(() => {
-    if (state.currentStep === "completion" && typeof window !== "undefined") {
+    if (state.currentStep === "completion" && typeof globalThis.window !== "undefined") {
       localStorage.removeItem(STORAGE_KEY);
     }
   }, [state.currentStep]);
 
-  const value: OnboardingContextValue = {
-    state,
-    dispatch,
-    startOnboarding,
-    completeAuth,
-    captureSelfie,
-    startAnalysis,
-    setAnalysisResults,
-    connectCalendar,
-    skipCalendar,
-    completeOnboarding,
-    saveProgress,
-    resumeProgress,
-    retryCurrentStep,
-    setError,
-    advanceStep,
-  };
+  const value: OnboardingContextValue = useMemo(
+    () => ({
+      state,
+      dispatch,
+      startOnboarding,
+      completeAuth,
+      captureSelfie,
+      startAnalysis,
+      setAnalysisResults,
+      connectCalendar,
+      skipCalendar,
+      completeOnboarding,
+      saveProgress,
+      resumeProgress,
+      retryCurrentStep,
+      setError,
+      advanceStep,
+    }),
+    [
+      state,
+      startOnboarding,
+      completeAuth,
+      captureSelfie,
+      startAnalysis,
+      setAnalysisResults,
+      connectCalendar,
+      skipCalendar,
+      completeOnboarding,
+      saveProgress,
+      resumeProgress,
+      retryCurrentStep,
+      setError,
+      advanceStep,
+    ]
+  );
 
   return (
     <OnboardingContext.Provider value={value}>

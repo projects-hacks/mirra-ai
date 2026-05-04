@@ -28,7 +28,7 @@ export default function VTODisplay({
   currentTool,
   onReset,
   showBaseImage = true,
-}: VTODisplayProps) {
+}: Readonly<VTODisplayProps>) {
   // Determine which image to display
   const currentImage = vtoResult?.imageUrl ?? selfie;
   

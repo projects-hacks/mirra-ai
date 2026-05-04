@@ -20,12 +20,12 @@ export default function RadialProgress({
   value,
   size = 80,
   strokeWidth = 6,
-  color = 'var(--primary)',
-  backgroundColor = 'var(--surface-container)',
+  color = "var(--primary)",
+  backgroundColor = "var(--surface-container)",
   showValue = true,
   label,
-  className = '',
-}: RadialProgressProps) {
+  className = "",
+}: Readonly<RadialProgressProps>) {
   // Clamp value between 0 and 100
   const clampedValue = Math.max(0, Math.min(100, value));
   

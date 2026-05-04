@@ -20,24 +20,15 @@ export default function ParameterModal({
   tool,
   onSubmit,
   onCancel,
-}: ParameterModalProps) {
+}: Readonly<ParameterModalProps>) {
   const config = PARAMETER_CONFIGS[tool];
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries((config?.fields ?? []).map((field) => [field.name, ""]))
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const modalRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const lastFocusableRef = useRef<HTMLButtonElement>(null);
-
-  // Initialize values
-  useEffect(() => {
-    if (!config) return;
-    
-    const initialValues: Record<string, string> = {};
-    config.fields.forEach((field) => {
-      initialValues[field.name] = "";
-    });
-    setValues(initialValues);
-  }, [config]);
 
   // Focus first input on mount
   useEffect(() => {
@@ -51,8 +42,8 @@ export default function ParameterModal({
         onCancel();
       }
     };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    globalThis.window.addEventListener("keydown", handleEscape);
+    return () => globalThis.window.removeEventListener("keydown", handleEscape);
   }, [onCancel]);
 
   // Focus trap
@@ -66,7 +57,7 @@ export default function ParameterModal({
       if (!focusableElements || focusableElements.length === 0) return;
 
       const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+      const lastElement = focusableElements.item(focusableElements.length - 1) as HTMLElement;
 
       if (e.shiftKey && document.activeElement === firstElement) {
         e.preventDefault();
@@ -77,8 +68,8 @@ export default function ParameterModal({
       }
     };
 
-    window.addEventListener("keydown", handleTab);
-    return () => window.removeEventListener("keydown", handleTab);
+    globalThis.window.addEventListener("keydown", handleTab);
+    return () => globalThis.window.removeEventListener("keydown", handleTab);
   }, []);
 
   // Validate field
@@ -154,7 +145,8 @@ export default function ParameterModal({
   if (!config) return null;
 
   return (
-    <div
+    <dialog
+      open
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
         background: "rgba(0, 0, 0, 0.4)",
@@ -162,7 +154,6 @@ export default function ParameterModal({
         WebkitBackdropFilter: "blur(8px)",
       }}
       onClick={handleBackdropClick}
-      role="dialog"
       aria-modal="true"
       aria-labelledby="parameter-modal-title"
     >
@@ -255,6 +246,6 @@ export default function ParameterModal({
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   );
 }

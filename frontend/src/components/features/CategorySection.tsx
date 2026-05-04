@@ -21,14 +21,16 @@ const CategorySection = memo(function CategorySection({
   features,
   isLoading,
   onFeatureClick,
-}: CategorySectionProps) {
+}: Readonly<CategorySectionProps>) {
   if (features.length === 0) return null;
 
+  const categoryId = `category-${title.toLowerCase().replaceAll(" ", "-")}`;
+
   return (
-    <div role="group" aria-labelledby={`category-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+    <section aria-labelledby={categoryId}>
       {/* Category Header */}
       <h3
-        id={`category-${title.toLowerCase().replace(/\s+/g, "-")}`}
+        id={categoryId}
         className="label-caps mb-3"
       >
         {title}
@@ -48,7 +50,7 @@ const CategorySection = memo(function CategorySection({
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 });
 

@@ -51,7 +51,7 @@ export function useCamera(): UseCameraReturn {
       // DEPRECATED: Old photo mode API - should migrate to new Camera Kit SDK
       // For now, skip Camera Kit and use native camera directly
       // The YMK global is reserved for the new Camera Kit SDK (v2.4)
-      
+
       // Fallback: native getUserMedia
       await startNativeCamera();
     }

@@ -18,15 +18,15 @@ interface ProductRowProps {
  * Horizontal scrollable row of product cards
  * Used for search results and recommendations
  */
-export default function ProductRow({ products, onTryOn }: ProductRowProps) {
+export default function ProductRow({ products, onTryOn }: Readonly<ProductRowProps>) {
   if (!products || products.length === 0) return null;
 
   return (
     <div className="w-full overflow-x-auto float-in" style={{ scrollbarWidth: "none" }}>
       <div className="flex gap-3 px-1 pb-2">
-        {products.map((product, i) => (
+        {products.map((product) => (
           <ProductCard
-            key={i}
+            key={`${product.link}-${product.title}-${product.source}`}
             product={product}
             onTryOn={onTryOn}
           />

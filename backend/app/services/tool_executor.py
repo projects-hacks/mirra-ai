@@ -68,7 +68,7 @@ async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None =
                 selfie_bytes=selfie_bytes,  # Pass selfie for color analysis if needed
             )
         case ToolName.GENERATE_PROOF_CARD:
-            return await _generate_proof_card(
+            return _generate_proof_card(
                 user_id=user_id,
                 args=args,
             )
@@ -114,7 +114,7 @@ async def _match_closet(user_id: str | None, occasion: str | None, location: str
         context = await build_match_context(
             occasion=occasion,
             location=location,
-            user_preferences={},  # TODO: fetch from user profile
+            user_preferences={},  # Placeholder until onboarding preferences are wired into tool execution.
             user_id=user_id,  # For color profile lookup
             selfie_bytes=selfie_bytes,  # Only used if color profile is stale/missing
         )
@@ -170,7 +170,7 @@ async def _match_closet(user_id: str | None, occasion: str | None, location: str
         return {"error": f"Closet matching failed: {str(e)}"}
 
 
-async def _generate_proof_card(user_id: str | None, args: dict) -> dict:
+def _generate_proof_card(user_id: str | None, args: dict) -> dict:
     """
     Generate proof card with calculated match scores
     

@@ -22,7 +22,7 @@ export default function SkinAnalysisModal({
   onClose,
   scores,
   previousScores,
-}: SkinAnalysisModalProps) {
+}: Readonly<SkinAnalysisModalProps>) {
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -48,9 +48,11 @@ export default function SkinAnalysisModal({
   return (
     <>
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
         className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 fade-in"
         onClick={onClose}
+        aria-label="Close modal"
       />
 
       {/* Modal */}
@@ -63,6 +65,8 @@ export default function SkinAnalysisModal({
             slide-up
           "
           onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
         >
           {/* Header */}
           <div className="sticky top-0 bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--outline-variant)]/20 px-6 py-4 flex items-center justify-between z-10">
@@ -171,7 +175,7 @@ export default function SkinAnalysisModal({
                 <h3 className="font-h3 text-lg mb-3">Since Last Scan</h3>
                 <div className="space-y-2">
                   {concerns.slice(0, 5).map((concern) => {
-                    const prevScore = (previousScores as any)[concern.key];
+                    const prevScore = previousScores[concern.key as keyof SkinAnalysis];
                     if (!prevScore) return null;
 
                     const trend = skinScoreStrategy.calculateTrend(

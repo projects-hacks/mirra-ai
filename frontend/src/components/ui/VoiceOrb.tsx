@@ -13,18 +13,39 @@ export default function VoiceOrb({
   isConnecting,
   error,
   onClick,
-}: VoiceOrbProps) {
+}: Readonly<VoiceOrbProps>) {
   // Don't disable during processing - allow interruption
   const disabled = isConnecting;
 
-  // Status label - simplified
-  const label = error
-    ? error
-    : isConnecting
-      ? "Connecting…"
-      : isListening
-          ? "Listening"
-          : "Tap to speak";
+  // Status label — extracted to avoid nested ternary (S3358)
+  function getLabel(): string {
+    if (error) return error;
+    if (isConnecting) return "Connecting…";
+    if (isListening) return "Listening";
+    return "Tap to speak";
+  }
+
+  const label = getLabel();
+
+  // Icon — extracted to avoid nested ternary (S3358)
+  function renderIcon() {
+    if (isConnecting) {
+      return <div className="processing-ring" style={{ width: 20, height: 20 }} />;
+    }
+    if (isListening) {
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </svg>
+      );
+    }
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+      </svg>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -38,21 +59,7 @@ export default function VoiceOrb({
         }}
         aria-label={isListening ? "Stop listening" : "Start listening"}
       >
-        {isConnecting ? (
-          /* Spinner */
-          <div className="processing-ring" style={{ width: 20, height: 20 }} />
-        ) : isListening ? (
-          /* Stop icon */
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="6" y="6" width="12" height="12" rx="2" />
-          </svg>
-        ) : (
-          /* Mic icon */
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-          </svg>
-        )}
+        {renderIcon()}
       </button>
 
       <span

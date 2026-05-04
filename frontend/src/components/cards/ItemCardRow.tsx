@@ -1,7 +1,7 @@
 "use client";
 
 /** Horizontal scrollable row of product/closet item cards. */
-export default function ItemCardRow({ data }: { data: unknown }) {
+export default function ItemCardRow({ data }: Readonly<{ data: unknown }>) {
   // Parse items from tool result data
   const items = Array.isArray(data) ? data : (data as any)?.items ?? [];
 
@@ -10,8 +10,14 @@ export default function ItemCardRow({ data }: { data: unknown }) {
   return (
     <div className="w-full overflow-x-auto float-in" style={{ scrollbarWidth: "none" }}>
       <div className="flex gap-3 px-1 pb-2">
-        {items.map((item: any, i: number) => (
-          <div key={i} className="item-card">
+        {items.map((item: any) => (
+          <div
+            key={
+              item.id ||
+              `${item.source ?? "item"}-${item.name ?? item.title ?? "unknown"}-${item.image_url ?? item.imageUrl ?? "na"}`
+            }
+            className="item-card"
+          >
             {item.image_url || item.imageUrl ? (
               <img
                 src={item.image_url ?? item.imageUrl}

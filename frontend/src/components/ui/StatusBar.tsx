@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { User } from "@/types";
 
 interface StatusBarProps {
@@ -14,8 +15,9 @@ export default function StatusBar({
   isConnected,
   user,
   onSignIn,
-  onSignOut,
-}: StatusBarProps) {
+}: Readonly<StatusBarProps>) {
+  const router = useRouter();
+
   return (
     <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4">
       {/* Left: Menu placeholder */}
@@ -34,18 +36,32 @@ export default function StatusBar({
         Mirra
       </h1>
 
-      {/* Right: Live badge or Sign in */}
+      {/* Right: Avatar → profile, or Sign in */}
       {user ? (
         <button
-          onClick={onSignOut}
-          className="context-pill text-xs min-h-[44px]"
-          style={{ padding: "0.375rem 0.75rem" }}
+          onClick={() => router.push("/profile")}
+          className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+          aria-label="Go to profile"
         >
+          {user.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={user.displayName}
+              className="w-8 h-8 rounded-full object-cover"
+              style={{ outline: `2px solid ${isConnected ? "var(--success)" : "var(--outline)"}`, outlineOffset: "1px" }}
+            />
+          ) : (
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
+              style={{ background: "var(--primary)", color: "white" }}
+            >
+              {user.displayName?.[0]?.toUpperCase()}
+            </div>
+          )}
           <span
             className="w-2 h-2 rounded-full"
             style={{ background: isConnected ? "var(--success)" : "var(--outline)" }}
           />
-          <span className="hidden sm:inline">{isConnected ? "Live" : "…"}</span>
         </button>
       ) : (
         <button onClick={onSignIn} className="context-pill text-xs min-h-[44px]">

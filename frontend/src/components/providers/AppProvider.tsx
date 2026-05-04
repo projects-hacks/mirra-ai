@@ -4,20 +4,57 @@ import {
   createContext,
   useContext,
   useReducer,
+  useEffect,
+  useRef,
   type Dispatch,
   type ReactNode,
 } from "react";
-import type { AppState, AppAction, Message } from "@/types";
+import type { AppState, AppAction, Message, VTOResult } from "@/types";
 import { ToolName } from "@/lib/constants";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ToastProvider } from "../ui/Toast";
 
-// ── Initial State ───────────────────────────────────
+// ── Storage Keys ────────────────────────────────────
+const STORAGE_KEYS = {
+  MESSAGES: "mirra:messages",
+  SELFIE: "mirra:selfie",
+  VTO_RESULT: "mirra:vto_result",
+  MENU_VISIBLE: "mirra:menu_visible",
+} as const;
+
+const MAX_MESSAGES = 50;
+
+// ── Persistence helpers ──────────────────────────────
+function loadFromStorage<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveToStorage<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Quota exceeded or private mode — silently ignore
+  }
+}
+
+function clearStorage(): void {
+  try {
+    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+  } catch { /* ignore */ }
+}
+
+// ── Initial State ────────────────────────────────────
 const initialState: AppState = {
   selfie: null,
   isListening: false,
   isProcessing: false,
   isConnected: false,
+  isHydrated: false,
   messages: [],
   vtoResult: null,
   currentTool: null,
@@ -30,14 +67,35 @@ const initialState: AppState = {
   },
 };
 
-// ── Reducer ─────────────────────────────────────────
+// ── Reducer ──────────────────────────────────────────
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+
+    // ── Hydration (19.1) ────────────────────────────
+    case "HYDRATE":
+      return {
+        ...state,
+        messages: action.payload.messages,
+        selfie: action.payload.selfie,
+        vtoResult: action.payload.vtoResult,
+        menu: { ...state.menu, isVisible: action.payload.menuVisible ?? true },
+        isHydrated: true,
+      };
+
     case "SET_SELFIE":
       return { ...state, selfie: action.payload };
 
-    case "ADD_MESSAGE":
-      return { ...state, messages: [...state.messages, action.payload] };
+    case "CLEAR_SELFIE":
+      return { ...state, selfie: null };
+
+    // ── Messages: cap at MAX_MESSAGES (19.3) ─────────
+    case "ADD_MESSAGE": {
+      const updated = [...state.messages, action.payload];
+      const capped = updated.length > MAX_MESSAGES
+        ? updated.slice(updated.length - MAX_MESSAGES)
+        : updated;
+      return { ...state, messages: capped };
+    }
 
     case "REMOVE_LOADING":
       return {
@@ -72,44 +130,107 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, vtoResult: null };
 
     case "RESET":
-      return { ...initialState, user: state.user };
+      clearStorage();
+      return { ...initialState, user: state.user, isHydrated: true };
 
     case "TOGGLE_MENU":
-      return {
-        ...state,
-        menu: { ...state.menu, isVisible: !state.menu.isVisible },
-      };
+      return { ...state, menu: { ...state.menu, isVisible: !state.menu.isVisible } };
 
     case "SET_MENU_VISIBLE":
-      return {
-        ...state,
-        menu: { ...state.menu, isVisible: action.payload },
-      };
+      return { ...state, menu: { ...state.menu, isVisible: action.payload } };
 
     case "SET_ACTIVE_FEATURE":
-      return {
-        ...state,
-        menu: { ...state.menu, activeFeature: action.payload },
-      };
+      return { ...state, menu: { ...state.menu, activeFeature: action.payload } };
 
     case "SHOW_PARAMETER_MODAL":
-      return {
-        ...state,
-        menu: { ...state.menu, showParameterModal: action.payload },
-      };
+      return { ...state, menu: { ...state.menu, showParameterModal: action.payload } };
 
     default:
       return state;
   }
 }
 
-// ── Context ─────────────────────────────────────────
+// ── Contexts ─────────────────────────────────────────
 const AppStateContext = createContext<AppState>(initialState);
 const AppDispatchContext = createContext<Dispatch<AppAction>>(() => {});
 
-// ── Provider ────────────────────────────────────────
-export function AppProvider({ children }: { children: ReactNode }) {
+// ── Provider ─────────────────────────────────────────
+export function AppProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const isFirstRender = useRef(true);
+
+  // ── 19.1: Hydrate from localStorage on mount ──────
+  useEffect(() => {
+    try {
+      const messages = loadFromStorage<Message[]>(STORAGE_KEYS.MESSAGES) ?? [];
+      const selfie = loadFromStorage<string>(STORAGE_KEYS.SELFIE);
+      const vtoResult = loadFromStorage<VTOResult>(STORAGE_KEYS.VTO_RESULT);
+      const menuVisible = loadFromStorage<boolean>(STORAGE_KEYS.MENU_VISIBLE);
+
+      // Only restore non-loading messages (loading states are transient)
+      const restoredMessages = messages
+        .filter((m) => m.type !== "loading" && m.type !== "tool_result")
+        .slice(-MAX_MESSAGES);
+
+      dispatch({
+        type: "HYDRATE",
+        payload: {
+          messages: restoredMessages,
+          selfie: selfie ?? null,
+          vtoResult: vtoResult ?? null,
+          menuVisible: menuVisible ?? true,
+        },
+      });
+    } catch {
+      // Hydration failed (e.g. cleared browser data) — mark done without restoring
+      dispatch({
+        type: "HYDRATE",
+        payload: { messages: [], selfie: null, vtoResult: null, menuVisible: true },
+      });
+    }
+  }, []);
+
+  // ── 19.3: Persist messages on every change ────────
+  useEffect(() => {
+    // Skip the very first render — hydration will set state from storage
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!state.isHydrated) return;
+
+    // Only persist user/agent messages (not transient loading states)
+    const persistable = state.messages
+      .filter((m) => m.type === "user" || m.type === "agent")
+      .slice(-MAX_MESSAGES);
+    saveToStorage(STORAGE_KEYS.MESSAGES, persistable);
+  }, [state.messages, state.isHydrated]);
+
+  // ── Persist selfie on change ──────────────────────
+  useEffect(() => {
+    if (!state.isHydrated) return;
+    if (state.selfie) {
+      saveToStorage(STORAGE_KEYS.SELFIE, state.selfie);
+    } else {
+      try { localStorage.removeItem(STORAGE_KEYS.SELFIE); } catch { /* ignore */ }
+    }
+  }, [state.selfie, state.isHydrated]);
+
+  // ── Persist VTO result on change ──────────────────
+  useEffect(() => {
+    if (!state.isHydrated) return;
+    if (state.vtoResult) {
+      saveToStorage(STORAGE_KEYS.VTO_RESULT, state.vtoResult);
+    } else {
+      try { localStorage.removeItem(STORAGE_KEYS.VTO_RESULT); } catch { /* ignore */ }
+    }
+  }, [state.vtoResult, state.isHydrated]);
+
+  // ── Persist menu visibility on change ─────────────
+  useEffect(() => {
+    if (!state.isHydrated) return;
+    saveToStorage(STORAGE_KEYS.MENU_VISIBLE, state.menu.isVisible);
+  }, [state.menu.isVisible, state.isHydrated]);
 
   return (
     <ErrorBoundary>
@@ -124,7 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ── Hooks ───────────────────────────────────────────
+// ── Hooks ─────────────────────────────────────────────
 export function useAppState(): AppState {
   return useContext(AppStateContext);
 }
@@ -133,7 +254,7 @@ export function useAppDispatch(): Dispatch<AppAction> {
   return useContext(AppDispatchContext);
 }
 
-// ── Action Creators (DRY helpers) ───────────────────
+// ── Action Creators (DRY helpers) ─────────────────────
 let _msgId = 0;
 function nextId(): string {
   return `msg-${Date.now()}-${++_msgId}`;

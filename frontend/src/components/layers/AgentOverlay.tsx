@@ -50,7 +50,7 @@ export default function AgentOverlay({
   user,
   vtoResult,
   onRecapture,
-}: AgentOverlayProps) {
+}: Readonly<AgentOverlayProps>) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new messages
@@ -73,13 +73,13 @@ export default function AgentOverlay({
      (m as any).tool === ToolName.CHECK_CLOSET ||
      (m as any).tool === ToolName.MATCH_CLOSET)
   );
-  const latestProducts = productResults.length > 0 ? productResults[productResults.length - 1] : null;
+  const latestProducts = productResults.at(-1) ?? null;
 
   // Proof card from tool results
   const proofCardResults = messages.filter(
     (m) => m.type === "tool_result" && (m as any).tool === ToolName.GENERATE_PROOF_CARD
   );
-  const latestProofCard = proofCardResults.length > 0 ? proofCardResults[proofCardResults.length - 1] : null;
+  const latestProofCard = proofCardResults.at(-1) ?? null;
   const [showProofCard, setShowProofCard] = useState(false);
 
   // Show proof card when it arrives

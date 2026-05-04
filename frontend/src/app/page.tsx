@@ -20,8 +20,8 @@ export default function HomePage() {
   const { containerRef, videoRef, capture, isReady: cameraReady, error: cameraError, isUsingCameraKit } = useCamera();
   const voice = useVoiceAgent();
   const { user, signInWithGoogle, signOut } = useAuth();
+  const voiceSocket = (globalThis as typeof globalThis & { __mirraWS?: WebSocket }).__mirraWS;
 
-  const [hasCaptured, setHasCaptured] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
@@ -59,14 +59,15 @@ export default function HomePage() {
     checkOnboardingStatus();
   }, [user]);
 
-  // Show onboarding if not authenticated or not onboarded
-  const shouldShowOnboarding = !user || isOnboarded === false;
+  // Only show onboarding check once the store is hydrated (avoids flash)
+  const shouldShowOnboarding = state.isHydrated && (!user || isOnboarded === false);
 
   // We no longer auto-capture the selfie. The selfie is captured exactly when the user taps to speak.
 
   // Show a local welcome message immediately after camera is ready
+  // Gate on isHydrated so we don't show it before restored messages appear (Task 19.1)
   useEffect(() => {
-    if (cameraReady && state.messages.length === 0) {
+    if (cameraReady && state.isHydrated && state.messages.length === 0) {
       dispatch({
         type: "ADD_MESSAGE",
         payload: {
@@ -77,7 +78,7 @@ export default function HomePage() {
         },
       });
     }
-  }, [cameraReady, state.messages.length, dispatch]);
+  }, [cameraReady, state.isHydrated, state.messages.length, dispatch]);
 
   // Just-In-Time Capture: Take a fresh selfie when a tool starts running
   useEffect(() => {
@@ -85,13 +86,12 @@ export default function HomePage() {
       const freshSelfie = capture();
       if (freshSelfie) {
         dispatch({ type: "SET_SELFIE", payload: freshSelfie });
-        const ws = (window as any).__mirraWS;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'selfie', data: freshSelfie }));
+        if (voiceSocket?.readyState === WebSocket.OPEN) {
+          voiceSocket.send(JSON.stringify({ type: "selfie", data: freshSelfie }));
         }
       }
     }
-  }, [state.currentTool, cameraReady, capture, dispatch]);
+  }, [state.currentTool, cameraReady, capture, dispatch, voiceSocket]);
 
   // Voice connection is user-initiated (first mic tap), not auto-connect.
   // This avoids a reconnect storm when no backend is available.
@@ -102,7 +102,7 @@ export default function HomePage() {
     }
 
     // Capture a fresh selfie exactly when the user taps the mic
-    let currentSelfie = state.selfie;
+    let currentSelfie = state.selfie;  // May be restored from localStorage (Task 19.2)
     if (cameraReady) {
       const freshSelfie = capture();
       if (freshSelfie) {
@@ -119,14 +119,13 @@ export default function HomePage() {
 
     // If already connected, push the fresh selfie to the backend
     if (voice.isConnected && currentSelfie) {
-      const ws = (window as any).__mirraWS;
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'selfie', data: currentSelfie }));
+      if (voiceSocket?.readyState === WebSocket.OPEN) {
+        voiceSocket.send(JSON.stringify({ type: "selfie", data: currentSelfie }));
       }
     }
 
     voice.startListening();
-  }, [voice, state.selfie, cameraReady, capture, dispatch]);
+  }, [voice, state.selfie, cameraReady, capture, dispatch, voiceSocket]);
 
   const handleRecapture = useCallback(() => {
     const selfie = capture();
@@ -135,8 +134,8 @@ export default function HomePage() {
     }
   }, [capture, dispatch]);
 
-  // Show loading state while checking onboarding status
-  if (isCheckingOnboarding) {
+  // Show spinner until BOTH hydration and onboarding check are done
+  if (!state.isHydrated || isCheckingOnboarding) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="processing-ring h-16 w-16" />

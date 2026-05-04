@@ -23,9 +23,9 @@ export default function FeatureMenu() {
   // Helper to send tool execution commands via WebSocket
   const sendToolCommand = useCallback((tool: ToolName, params: Record<string, string>) => {
     // Access WebSocket from window (set by useVoiceAgent)
-    const ws = (window as Window & { __mirraWS?: WebSocket }).__mirraWS;
+    const ws = (globalThis as typeof globalThis & { __mirraWS?: WebSocket }).__mirraWS;
     
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
+    if (ws?.readyState !== WebSocket.OPEN) {
       showToast("Connection lost. Please reconnect.", "error");
       return;
     }
@@ -147,7 +147,8 @@ export default function FeatureMenu() {
       {isVisible && (
         <>
           {/* Backdrop */}
-          <div
+          <button
+            type="button"
             className="fixed inset-0 z-40 transition-opacity duration-300"
             style={{
               background: "rgba(0, 0, 0, 0.2)",
@@ -155,6 +156,7 @@ export default function FeatureMenu() {
               WebkitBackdropFilter: "blur(4px)",
             }}
             onClick={handleToggleMenu}
+            aria-label="Close feature menu"
           />
 
           {/* Panel */}

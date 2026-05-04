@@ -1,6 +1,6 @@
 """Google Calendar service with Redis cache."""
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.core.config import settings
 from app.core import cache
@@ -23,7 +23,7 @@ async def get_todays_events() -> dict:
     creds = Credentials.from_authorized_user_info(json.loads(settings.GOOGLE_CALENDAR_CREDENTIALS))
     service = build("calendar", "v3", credentials=creds)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     events = service.events().list(
         calendarId="primary",
         timeMin=now.isoformat() + "Z",

@@ -36,7 +36,7 @@ async def init_onboarding(request: InitRequest) -> InitResponse:
         HTTPException: 404 if user not found, 500 for other errors
     """
     try:
-        result = await onboarding_service.init(request.user_id)
+        result = onboarding_service.init(request.user_id)
         return InitResponse(**result)
     except ValueError as e:
         logger.error(f"User not found: {str(e)}")

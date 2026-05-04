@@ -1,8 +1,15 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { WS_URL, Endpoint, WS_CONFIG, WSClientMsg, WSServerMsg, LOADING_TEXT } from "@/lib/constants";
-import { ToolName } from "@/lib/constants";
+import {
+  WS_URL,
+  Endpoint,
+  WS_CONFIG,
+  WSClientMsg,
+  WSServerMsg,
+  LOADING_TEXT,
+  ToolName,
+} from "@/lib/constants";
 import {
   useAppDispatch,
   createAgentMessage,
@@ -46,8 +53,12 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, setNextPlayTime] = useState(0);
 
   const dispatch = useAppDispatch();
+  const setMirraWebSocket = useCallback((socket?: WebSocket) => {
+    (globalThis as typeof globalThis & { __mirraWS?: WebSocket }).__mirraWS = socket;
+  }, []);
 
   // ── Cleanup ─────────────────────────────────────
   const cleanup = useCallback(() => {
@@ -63,114 +74,6 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
     setIsListening(false);
   }, []);
-
-  // ── Handle incoming WS messages ─────────────────
-  const handleMessage = useCallback(
-    (event: MessageEvent) => {
-      // Binary = audio data → play it
-      if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-        playAudio(event.data);
-        return;
-      }
-
-      try {
-        const msg = JSON.parse(event.data);
-
-        switch (msg.type) {
-          // ── Deepgram native messages ──────────────
-          case "ConversationText":
-            if (msg.role === "assistant" || msg.role === "agent") {
-              dispatch({
-                type: "ADD_MESSAGE",
-                payload: createAgentMessage(msg.content),
-              });
-            } else if (msg.role === "user") {
-              dispatch({
-                type: "ADD_MESSAGE",
-                payload: createUserMessage(msg.content),
-              });
-            }
-            break;
-
-          case "UserStartedSpeaking":
-            // Could be used to interrupt agent audio playback
-            break;
-
-          case "AgentStartedSpeaking":
-            // Reset audio queue — fresh utterance
-            nextPlayTimeRef.current = 0;
-            break;
-
-          case "AgentAudioDone":
-            // Agent finished speaking
-            break;
-
-          case "SettingsApplied":
-            dispatch({ type: "SET_CONNECTED", payload: true });
-            break;
-
-          // ── Custom messages from our backend ──────
-          case WSServerMsg.VTO_RESULT:
-            if (msg.status === "running") {
-              // Tool started
-              const toolName = msg.tool as ToolName;
-              const text = LOADING_TEXT[toolName] ?? "Processing…";
-              dispatch({ type: "SET_PROCESSING", payload: true });
-              dispatch({ type: "SET_CURRENT_TOOL", payload: toolName });
-              dispatch({
-                type: "ADD_MESSAGE",
-                payload: createLoadingMessage(toolName, text),
-              });
-            } else if (msg.status === "complete") {
-              // Tool finished
-              dispatch({ type: "REMOVE_LOADING", payload: msg.tool });
-              if (msg.image_url) {
-                dispatch({
-                  type: "SET_VTO_RESULT",
-                  payload: {
-                    imageUrl: msg.image_url,
-                    toolName: msg.tool,
-                    timestamp: Date.now(),
-                  },
-                });
-              } else if (msg.scores || msg.data) {
-                dispatch({
-                  type: "ADD_MESSAGE",
-                  payload: createToolResultMessage(msg.tool, msg.scores || msg.data || msg),
-                });
-              }
-              dispatch({ type: "SET_PROCESSING", payload: false });
-              dispatch({ type: "SET_CURRENT_TOOL", payload: null });
-            }
-            break;
-
-          case WSServerMsg.ERROR:
-            setError(msg.message ?? "Something went wrong");
-            dispatch({ type: "SET_PROCESSING", payload: false });
-            break;
-
-          // Legacy server message types (backward compat)
-          case WSServerMsg.SESSION_READY:
-            dispatch({ type: "SET_CONNECTED", payload: true });
-            break;
-          case WSServerMsg.GREETING:
-          case WSServerMsg.AGENT_TEXT:
-            dispatch({ type: "ADD_MESSAGE", payload: createAgentMessage(msg.text) });
-            break;
-          case WSServerMsg.USER_TEXT:
-            dispatch({ type: "ADD_MESSAGE", payload: createUserMessage(msg.text) });
-            break;
-        }
-      } catch {
-        console.error("Failed to parse WS message");
-      }
-    },
-    [dispatch]
-  );
-
-  // ── Play audio from WS ─────────────────────────
-  // Schedule audio chunks sequentially to avoid overlaps/gaps (gibberish noise)
-  const nextPlayTimeRef = useRef<number>(0);
 
   async function playAudio(data: Blob | ArrayBuffer) {
     try {
@@ -195,18 +98,105 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       // Schedule: play right after the previous chunk ends (gapless)
       const now = ctx.currentTime;
-      const startTime = Math.max(now, nextPlayTimeRef.current);
-      source.start(startTime);
-      nextPlayTimeRef.current = startTime + audioBuffer.duration;
+      setNextPlayTime((previousNextPlayTime) => {
+        const startTime = Math.max(now, previousNextPlayTime);
+        source.start(startTime);
+        return startTime + audioBuffer.duration;
+      });
     } catch {
       // Silently skip undecodable audio chunks
     }
   }
 
+  // ── Handle incoming WS messages ─────────────────
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
+      // Binary = audio data → play it
+      if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+        void playAudio(event.data);
+        return;
+      }
+
+      try {
+        const msg = JSON.parse(event.data);
+
+        switch (msg.type) {
+          case "ConversationText":
+            if (msg.role === "assistant" || msg.role === "agent") {
+              dispatch({
+                type: "ADD_MESSAGE",
+                payload: createAgentMessage(msg.content),
+              });
+            } else if (msg.role === "user") {
+              dispatch({
+                type: "ADD_MESSAGE",
+                payload: createUserMessage(msg.content),
+              });
+            }
+            break;
+          case "AgentStartedSpeaking":
+            setNextPlayTime(0);
+            break;
+          case "SettingsApplied":
+          case WSServerMsg.SESSION_READY:
+            dispatch({ type: "SET_CONNECTED", payload: true });
+            break;
+          case WSServerMsg.VTO_RESULT:
+            if (msg.status === "running") {
+              const toolName = msg.tool as ToolName;
+              const text = LOADING_TEXT[toolName] ?? "Processing…";
+              dispatch({ type: "SET_PROCESSING", payload: true });
+              dispatch({ type: "SET_CURRENT_TOOL", payload: toolName });
+              dispatch({
+                type: "ADD_MESSAGE",
+                payload: createLoadingMessage(toolName, text),
+              });
+            } else if (msg.status === "complete") {
+              dispatch({ type: "REMOVE_LOADING", payload: msg.tool });
+              if (msg.image_url) {
+                dispatch({
+                  type: "SET_VTO_RESULT",
+                  payload: {
+                    imageUrl: msg.image_url,
+                    toolName: msg.tool,
+                    timestamp: Date.now(),
+                  },
+                });
+              } else if (msg.scores || msg.data) {
+                dispatch({
+                  type: "ADD_MESSAGE",
+                  payload: createToolResultMessage(msg.tool, msg.scores || msg.data || msg),
+                });
+              }
+              dispatch({ type: "SET_PROCESSING", payload: false });
+              dispatch({ type: "SET_CURRENT_TOOL", payload: null });
+            }
+            break;
+          case WSServerMsg.ERROR:
+            setError(msg.message ?? "Something went wrong");
+            dispatch({ type: "SET_PROCESSING", payload: false });
+            break;
+          case WSServerMsg.GREETING:
+          case WSServerMsg.AGENT_TEXT:
+            dispatch({ type: "ADD_MESSAGE", payload: createAgentMessage(msg.text) });
+            break;
+          case WSServerMsg.USER_TEXT:
+            dispatch({ type: "ADD_MESSAGE", payload: createUserMessage(msg.text) });
+            break;
+          default:
+            break;
+        }
+      } catch {
+        console.error("Failed to parse WS message");
+      }
+    },
+    [dispatch]
+  );
+
   // ── Start Listening (mic → WS) ──────────────────
   const startListening = useCallback(async () => {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (ws?.readyState !== WebSocket.OPEN) return;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -254,7 +244,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
   // ── Connect ─────────────────────────────────────
   const connect = useCallback(
-    (selfie: string, autoStart: boolean = true) => {
+    function connectToVoice(selfie: string, autoStart: boolean = true) {
       if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
       setIsConnecting(true);
@@ -262,7 +252,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       // Timeout: if WS doesn't open in 10s, give up
       connectTimeoutRef.current = setTimeout(() => {
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) {
           wsRef.current?.close();
           wsRef.current = null;
           setIsConnecting(false);
@@ -275,14 +265,16 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+        if (connectTimeoutRef.current) {
+          clearTimeout(connectTimeoutRef.current);
+        }
         setIsConnected(true);
         setIsConnecting(false);
         setError(null);
         retryCountRef.current = 0;
 
         // Expose WebSocket to window for feature menu access
-        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = ws;
+        setMirraWebSocket(ws);
 
         // Send selfie as first message
         ws.send(
@@ -308,7 +300,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         cleanup();
 
         // Clear WebSocket reference
-        (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
+        setMirraWebSocket();
 
         // Reconnect with backoff (only if not timed out)
         if (retryCountRef.current < WS_CONFIG.MAX_RETRIES) {
@@ -318,7 +310,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
             ];
           retryCountRef.current++;
           setIsConnecting(true);
-          setTimeout(() => connect(selfie), delay);
+          setTimeout(() => connectToVoice(selfie), delay);
         } else {
           setError("Connection lost. Please refresh.");
         }
@@ -328,8 +320,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         setError("Connection error");
       };
     },
-    [handleMessage, cleanup, startListening]
+    [cleanup, handleMessage, setMirraWebSocket, startListening]
   );
+  reconnectRef.current = connect;
 
   // ── Disconnect ──────────────────────────────────
   const disconnect = useCallback(() => {
@@ -340,8 +333,8 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     setIsConnected(false);
     
     // Clear WebSocket reference
-    (window as Window & { __mirraWS?: WebSocket }).__mirraWS = undefined;
-  }, [cleanup]);
+    setMirraWebSocket();
+  }, [cleanup, setMirraWebSocket]);
 
   // ── Stop Listening ──────────────────────────────
   const stopListening = useCallback(() => {

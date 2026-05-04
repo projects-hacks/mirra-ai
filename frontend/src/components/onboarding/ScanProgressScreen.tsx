@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AnalysisResults, TaskStatus } from "@/types/onboarding";
-import { SCAN_POLL_INTERVAL, SCAN_TIMEOUT, COMPLETION_DISPLAY_DELAY } from "@/constants/onboarding";
+import { COMPLETION_DISPLAY_DELAY } from "@/constants/onboarding";
 
 // ── Props Interface ─────────────────────────────────
 interface ScanProgressScreenProps {
@@ -25,7 +25,14 @@ export function ScanProgressScreen({
   selfie,
   onComplete,
   onError,
-}: ScanProgressScreenProps) {
+}: Readonly<ScanProgressScreenProps>) {
+  // Helper to derive status label (avoids nested ternary — S3358)
+  function getStatusLabel(err: string | null, progress: number): string {
+    if (err) return "Failed";
+    if (progress === 100) return "Complete";
+    return "Analyzing";
+  }
+
   const [tasks, setTasks] = useState<AnalysisTask[]>([
     { id: "skinAnalysis", label: "Analyzing skin texture", status: "pending" },
     { id: "skinTone", label: "Analyzing skin tone", status: "pending" },
@@ -174,7 +181,7 @@ export function ScanProgressScreen({
           >
             <span className="text-4xl font-bold">{overallProgress}%</span>
             <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-              {error ? "Failed" : overallProgress === 100 ? "Complete" : "Analyzing"}
+              {getStatusLabel(error, overallProgress)}
             </span>
           </div>
         </div>

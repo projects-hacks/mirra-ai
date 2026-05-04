@@ -10,7 +10,7 @@ from app.core.config import settings
 _pool: redis.Redis | None = None
 
 
-async def get_pool() -> redis.Redis:
+def get_pool() -> redis.Redis:
     """Lazy-init connection pool (singleton)."""
     global _pool
     if _pool is None:
@@ -24,26 +24,29 @@ async def get_pool() -> redis.Redis:
 
 async def get(key: str) -> Any | None:
     """Get a cached value. Returns None on miss."""
-    r = await get_pool()
+    r = get_pool()
     val = await r.get(key)
     return json.loads(val) if val else None
 
 
-async def set(key: str, value: Any, ttl: int = 300) -> None:
+async def cache_set(key: str, value: Any, ttl: int = 300) -> None:
     """Set a cached value with TTL in seconds."""
-    r = await get_pool()
+    r = get_pool()
     await r.set(key, json.dumps(value), ex=ttl)
+
+# Backward-compatible alias (shadows built-in `set`)
+set = cache_set
 
 
 async def delete(key: str) -> None:
     """Delete a cached key."""
-    r = await get_pool()
+    r = get_pool()
     await r.delete(key)
 
 
 async def invalidate_pattern(pattern: str) -> None:
     """Delete all keys matching a glob pattern."""
-    r = await get_pool()
+    r = get_pool()
     async for key in r.scan_iter(match=pattern):
         await r.delete(key)
 

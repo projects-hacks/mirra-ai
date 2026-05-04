@@ -7,7 +7,7 @@
 class AudioProcessor extends AudioWorkletProcessor {
   process(inputs) {
     const input = inputs[0];
-    if (!input || !input[0]) return true;
+    if (!input?.length || !input[0]?.length) return true;
 
     const samples = input[0];
     const pcm = new Int16Array(samples.length);
@@ -18,7 +18,7 @@ class AudioProcessor extends AudioWorkletProcessor {
     }
 
     this.port.postMessage(pcm.buffer, [pcm.buffer]);
-    return true;
+    return currentFrame >= 0;
   }
 }
 

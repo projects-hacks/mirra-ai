@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, memo } from "react";
+import { useMemo, memo } from "react";
 import Image from "next/image";
 import MatchScore from "@/components/ui/MatchScore";
 import { useToast } from "@/components/ui/Toast";
@@ -44,15 +44,8 @@ const ProofCard = memo(function ProofCard({
   onAdjust,
   onSave,
   onClose,
-}: ProofCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+}: Readonly<ProofCardProps>) {
   const { showToast } = useToast();
-
-  // Memoize expensive calculations
-  const totalNewSpend = useMemo(
-    () => card.total_new_spend,
-    [card.total_new_spend]
-  );
 
   const formatPrice = useMemo(
     () => (price: number) => {
@@ -72,7 +65,7 @@ const ProofCard = memo(function ProofCard({
     try {
       await retryWithBackoff(
         async () => {
-          await onApprove();
+          await Promise.resolve(onApprove());
         },
         {
           maxRetries: 2,
@@ -93,7 +86,7 @@ const ProofCard = memo(function ProofCard({
     if (!onAdjust) return;
 
     try {
-      await retryWithBackoff(async () => await onAdjust(), {
+      await retryWithBackoff(async () => Promise.resolve(onAdjust()), {
         maxRetries: 2,
         initialDelay: 500,
       });
@@ -107,7 +100,7 @@ const ProofCard = memo(function ProofCard({
     if (!onSave) return;
 
     try {
-      await retryWithBackoff(async () => await onSave(), {
+      await retryWithBackoff(async () => Promise.resolve(onSave()), {
         maxRetries: 2,
         initialDelay: 500,
       });
@@ -199,9 +192,9 @@ const ProofCard = memo(function ProofCard({
           <div className="space-y-3">
             <h3 className="text-xl font-medium">New Items</h3>
             <div className="space-y-2">
-              {card.new_items.map((item, i) => (
+              {card.new_items.map((item) => (
                 <div
-                  key={i}
+                  key={`${item.name}-${item.imageUrl ?? item.price ?? "new"}`}
                   className="flex justify-between items-center group"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -232,9 +225,9 @@ const ProofCard = memo(function ProofCard({
           <div className="space-y-3 pt-4 border-t border-white/20">
             <h3 className="text-xl font-medium">From Your Closet</h3>
             <div className="space-y-2">
-              {card.owned_items.map((item, i) => (
+              {card.owned_items.map((item) => (
                 <div
-                  key={i}
+                  key={`${item.name}-${item.imageUrl ?? item.price ?? "owned"}`}
                   className="flex justify-between items-center opacity-70"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">

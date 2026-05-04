@@ -178,7 +178,7 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
 class OnboardingService:
     """Service for handling complete onboarding flow."""
 
-    async def init(self, user_id: str) -> dict[str, Any]:
+    def init(self, user_id: str) -> dict[str, Any]:
         """Initialize onboarding session.
 
         Validates user exists and fetches/creates profile and preferences.
@@ -527,7 +527,7 @@ class OnboardingService:
             items_to_insert = [{"user_id": user_id, **item} for item in DEMO_CLOSET_ITEMS]
 
             # Insert all items
-            response = supabase.from_("closet_items").insert(items_to_insert).execute()
+            supabase.from_("closet_items").insert(items_to_insert).execute()
 
             # Cache closet items
             await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
@@ -542,7 +542,7 @@ class OnboardingService:
             try:
                 logger.info(f"Retrying closet seeding for user {user_id}")
                 items_to_insert = [{"user_id": user_id, **item} for item in DEMO_CLOSET_ITEMS]
-                response = supabase.from_("closet_items").insert(items_to_insert).execute()
+                supabase.from_("closet_items").insert(items_to_insert).execute()
                 await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
                 return {"success": True, "item_count": len(items_to_insert)}
             except Exception as retry_error:

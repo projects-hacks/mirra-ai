@@ -49,7 +49,7 @@ class ProofCardGenerator:
         look_name: str,
         vto_result: Optional[Dict],
         selected_items: List[Dict],
-        closet_items: List[Dict],
+        _closet_items: List[Dict],
         context: Dict,
         user_profile: Optional[Dict] = None,
     ) -> ProofCardData:
@@ -184,7 +184,7 @@ class ProofCardGenerator:
         score += formality_score * 0.5
         
         # Factor 2: Category completeness (30% weight)
-        categories = set(item.get('category', '') for item in items)
+        categories = {item.get('category', '') for item in items}
         required_categories = self._get_required_categories(occasion)
         
         completeness = len(categories & required_categories) / len(required_categories)

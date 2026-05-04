@@ -29,7 +29,7 @@ async def test_init():
             MagicMock(select=lambda *args: MagicMock(eq=lambda *args: mock_prefs_query)),
         ]
         
-        result = await service.init("user-123")
+        result = service.init("user-123")
         
         assert result["success"] is True
         assert result["profile"]["id"] == "user-123"
@@ -47,7 +47,7 @@ async def test_analyze():
     
     with patch('app.services.onboarding.supabase') as mock_supabase, \
          patch('app.services.onboarding._call_api_with_circuit_breaker') as mock_api, \
-         patch('app.services.onboarding.cache_set') as mock_cache:
+         patch('app.services.onboarding.cache_set') as _mock_cache:
         
         # Mock API responses
         mock_api.side_effect = [
@@ -116,7 +116,7 @@ async def test_seed_closet():
     service = OnboardingService()
     
     with patch('app.services.onboarding.supabase') as mock_supabase, \
-         patch('app.services.onboarding.cache_set') as mock_cache:
+         patch('app.services.onboarding.cache_set') as _mock_cache:
         
         # Mock database response
         mock_insert = MagicMock()
@@ -179,7 +179,7 @@ async def test_retry_with_backoff():
         nonlocal call_count
         call_count += 1
         if call_count < 3:
-            raise Exception("Temporary failure")
+            raise RuntimeError("Temporary failure")
         return "success"
     
     result = await _retry_with_backoff(failing_fn, max_retries=2, base_delay=0.01)

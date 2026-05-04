@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core import cache
+from app.core.auth_middleware import JWTAuthMiddleware
 from app.routers import voice, vto, context, closet, onboarding
 
 
@@ -30,6 +31,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# JWT auth middleware — validates Bearer token on all non-public REST routes
+# Added AFTER CORS so 401 responses still include Access-Control-Allow-Origin
+app.add_middleware(JWTAuthMiddleware)
 
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(vto.router, prefix="/api/vto", tags=["VTO"])

@@ -23,7 +23,7 @@ const CACHE_MAX_AGE = {
 };
 
 // ── Install Event ──────────────────────────────────
-self.addEventListener("install", (event) => {
+globalThis.addEventListener("install", (event) => {
   console.log("[SW] Installing service worker v2.0.0");
   
   event.waitUntil(
@@ -32,13 +32,13 @@ self.addEventListener("install", (event) => {
       return cache.addAll(STATIC_ASSETS);
     }).then(() => {
       console.log("[SW] Skip waiting");
-      return self.skipWaiting();
+      return globalThis.skipWaiting();
     })
   );
 });
 
 // ── Activate Event ─────────────────────────────────
-self.addEventListener("activate", (event) => {
+globalThis.addEventListener("activate", (event) => {
   console.log("[SW] Activating service worker v2.0.0");
   
   event.waitUntil(
@@ -54,65 +54,51 @@ self.addEventListener("activate", (event) => {
       );
     }).then(() => {
       console.log("[SW] Claiming clients");
-      return self.clients.claim();
+      return globalThis.clients.claim();
     })
   );
 });
 
 // ── Fetch Event ────────────────────────────────────
-self.addEventListener("fetch", (event) => {
+globalThis.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip service worker for:
-  // 1. Chrome extensions
-  if (url.protocol === "chrome-extension:") {
-    return;
-  }
+  // Skip non-cacheable requests
+  if (shouldBypassCache(url, request)) return;
 
-  // 2. OAuth callbacks (critical - must not be cached)
-  if (url.pathname.includes("/auth/callback") || url.pathname.includes("/auth/")) {
-    console.log("[SW] Bypassing cache for auth:", url.pathname);
-    return;
-  }
+  event.respondWith(routeRequest(request, url));
+});
 
-  // 3. API calls (network-first with fallback)
+/** Determine if a request should bypass the service worker entirely */
+function shouldBypassCache(url, request) {
+  return (
+    url.protocol === "chrome-extension:" ||
+    url.pathname.includes("/auth/callback") ||
+    url.pathname.includes("/auth/") ||
+    url.protocol === "ws:" ||
+    url.protocol === "wss:"
+  );
+}
+
+/** Route request to correct caching strategy */
+async function routeRequest(request, url) {
   if (url.pathname.startsWith("/api/") || url.hostname.includes("supabase.co")) {
-    event.respondWith(networkFirstStrategy(request, CACHE_NAMES.dynamic));
-    return;
+    return networkFirstStrategy(request, CACHE_NAMES.dynamic);
   }
-
-  // 4. WebSocket connections
-  if (url.protocol === "ws:" || url.protocol === "wss:") {
-    return;
-  }
-
-  // 5. Images (cache-first with network fallback)
   if (request.destination === "image") {
-    event.respondWith(cacheFirstStrategy(request, CACHE_NAMES.images));
-    return;
+    return cacheFirstStrategy(request, CACHE_NAMES.images);
   }
-
-  // 6. Static assets (cache-first with network fallback)
   if (
     request.destination === "script" ||
     request.destination === "style" ||
     request.destination === "font" ||
     url.pathname.startsWith("/_next/static/")
   ) {
-    event.respondWith(cacheFirstStrategy(request, CACHE_NAMES.static));
-    return;
+    return cacheFirstStrategy(request, CACHE_NAMES.static);
   }
-
-  // 7. HTML pages (network-first with cache fallback)
-  if (request.destination === "document" || request.mode === "navigate") {
-    event.respondWith(networkFirstStrategy(request, CACHE_NAMES.dynamic));
-    return;
-  }
-
-  // Default: network-first
-  event.respondWith(networkFirstStrategy(request, CACHE_NAMES.dynamic));
-});
+  return networkFirstStrategy(request, CACHE_NAMES.dynamic);
+}
 
 // ── Caching Strategies ─────────────────────────────
 
@@ -141,9 +127,11 @@ async function networkFirstStrategy(request, cacheName) {
     
     // If both network and cache fail, return offline page for navigation requests
     if (request.mode === "navigate") {
-      return caches.match("/offline.html") || new Response(
-        createOfflinePage(),
-        { headers: { "Content-Type": "text/html" } }
+      return (
+        (await caches.match("/offline.html")) ??
+        new Response(createOfflinePage(), {
+          headers: { "Content-Type": "text/html" },
+        })
       );
     }
     
@@ -243,7 +231,7 @@ function createOfflinePage() {
 }
 
 // ── Background Sync ────────────────────────────────
-self.addEventListener("sync", (event) => {
+globalThis.addEventListener("sync", (event) => {
   console.log("[SW] Background sync:", event.tag);
   
   if (event.tag === "sync-failed-requests") {
@@ -261,14 +249,14 @@ async function syncFailedRequests() {
 }
 
 // ── Message Handler ────────────────────────────────
-self.addEventListener("message", (event) => {
+globalThis.addEventListener("message", (event) => {
   console.log("[SW] Message received:", event.data);
   
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
+  if (event.data?.type === "SKIP_WAITING") {
+    globalThis.skipWaiting();
   }
   
-  if (event.data && event.data.type === "CLEAR_CACHE") {
+  if (event.data?.type === "CLEAR_CACHE") {
     event.waitUntil(
       caches.keys().then((cacheNames) => {
         return Promise.all(

@@ -36,7 +36,7 @@ function CalendarPromptScreen() {
   );
 }
 
-function CompletionScreen({ userId }: { userId: string }) {
+function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
   const [isCompleting, setIsCompleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -77,7 +77,7 @@ function CompletionScreen({ userId }: { userId: string }) {
 
         // Step 3: Wait for animation, then reload to show main interface
         setTimeout(() => {
-          window.location.href = "/";
+          globalThis.location.href = "/";
         }, 2000);
 
       } catch (err) {
@@ -102,7 +102,7 @@ function CompletionScreen({ userId }: { userId: string }) {
             {error}
           </p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="btn-primary"
           >
             Try Again
@@ -150,7 +150,6 @@ export function OnboardingFlow() {
     setAnalysisResults,
     setError,
     retryCurrentStep,
-    dispatch,
   } = useOnboarding();
 
   // ── Check for existing session on mount ────────────

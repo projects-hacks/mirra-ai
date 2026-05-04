@@ -26,7 +26,7 @@ export default function CameraLayer({
   currentTool,
   cameraError,
   isUsingCameraKit,
-}: CameraLayerProps) {
+}: Readonly<CameraLayerProps>) {
   // Only freeze the mirror for VTO tasks that generate images. 
   // Data analysis tasks like 'analyze_skin' should keep the live camera visible.
   const isVtoTask = currentTool?.startsWith("try_on") || currentTool === "generate_proof_card";

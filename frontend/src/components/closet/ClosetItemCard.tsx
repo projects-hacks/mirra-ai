@@ -14,7 +14,7 @@ interface ClosetItemCardProps {
     purchasePrice?: number;
     owned?: boolean;
   };
-  onSelect?: (item: any) => void;
+  onSelect?: (item: ClosetItemCardProps["item"]) => void;
 }
 
 /**
@@ -22,7 +22,10 @@ interface ClosetItemCardProps {
  * Displays a single closet item in bento grid layout
  * Optimized with React.memo to prevent unnecessary re-renders
  */
-const ClosetItemCard = memo(function ClosetItemCard({ item, onSelect }: ClosetItemCardProps) {
+const ClosetItemCard = memo(function ClosetItemCard({
+  item,
+  onSelect,
+}: Readonly<ClosetItemCardProps>) {
   const handleClick = useCallback(() => {
     if (onSelect) {
       onSelect(item);
@@ -39,9 +42,11 @@ const ClosetItemCard = memo(function ClosetItemCard({ item, onSelect }: ClosetIt
   }, [item.purchasePrice]);
 
   return (
-    <div
+    <button
+      type="button"
       className="glass-panel rounded-DEFAULT overflow-hidden relative group cursor-pointer hover:scale-105 transition-transform duration-300"
       onClick={handleClick}
+      aria-label={`Select ${item.name}`}
     >
       {/* Badge */}
       <div className="absolute top-3 left-3 z-10 flex gap-2">
@@ -112,7 +117,7 @@ const ClosetItemCard = memo(function ClosetItemCard({ item, onSelect }: ClosetIt
           </p>
         )}
       </div>
-    </div>
+    </button>
   );
 });
 
