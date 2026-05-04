@@ -96,7 +96,7 @@ export function SelfieCaptureScreen({
   useEffect(() => {
     if (isSDKLoaded && !isCameraOpen && captureState === "loading") {
       openCamera({
-        faceDetectionMode: "skin", // Use 'skin' mode for onboarding
+        faceDetectionMode: "skincare", // Use 'skincare' mode for onboarding
         imageFormat: "base64",
         language: "enu",
       });
@@ -120,7 +120,7 @@ export function SelfieCaptureScreen({
     setErrorMessage(null);
     setCaptureState("loading");
     openCamera({
-      faceDetectionMode: "skin",
+      faceDetectionMode: "skincare",
       imageFormat: "base64",
       language: "enu",
     });
