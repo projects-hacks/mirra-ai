@@ -24,8 +24,23 @@ class PerfectCorpAPIError(Exception):
         super().__init__(f"[{task_type}] {error_code}: {error_message}")
     
     def is_retryable(self) -> bool:
-        """Check if this error should be retried."""
-        retryable_codes = ["429", "500", "504", "unknown_internal"]
+        """Check if this error should be retried.
+        
+        Retryable errors:
+        - 429 (Rate limit)
+        - 500, 502, 503, 504 (Server errors)
+        - unknown_internal (Perfect Corp internal errors)
+        
+        Non-retryable errors:
+        - 400, 401, 403, 404 (Client errors - bad request, auth, not found)
+        - error_face_angle, error_src_face_too_small, etc. (User input errors)
+        """
+        retryable_codes = ["429", "500", "502", "503", "504", "unknown_internal"]
+        
+        # HTTP 4xx errors (except 429) are not retryable
+        if self.error_code.startswith("http_4") and "429" not in self.error_code:
+            return False
+        
         return any(code in self.error_code for code in retryable_codes)
     
     def get_user_message(self) -> str:
@@ -58,8 +73,6 @@ async def upload_image(task_type: str, image_bytes: bytes, client: httpx.AsyncCl
     version = _api_version(task_type)
     # For nested paths like "2d-vto/earring", the file endpoint uses the base path
     file_path = task_type.split("/")[0] if "/" in task_type else task_type
-
-    logger.info(f"Uploading image for {task_type}, size: {len(image_bytes)} bytes")
     
     file_res = await client.post(
         f"{BASE}/s2s/{version}/file/{file_path}",
@@ -74,7 +87,7 @@ async def upload_image(task_type: str, image_bytes: bytes, client: httpx.AsyncCl
     await client.put(upload_req["url"], content=image_bytes, headers=upload_req.get("headers", {}))
 
     file_id = file_data["file_id"]
-    logger.info(f"✅ Image uploaded successfully, file_id: {file_id}")
+    logger.debug(f"Image uploaded for {task_type}, file_id: {file_id}")
     
     return file_id
 
@@ -120,22 +133,26 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
         import logging
         logger = logging.getLogger(__name__)
         
-        logger.info(f"Calling Perfect Corp API: {BASE}/s2s/{version}/task/{task_type}")
-        logger.info(f"Request payload: {task_payload}")
-        
         task_res = await client.post(
             f"{BASE}/s2s/{version}/task/{task_type}",
             json=task_payload,
             headers=HEADERS,
         )
         
-        # Log error details before raising
+        # Handle HTTP errors with proper retry logic
         if task_res.status_code >= 400:
-            logger.error(f"Perfect Corp API Error {task_res.status_code}")
-            logger.error(f"Response body: {task_res.text}")
-            logger.error(f"Request payload was: {task_payload}")
-        
-        task_res.raise_for_status()
+            logger.error(f"Perfect Corp API Error [{task_type}]: {task_res.status_code} - {task_res.text}")
+            
+            # 4xx errors are client errors (bad request, auth, etc.) - don't retry
+            if 400 <= task_res.status_code < 500:
+                raise PerfectCorpAPIError(
+                    f"http_{task_res.status_code}",
+                    task_res.text,
+                    task_type
+                )
+            # 5xx errors are server errors - can be retried
+            else:
+                task_res.raise_for_status()
         task_id = task_res.json()["data"]["task_id"]
 
         # Poll for result
@@ -149,13 +166,14 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
             data = poll.json()["data"]
 
             if data["task_status"] == "success":
+                logger.debug(f"Task {task_type} completed successfully")
                 return data
             if data["task_status"] == "error":
                 import logging
                 error_code = data.get("error_code", "unknown")
                 error_msg = data.get("error_message", str(data))
                 logging.getLogger(__name__).error(
-                    f"Perfect Corp API error - Task: {task_type}, Code: {error_code}, Message: {error_msg}"
+                    f"Perfect Corp API error [{task_type}]: {error_code} - {error_msg}"
                 )
                 
                 # Raise specific exception with error code for better handling
