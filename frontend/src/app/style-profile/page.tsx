@@ -1,0 +1,319 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getSupabase } from '@/lib/supabase';
+import StyleInsightsChart from '@/components/closet/StyleInsightsChart';
+import { SkeletonAnalyticsCard } from '@/components/common/SkeletonLoader';
+import { EmptyAnalytics } from '@/components/common/EmptyState';
+
+interface StyleProfile {
+  user_id: string;
+  period_start: string;
+  period_end: string;
+  top_colors: string[];
+  top_categories: Record<string, number>;
+  top_brands: string[];
+  formality_avg: number;
+  outfit_success_rate: number;
+  avg_cost_per_wear: number;
+  total_outfits: number;
+  drift_insights?: {
+    drift_detected: boolean;
+    insights: Array<{
+      type: string;
+      message: string;
+      change?: number;
+      new_colors?: string[];
+      category?: string;
+      change_percent?: number;
+    }>;
+  };
+}
+
+export default function StyleProfilePage() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<StyleProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Fetch user ID
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = getSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      } else {
+        router.push('/');
+      }
+    };
+    fetchUser();
+  }, [router]);
+
+  // Fetch style profile
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const supabase = getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          router.push('/');
+          return;
+        }
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/style-profile?user_id=${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch style profile');
+        }
+
+        const data = await response.json();
+        setProfile(data);
+      } catch (err) {
+        console.error('Error fetching style profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load style profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [userId, router]);
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Get drift icon
+  const getDriftIcon = (type: string) => {
+    switch (type) {
+      case 'formality_drift':
+        return 'trending_up';
+      case 'color_shift':
+        return 'palette';
+      case 'category_shift':
+        return 'swap_horiz';
+      default:
+        return 'info';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen pb-24"
+        style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
+          style={{
+            background: 'rgba(var(--bg-rgb, 10,10,20),0.85)',
+            backdropFilter: 'blur(16px)',
+          }}
+        >
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-sm"
+            style={{ color: 'var(--on-surface-variant)' }}
+          >
+            ← Back
+          </button>
+          <h1 className="text-base font-semibold tracking-tight">Style Profile</h1>
+          <div className="w-12" />
+        </div>
+
+        <div className="max-w-4xl mx-auto px-5 space-y-6 pt-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonAnalyticsCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div
+        className="min-h-screen pb-24"
+        style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
+          style={{
+            background: 'rgba(var(--bg-rgb, 10,10,20),0.85)',
+            backdropFilter: 'blur(16px)',
+          }}
+        >
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-sm"
+            style={{ color: 'var(--on-surface-variant)' }}
+          >
+            ← Back
+          </button>
+          <h1 className="text-base font-semibold tracking-tight">Style Profile</h1>
+          <div className="w-12" />
+        </div>
+
+        <div className="max-w-4xl mx-auto px-5 pt-4">
+          {profile && profile.total_outfits === 0 ? (
+            <EmptyAnalytics />
+          ) : (
+            <div className="glass-card p-8 text-center">
+              <span
+                className="material-symbols-outlined text-[64px] mb-4"
+                style={{ color: 'var(--error)' }}
+              >
+                error
+              </span>
+              <p className="text-lg mb-4" style={{ color: 'var(--error)' }}>
+                {error || 'Failed to load style profile'}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 rounded-lg"
+                style={{ background: 'var(--primary)', color: 'white' }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-screen pb-24"
+      style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}
+    >
+      {/* Header */}
+      <div
+        className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
+        style={{
+          background: 'rgba(var(--bg-rgb, 10,10,20),0.85)',
+          backdropFilter: 'blur(16px)',
+        }}
+      >
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm"
+          style={{ color: 'var(--on-surface-variant)' }}
+        >
+          ← Back
+        </button>
+        <h1 className="text-base font-semibold tracking-tight">Style Profile</h1>
+        <div className="w-12" />
+      </div>
+
+      <div className="max-w-4xl mx-auto px-5 space-y-6 pt-4">
+        {/* Period Info */}
+        <div className="glass-card p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: 'var(--on-surface-variant)' }}>
+                Profile Period
+              </p>
+              <p className="font-semibold" style={{ color: 'var(--on-surface)' }}>
+                {formatDate(profile.period_start)} - {formatDate(profile.period_end)}
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg border transition-colors"
+              style={{
+                borderColor: 'var(--outline)',
+                color: 'var(--on-surface)',
+              }}
+            >
+              <span className="material-symbols-outlined text-sm">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Style Drift Insights */}
+        {profile.drift_insights?.drift_detected && profile.drift_insights.insights.length > 0 && (
+          <div
+            className="glass-card p-6"
+            style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05))',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className="material-symbols-outlined text-[32px]"
+                style={{ color: 'var(--primary)' }}
+              >
+                insights
+              </span>
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--primary)' }}>
+                  Style Evolution Detected
+                </h2>
+                <p className="text-sm" style={{ color: 'var(--on-surface-variant)' }}>
+                  Your style is changing!
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {profile.drift_insights.insights.map((insight, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 p-3 rounded-lg"
+                  style={{ background: 'var(--surface-variant)' }}
+                >
+                  <span
+                    className="material-symbols-outlined text-[24px]"
+                    style={{ color: 'var(--primary)' }}
+                  >
+                    {getDriftIcon(insight.type)}
+                  </span>
+                  <div className="flex-1">
+                    <p style={{ color: 'var(--on-surface)' }}>{insight.message}</p>
+                    {insight.change && (
+                      <p className="text-sm mt-1" style={{ color: 'var(--on-surface-variant)' }}>
+                        Change: {(insight.change * 100).toFixed(1)}%
+                      </p>
+                    )}
+                    {insight.change_percent && (
+                      <p className="text-sm mt-1" style={{ color: 'var(--on-surface-variant)' }}>
+                        Change: {insight.change_percent}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Style Insights Chart */}
+        <StyleInsightsChart profile={profile} />
+      </div>
+    </div>
+  );
+}
