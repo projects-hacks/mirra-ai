@@ -356,17 +356,19 @@ class OnboardingService:
             logger.info(f"✓ All analyses completed successfully for user {user_id}")
 
             # Step 3: Extract comprehensive results from API responses
-            skin_result = skin_analysis.get("result", {})
+            # The API returns data in "results" key with "output" array for skin analysis
+            skin_results = skin_analysis.get("results", {})
+            skin_output = skin_results.get("output", []) if isinstance(skin_results, dict) else []
+            
             tone_result = skin_tone.get("results", {})
             face_result = face_attributes.get("results", {})
 
-            # Build flattened skin_scores using ui_score values (integers 0-100)
-            # Map backend metric names to frontend expectations
+            # Build flattened skin_scores from output array
+            # Each item in output has: {"type": "pore", "ui_score": 95, ...}
             metric_mapping = {
                 "wrinkle": "wrinkles",
                 "pore": "pores",
-                "dark_circle_v2": "dark_circles",  # Updated to v2
-                # These stay the same
+                "dark_circle_v2": "dark_circles",
                 "texture": "texture",
                 "acne": "acne",
                 "redness": "redness",
@@ -381,14 +383,28 @@ class OnboardingService:
             }
             
             skin_metrics = {}
-            for backend_metric, frontend_metric in metric_mapping.items():
-                metric_data = skin_result.get(backend_metric, {})
-                if isinstance(metric_data, dict):
-                    # Use ui_score as the flattened integer value
-                    skin_metrics[frontend_metric] = int(metric_data.get("ui_score", 75))
-                else:
-                    # Fallback for mock data format
-                    skin_metrics[frontend_metric] = 75
+            skin_age = None
+            
+            # Parse output array
+            for item in skin_output:
+                if not isinstance(item, dict):
+                    continue
+                    
+                item_type = item.get("type")
+                
+                # Extract skin_age
+                if item_type == "skin_age":
+                    skin_age = item.get("score")
+                    if skin_age:
+                        skin_age = int(skin_age)
+                    continue
+                
+                # Extract metric scores
+                if item_type in metric_mapping:
+                    ui_score = item.get("ui_score")
+                    if ui_score is not None:
+                        frontend_metric = metric_mapping[item_type]
+                        skin_metrics[frontend_metric] = int(ui_score)
 
             # Calculate overall score (average of all metric scores)
             metric_scores = list(skin_metrics.values())
@@ -398,11 +414,6 @@ class OnboardingService:
                 "overall": overall_score,
                 **skin_metrics
             }
-
-            # Extract skin age
-            skin_age = skin_result.get("skin_age", None)
-            if skin_age:
-                skin_age = int(skin_age)
 
             # Extract comprehensive skin tone data
             color_data = tone_result.get("color", {})
@@ -416,8 +427,8 @@ class OnboardingService:
                 "hair_color_name": color_data.get("hair_color_name", None),
             }
 
-            # Extract comprehensive face attributes (new camelCase format)
-            # The new API returns flat structure with camelCase keys
+            # Extract comprehensive face attributes (nested structure)
+            # API returns: {"agegender": {"age": 29, "gender": "male"}, "faceshape": "Diamond", ...}
             
             # Helper function to convert array/dict responses to strings
             def array_to_string(value):
@@ -437,17 +448,36 @@ class OnboardingService:
                 # Already a string or other type
                 return str(value) if value else None
             
+            # Extract age and gender from nested agegender object
+            agegender = face_result.get("agegender", {})
+            age = agegender.get("age") if isinstance(agegender, dict) else None
+            gender = agegender.get("gender") if isinstance(agegender, dict) else None
+            
+            # Extract nose attributes
+            nose = face_result.get("nose", {})
+            nose_width = nose.get("width") if isinstance(nose, dict) else None
+            nose_length = nose.get("length") if isinstance(nose, dict) else None
+            
+            # Extract face shape (lowercase key)
+            face_shape = face_result.get("faceshape", "Oval")
+            
+            # Extract eyelid (already a dict)
+            eyelid = face_result.get("eyelid", None)
+            
+            # Extract lip shape (array)
+            lipshape = face_result.get("lipshape", None)
+            
             face_shape_obj = {
-                "shape": face_result.get("faceShape", "Oval"),
-                "age": face_result.get("age", None),
-                "gender": face_result.get("gender", None),
-                "facial_ratios": {},  # Not requested in new format
-                "eye_shape": array_to_string(face_result.get("eyeShape", None)),
-                "eye_size": array_to_string(face_result.get("eyeSize", None)),
-                "eyelid_type": array_to_string(face_result.get("eyelid", None)),
-                "lip_shape": array_to_string(face_result.get("lipShape", None)),
-                "nose_width": array_to_string(face_result.get("noseWidth", None)),
-                "nose_length": array_to_string(face_result.get("noseLength", None)),
+                "shape": face_shape,
+                "age": age,
+                "gender": gender,
+                "facial_ratios": face_result.get("facialratio", {}),
+                "eye_shape": None,  # Not returned by API
+                "eye_size": None,  # Not returned by API
+                "eyelid_type": array_to_string(eyelid),
+                "lip_shape": array_to_string(lipshape),
+                "nose_width": nose_width,
+                "nose_length": nose_length,
             }
 
             body_model = {
