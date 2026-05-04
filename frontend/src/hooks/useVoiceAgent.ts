@@ -322,7 +322,6 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     },
     [cleanup, handleMessage, setMirraWebSocket, startListening]
   );
-  reconnectRef.current = connect;
 
   // ── Disconnect ──────────────────────────────────
   const disconnect = useCallback(() => {
