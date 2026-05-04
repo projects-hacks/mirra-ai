@@ -1,7 +1,7 @@
 # Contributing to Mirra
 
 ## Branch Strategy
-- `main` — always deployable
+- `main` — always deployable to prod
 - `feat/xyz` — features, `fix/xyz` — bugs
 
 ## Code Standards
