@@ -47,7 +47,7 @@ export function useCamera(): UseCameraReturn {
       await startNativeCamera();
     }
 
-    async function startNativeCamera() {
+    async function startNativeCamera(retries = 3) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -72,6 +72,11 @@ export function useCamera(): UseCameraReturn {
         }
       } catch (err) {
         if (!cancelled) {
+          if (retries > 0) {
+            console.warn(`Camera start failed, retrying... (${retries} attempts left)`, err);
+            setTimeout(() => startNativeCamera(retries - 1), 500);
+            return;
+          }
           const msg =
             err instanceof DOMException && err.name === "NotAllowedError"
               ? "Camera permission denied. Please allow camera access."
@@ -93,12 +98,17 @@ export function useCamera(): UseCameraReturn {
     };
   }, []);
 
+  const streamAttachedRef = useRef(false);
+
   // Attach stream if videoRef mounts after stream is initialized
   useEffect(() => {
     const video = videoRef.current;
     const stream = streamRef.current;
-    if (video && stream && video.srcObject !== stream) {
+    
+    // Check if we need to attach the stream (either it's different, or we haven't tracked it yet)
+    if (video && stream && (!streamAttachedRef.current || video.srcObject !== stream)) {
       video.srcObject = stream;
+      streamAttachedRef.current = true;
       video.play()
         .then(() => setIsReady(true))
         .catch(console.error);
