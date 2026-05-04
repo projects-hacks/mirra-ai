@@ -3,21 +3,10 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { CAMERA } from "@/lib/constants";
 
-/* ── Perfect Corp JS Camera Kit types ── */
-declare global {
-  interface Window {
-    YMK?: {
-      init: (config: {
-        container: HTMLElement;
-        mode: "photo";
-        onReady?: () => void;
-        onError?: (err: unknown) => void;
-        onCapture?: (result: { base64: string; blob: Blob }) => void;
-      }) => YMKInstance;
-    };
-    ymkAsyncInit?: () => void;
-  }
-}
+/* ── Perfect Corp JS Camera Kit types (OLD API - DEPRECATED) ── */
+// DEPRECATED: This hook uses the old photo mode API
+// The new Camera Kit SDK (useCameraKit.ts) should be used instead
+// This is kept only for backward compatibility with the main app interface
 
 interface YMKInstance {
   capture: () => void;
@@ -25,6 +14,9 @@ interface YMKInstance {
   startCamera: () => void;
   stopCamera: () => void;
 }
+
+// Note: We don't declare window.YMK here to avoid conflicts with useCameraKit.ts
+// The main app should be migrated to use the new Camera Kit SDK
 
 interface UseCameraReturn {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -56,34 +48,10 @@ export function useCamera(): UseCameraReturn {
     let cancelled = false;
 
     async function initCamera() {
-      // Try JS Camera Kit first (loaded via CDN in layout.tsx)
-      if (window.YMK && containerRef.current) {
-        try {
-          const instance = window.YMK.init({
-            container: containerRef.current,
-            mode: "photo",
-            onReady: () => {
-              if (!cancelled) {
-                setIsReady(true);
-                setIsUsingCameraKit(true);
-              }
-            },
-            onError: (err) => {
-              console.warn("JS Camera Kit error, falling back to native:", err);
-              if (!cancelled) startNativeCamera();
-            },
-            onCapture: (result) => {
-              lastCaptureRef.current = `data:image/jpeg;base64,${result.base64}`;
-            },
-          });
-          ymkRef.current = instance;
-          instance.startCamera();
-          return;
-        } catch {
-          console.warn("JS Camera Kit init failed, using native camera");
-        }
-      }
-
+      // DEPRECATED: Old photo mode API - should migrate to new Camera Kit SDK
+      // For now, skip Camera Kit and use native camera directly
+      // The YMK global is reserved for the new Camera Kit SDK (v2.4)
+      
       // Fallback: native getUserMedia
       await startNativeCamera();
     }
