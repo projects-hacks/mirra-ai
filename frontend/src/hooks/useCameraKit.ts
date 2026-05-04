@@ -32,17 +32,19 @@ export interface CameraKitEvents {
   onError?: (error: Error) => void;
 }
 
-// ── Global YMK Interface ────────────────────────────
+// ── Global YMK Interface (Camera Kit SDK v2.4) ────────────────────────────
+
+interface YMKCameraKit {
+  init: (config: CameraKitConfig) => void;
+  openCameraKit: () => void;
+  closeCameraKit: () => void;
+  addEventListener: (event: string, callback: (data?: any) => void) => void;
+  removeEventListener: (event: string, callback: (data?: any) => void) => void;
+}
 
 declare global {
   interface Window {
-    YMK?: {
-      init: (config: CameraKitConfig) => void;
-      openCameraKit: () => void;
-      closeCameraKit: () => void;
-      addEventListener: (event: string, callback: (data?: any) => void) => void;
-      removeEventListener: (event: string, callback: (data?: any) => void) => void;
-    };
+    YMKCameraKit?: YMKCameraKit;
     YMKAsyncInit?: () => void;
   }
 }
@@ -67,7 +69,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     setError(null);
 
     // Check if SDK is already loaded
-    if (window.YMK) {
+    if (window.YMKCameraKit) {
       setIsSDKLoaded(true);
       setIsSDKLoading(false);
       return;
@@ -75,7 +77,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     // Define YMKAsyncInit before loading script
     window.YMKAsyncInit = function() {
-      if (!window.YMK) {
+      if (!window.YMKCameraKit) {
         setError(new Error('YMK SDK failed to initialize'));
         setIsSDKLoading(false);
         return;
@@ -111,7 +113,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       // Store handlers for cleanup
       Object.entries(handlers).forEach(([event, handler]) => {
         eventHandlersRef.current.set(event, handler);
-        window.YMK!.addEventListener(event, handler);
+        window.YMKCameraKit!.addEventListener(event, handler);
       });
 
       setIsSDKLoaded(true);
@@ -138,7 +140,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
   // Open camera with config
   const openCamera = useCallback((config: Partial<CameraKitConfig> = {}) => {
-    if (!window.YMK) {
+    if (!window.YMKCameraKit) {
       const err = new Error('Camera Kit SDK not loaded');
       setError(err);
       events.onError?.(err);
@@ -153,8 +155,8 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         ...config,
       };
 
-      window.YMK.init(defaultConfig);
-      window.YMK.openCameraKit();
+      window.YMKCameraKit.init(defaultConfig);
+      window.YMKCameraKit.openCameraKit();
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to open camera');
       setError(error);
@@ -164,10 +166,10 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
   // Close camera
   const closeCamera = useCallback(() => {
-    if (!window.YMK) return;
+    if (!window.YMKCameraKit) return;
 
     try {
-      window.YMK.closeCameraKit();
+      window.YMKCameraKit.closeCameraKit();
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to close camera');
       setError(error);
@@ -179,15 +181,15 @@ export function useCameraKit(events: CameraKitEvents = {}) {
   useEffect(() => {
     return () => {
       // Remove event listeners
-      if (window.YMK) {
+      if (window.YMKCameraKit) {
         eventHandlersRef.current.forEach((handler, event) => {
-          window.YMK!.removeEventListener(event, handler);
+          window.YMKCameraKit!.removeEventListener(event, handler);
         });
       }
 
       // Close camera if open
-      if (isCameraOpen && window.YMK) {
-        window.YMK.closeCameraKit();
+      if (isCameraOpen && window.YMKCameraKit) {
+        window.YMKCameraKit.closeCameraKit();
       }
 
       // Remove SDK script
