@@ -14,6 +14,8 @@ import FeatureMenu from "@/components/features/FeatureMenu";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 export default function HomePage() {
   const state = useAppState();
   const dispatch = useAppDispatch();
@@ -44,12 +46,16 @@ export default function HomePage() {
 
         if (error) {
           console.error("Error checking onboarding status:", error);
+          // If profile doesn't exist yet, assume not onboarded
           setIsOnboarded(false);
         } else {
-          setIsOnboarded((data as { onboarded: boolean } | null)?.onboarded ?? false);
+          const onboardedStatus = (data as { onboarded: boolean } | null)?.onboarded ?? false;
+          console.log("Onboarding status:", onboardedStatus);
+          setIsOnboarded(onboardedStatus);
         }
       } catch (error) {
         console.error("Error checking onboarding status:", error);
+        // On error, assume not onboarded to show onboarding flow
         setIsOnboarded(false);
       } finally {
         setIsCheckingOnboarding(false);
@@ -146,15 +152,18 @@ export default function HomePage() {
   // Show onboarding flow if not authenticated or not onboarded
   if (shouldShowOnboarding) {
     return (
-      <OnboardingProvider>
-        <OnboardingFlow />
-      </OnboardingProvider>
+      <ErrorBoundary>
+        <OnboardingProvider>
+          <OnboardingFlow />
+        </OnboardingProvider>
+      </ErrorBoundary>
     );
   }
 
   // Show main interface if authenticated and onboarded
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <ErrorBoundary>
+      <div className="relative h-full w-full overflow-hidden">
       {/* Layer 0: Camera / Selfie / VTO */}
       <CameraLayer
         containerRef={containerRef}
@@ -195,6 +204,6 @@ export default function HomePage() {
           onClick={handleVoiceToggle}
         />
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

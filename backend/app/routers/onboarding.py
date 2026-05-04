@@ -1,6 +1,6 @@
 """Onboarding API endpoints — orchestrates complete user onboarding flow."""
 import logging
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 
 from app.models.onboarding import (
     InitRequest,
@@ -21,13 +21,14 @@ onboarding_service = OnboardingService()
 
 
 @router.post("/init")
-async def init_onboarding(request: InitRequest) -> InitResponse:
+async def init_onboarding(request: Request, body: InitRequest) -> InitResponse:
     """Initialize onboarding session after authentication.
     
-    Validates user exists and fetches/creates profile and preferences.
+    Automatically detects user location from IP address if profile has default location.
     
     Args:
-        request: InitRequest with user_id
+        request: FastAPI request object (to get client IP)
+        body: InitRequest with user_id
         
     Returns:
         InitResponse with success status, profile, and preferences
@@ -36,7 +37,22 @@ async def init_onboarding(request: InitRequest) -> InitResponse:
         HTTPException: 404 if user not found, 500 for other errors
     """
     try:
-        result = onboarding_service.init(request.user_id)
+        # Get client IP address
+        client_ip = request.client.host if request.client else None
+        
+        # If behind proxy (e.g., Nginx, Cloudflare), get real IP from headers
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+        
+        # Skip localhost/private IPs
+        if client_ip and (client_ip.startswith("127.") or client_ip.startswith("192.168.") or client_ip.startswith("10.")):
+            logger.info(f"Skipping IP detection for private IP: {client_ip}")
+            client_ip = None
+        
+        logger.info(f"Init onboarding for user {body.user_id} from IP {client_ip}")
+        
+        result = await onboarding_service.init(body.user_id, ip_address=client_ip)
         return InitResponse(**result)
     except ValueError as e:
         logger.error(f"User not found: {str(e)}")

@@ -75,10 +75,11 @@ function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
 
         console.log("Onboarding completed successfully!");
 
-        // Step 3: Wait for animation, then reload to show main interface
+        // Step 3: Wait for animation and profile propagation, then reload
         setTimeout(() => {
-          globalThis.location.href = "/";
-        }, 2000);
+          // Use router.refresh() or window.location.reload() for a cleaner reload
+          window.location.reload();
+        }, 2500);
 
       } catch (err) {
         console.error("Completion error:", err);

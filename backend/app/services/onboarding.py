@@ -178,13 +178,49 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
 class OnboardingService:
     """Service for handling complete onboarding flow."""
 
-    def init(self, user_id: str) -> dict[str, Any]:
+    async def _detect_location_from_ip(self, ip_address: str) -> tuple[str | None, str | None]:
+        """Detect city and timezone from IP address.
+        
+        Args:
+            ip_address: Client IP address
+            
+        Returns:
+            Tuple of (city, timezone) or (None, None) if detection fails
+        """
+        try:
+            import httpx
+            
+            # Use ipapi.co (free tier: 1000 requests/day, no API key needed)
+            async with httpx.AsyncClient(timeout=5) as client:
+                response = await client.get(f"https://ipapi.co/{ip_address}/json/")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    city = data.get("city")
+                    timezone = data.get("timezone")
+                    
+                    if city and timezone:
+                        logger.info(f"Detected location from IP {ip_address}: {city}, {timezone}")
+                        return city, timezone
+                    else:
+                        logger.warning(f"Incomplete location data from IP {ip_address}: {data}")
+                else:
+                    logger.warning(f"IP geolocation failed with status {response.status_code}")
+                    
+        except Exception as e:
+            logger.warning(f"Could not detect location from IP {ip_address}: {str(e)}")
+        
+        return None, None
+
+    async def init(self, user_id: str, ip_address: str | None = None) -> dict[str, Any]:
         """Initialize onboarding session.
 
         Validates user exists and fetches/creates profile and preferences.
+        If profile has default location and IP is provided, attempts to detect actual location.
 
         Args:
             user_id: User ID from Supabase Auth
+            ip_address: Optional client IP address for location detection
 
         Returns:
             Dict with success status, profile, and preferences
@@ -196,6 +232,25 @@ class OnboardingService:
             if not profile_response.data:
                 raise ValueError(f"Profile not found for user {user_id}")
 
+            profile = profile_response.data
+            
+            # Auto-detect location from IP if still using default
+            if profile.get("location") == "San Francisco" and ip_address:
+                logger.info(f"Profile has default location, attempting IP-based detection for {ip_address}")
+                
+                detected_city, detected_timezone = await self._detect_location_from_ip(ip_address)
+                
+                if detected_city and detected_timezone:
+                    # Update profile with detected location
+                    update_response = supabase.from_("profiles").update({
+                        "location": detected_city,
+                        "timezone": detected_timezone
+                    }).eq("id", user_id).execute()
+                    
+                    if update_response.data:
+                        profile = update_response.data[0]
+                        logger.info(f"Updated profile location to {detected_city}, {detected_timezone}")
+
             # Fetch preferences
             prefs_response = (
                 supabase.from_("user_preferences").select("*").eq("user_id", user_id).single().execute()
@@ -204,7 +259,7 @@ class OnboardingService:
             if not prefs_response.data:
                 raise ValueError(f"Preferences not found for user {user_id}")
 
-            return {"success": True, "profile": profile_response.data, "preferences": prefs_response.data}
+            return {"success": True, "profile": profile, "preferences": prefs_response.data}
 
         except Exception as e:
             logger.error(f"Onboarding init failed for user {user_id}: {str(e)}")
@@ -560,21 +615,33 @@ class OnboardingService:
             Dict with success status and updated profile
         """
         try:
+            logger.info(f"Starting onboarding completion for user {user_id}")
+            
             # Update profiles.onboarded = true
             profile_response = (
                 supabase.from_("profiles").update({"onboarded": True}).eq("id", user_id).execute()
             )
+            
+            logger.info(f"Profile update response: {profile_response}")
+            
+            if not profile_response.data:
+                logger.error(f"Profile update returned no data for user {user_id}")
+                # Verify the profile exists
+                check_response = supabase.from_("profiles").select("*").eq("id", user_id).execute()
+                logger.info(f"Profile check: {check_response.data}")
+                raise ValueError(f"Failed to update profile for user {user_id}")
 
             # Update calendar_connected if applicable
             if calendar_connected:
-                supabase.from_("user_preferences").update({"calendar_connected": True}).eq(
+                prefs_response = supabase.from_("user_preferences").update({"calendar_connected": True}).eq(
                     "user_id", user_id
                 ).execute()
+                logger.info(f"Preferences update response: {prefs_response}")
 
-            logger.info(f"Onboarding completed for user {user_id}")
+            logger.info(f"Onboarding completed successfully for user {user_id}")
 
             return {"success": True, "profile": profile_response.data[0] if profile_response.data else None}
 
         except Exception as e:
-            logger.error(f"Onboarding complete failed for user {user_id}: {str(e)}")
+            logger.error(f"Onboarding complete failed for user {user_id}: {str(e)}", exc_info=True)
             raise
