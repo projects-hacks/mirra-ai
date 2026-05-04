@@ -201,7 +201,7 @@ async def _handle_client_message(data: dict, msg_type: str, dg, session: dict) -
             logger.warning(f"Unknown client message type: {msg_type}")
 
 
-async def _create_message_forwarders(dg, ws: WebSocket, session: dict) -> tuple:
+def _create_message_forwarders(dg, ws: WebSocket, session: dict) -> tuple:
     """Create and return Deepgram-to-client and client-to-Deepgram forwarder tasks."""
     async def dg_to_client():
         """Forward Deepgram messages to browser client."""
@@ -243,7 +243,7 @@ async def _run_deepgram_connection(dg, ws: WebSocket, session: dict) -> None:
     await dg.send(settings_payload)
 
     # Create tasks and handle cancellation properly
-    dg_task, client_task = await _create_message_forwarders(dg, ws, session)
+    dg_task, client_task = _create_message_forwarders(dg, ws, session)
     
     try:
         # Wait for either task to complete (or fail)
@@ -258,7 +258,8 @@ async def _run_deepgram_connection(dg, ws: WebSocket, session: dict) -> None:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                # Re-raise cancellation after cleanup
+                raise
         
         # Re-raise any exceptions from completed tasks
         for task in done:
@@ -268,6 +269,7 @@ async def _run_deepgram_connection(dg, ws: WebSocket, session: dict) -> None:
         # Cancel both tasks if we're cancelled
         dg_task.cancel()
         client_task.cancel()
+        # Re-raise cancellation after cleanup
         raise
 
 

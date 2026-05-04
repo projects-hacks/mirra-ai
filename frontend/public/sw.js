@@ -111,7 +111,7 @@ async function networkFirstStrategy(request, cacheName) {
     const networkResponse = await fetch(request);
     
     // Only cache successful responses
-    if (networkResponse && networkResponse.status === 200) {
+    if (networkResponse?.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
@@ -160,7 +160,7 @@ async function cacheFirstStrategy(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
     
-    if (networkResponse && networkResponse.status === 200) {
+    if (networkResponse?.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
