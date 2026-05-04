@@ -131,11 +131,8 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
         Exception: If circuit breaker is open or all retries fail
     """
     if _circuit_breaker.is_open():
-        logger.warning(f"Circuit breaker open for {task_type}, using mock data")
-        # Return mock data when circuit breaker is open
-        from app.core.mock_interceptor import get_mock
-
-        return get_mock(task_type)
+        logger.error(f"Circuit breaker open for {task_type}, too many failures")
+        raise Exception(f"Circuit breaker open for {task_type}, service temporarily unavailable")
 
     try:
         async def api_call():
@@ -170,9 +167,8 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
         if isinstance(e, PerfectCorpAPIError):
             logger.info(f"User-friendly message: {e.get_user_message()}")
         
-        # Fall back to mock data
-        from app.core.mock_interceptor import get_mock
-        return get_mock(task_type)
+        # Re-raise the exception instead of falling back to mock
+        raise
 
 
 class OnboardingService:
@@ -265,7 +261,7 @@ class OnboardingService:
             logger.error(f"Onboarding init failed for user {user_id}: {str(e)}")
             raise
 
-    async def analyze(self, user_id: str, selfie_base64: str) -> dict[str, Any]:
+    async def analyze(self, user_id: str, selfie_base64: str, ip_address: str | None = None) -> dict[str, Any]:
         """Execute parallel appearance analysis.
 
         Calls three Perfect Corp APIs in parallel:
@@ -276,6 +272,7 @@ class OnboardingService:
         Args:
             user_id: User ID
             selfie_base64: Base64-encoded JPEG selfie
+            ip_address: Optional client IP address for location detection
 
         Returns:
             Dict with success status, body_model, skin_scan, and greeting
@@ -344,21 +341,18 @@ class OnboardingService:
 
             skin_analysis, skin_tone, face_attributes = results
 
-            # Handle individual failures (already logged in _call_api_with_circuit_breaker)
+            # Handle individual failures - re-raise exceptions instead of using mocks
             if isinstance(skin_analysis, Exception):
                 logger.error(f"Skin analysis failed: {str(skin_analysis)}")
-                from app.core.mock_interceptor import get_mock
-                skin_analysis = get_mock("skin-analysis")
+                raise skin_analysis
 
             if isinstance(skin_tone, Exception):
                 logger.error(f"Skin tone failed: {str(skin_tone)}")
-                from app.core.mock_interceptor import get_mock
-                skin_tone = get_mock("skin-tone")
+                raise skin_tone
 
             if isinstance(face_attributes, Exception):
                 logger.error(f"Face attributes failed: {str(face_attributes)}")
-                from app.core.mock_interceptor import get_mock
-                face_attributes = get_mock("face-attributes")
+                raise face_attributes
 
             # Step 3: Extract comprehensive results from API responses
             skin_result = skin_analysis.get("result", {})
@@ -469,15 +463,32 @@ class OnboardingService:
             from datetime import datetime
             import pytz
             
-            # Get user's timezone and location
+            # Detect actual scan location from IP (where user is right now)
+            scan_location = None
+            scan_timezone = None
+            
+            if ip_address:
+                logger.info(f"Detecting scan location from IP {ip_address}")
+                scan_location, scan_timezone = await self._detect_location_from_ip(ip_address)
+            
+            # Fall back to profile location/timezone if IP detection fails
+            if not scan_location or not scan_timezone:
+                try:
+                    profile_response = supabase.from_("profiles").select("timezone, location").eq("id", user_id).single().execute()
+                    if not scan_timezone:
+                        scan_timezone = profile_response.data.get("timezone", "UTC") if profile_response.data else "UTC"
+                    if not scan_location:
+                        scan_location = profile_response.data.get("location", None) if profile_response.data else None
+                    logger.info(f"Using profile location as fallback: {scan_location}, {scan_timezone}")
+                except:
+                    scan_timezone = "UTC"
+                    scan_location = None
+            
+            # Determine time of day context using scan timezone
             try:
-                profile_response = supabase.from_("profiles").select("timezone, location").eq("id", user_id).single().execute()
-                user_timezone = profile_response.data.get("timezone", "UTC") if profile_response.data else "UTC"
-                user_location = profile_response.data.get("location", None) if profile_response.data else None
-                tz = pytz.timezone(user_timezone)
+                tz = pytz.timezone(scan_timezone)
             except:
                 tz = pytz.UTC
-                user_location = None
             
             current_time = datetime.now(tz)
             hour = current_time.hour
@@ -492,21 +503,23 @@ class OnboardingService:
             else:
                 scan_context = "night"
 
-            # Get weather data for the scan (optional)
+            # Get weather data for the ACTUAL scan location (not profile location)
             weather_data = None
-            if user_location:
+            if scan_location:
                 try:
                     from app.services.weather import get_weather
-                    weather_data = await get_weather(user_location)
+                    weather_data = await get_weather(scan_location)
+                    logger.info(f"Weather fetched for scan location {scan_location}: {weather_data}")
                 except Exception as weather_error:
-                    logger.warning(f"Could not fetch weather data: {str(weather_error)}")
+                    logger.warning(f"Could not fetch weather data for {scan_location}: {str(weather_error)}")
 
-            # Insert comprehensive scan record
+            # Insert comprehensive scan record with actual scan location
             supabase.from_("skin_scans").insert({
                 "user_id": user_id,
                 "scores": skin_scores,
                 "skin_age": skin_age,
                 "scan_context": scan_context,
+                "location_at_scan": scan_location,  # Where user actually was during scan
                 "weather_at_scan": weather_data,
                 "selfie_url": selfie_url,  # Store selfie URL for before/after comparisons
             }).execute()

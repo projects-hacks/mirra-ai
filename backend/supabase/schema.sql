@@ -79,6 +79,7 @@ create table skin_scans (
   scores jsonb not null,
   skin_age int,
   scan_context text,       -- 'morning', 'afternoon', 'evening', 'night'
+  location_at_scan text,   -- actual location where scan happened (detected from IP)
   weather_at_scan jsonb,   -- snapshot of weather when scanned
   selfie_url text,         -- URL to selfie in Supabase Storage for before/after comparisons
   created_at timestamptz default now()

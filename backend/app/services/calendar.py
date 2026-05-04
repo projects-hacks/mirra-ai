@@ -8,14 +8,21 @@ from app.core.constants import CachePrefix
 
 
 async def get_todays_events() -> dict:
-    """Get today's events. Cached for 5 minutes in Redis."""
+    """Get today's events. Cached for 5 minutes in Redis.
+    
+    Raises:
+        ValueError: If Google Calendar credentials are not configured
+    """
     cache_key = f"{CachePrefix.CALENDAR}:today"
     cached = await cache.get(cache_key)
     if cached:
         return cached
 
     if not settings.GOOGLE_CALENDAR_CREDENTIALS:
-        return _mock_events()
+        raise ValueError(
+            "Google Calendar credentials not configured. "
+            "Set GOOGLE_CALENDAR_CREDENTIALS environment variable."
+        )
 
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
@@ -46,12 +53,3 @@ async def get_todays_events() -> dict:
 
     await cache.set(cache_key, result, cache.TTL.CALENDAR)
     return result
-
-
-def _mock_events() -> dict:
-    return {
-        "events": [
-            {"title": "Board Meeting", "start": "14:00", "end": "15:30", "location": "Office - Room 4B"},
-            {"title": "Date Night", "start": "20:00", "end": "22:00", "location": "Nobu Downtown"},
-        ]
-    }

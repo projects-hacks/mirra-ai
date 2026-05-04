@@ -55,7 +55,15 @@ async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None =
                 ref_hair_url=args["ref_hair_url"],
             )
         case ToolName.CHECK_CALENDAR:
-            return await calendar.get_todays_events()
+            try:
+                return await calendar.get_todays_events()
+            except ValueError as e:
+                # Calendar credentials not configured
+                return {
+                    "error": "Calendar not configured",
+                    "message": str(e),
+                    "events": []
+                }
         case ToolName.CHECK_WEATHER:
             return await weather.get_weather(args.get("location", "San Francisco"))
         case ToolName.SEARCH_PRODUCTS:

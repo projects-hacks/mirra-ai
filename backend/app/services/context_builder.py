@@ -44,14 +44,19 @@ async def build_match_context(
     
     # Get calendar events if no occasion specified
     if not occasion:
-        calendar_data = await calendar.get_todays_events()
-        events = calendar_data.get('events', [])
-        
-        if events:
-            # Use first event as occasion
-            first_event = events[0]
-            occasion = _infer_occasion_from_event(first_event)
-        else:
+        try:
+            calendar_data = await calendar.get_todays_events()
+            events = calendar_data.get('events', [])
+            
+            if events:
+                # Use first event as occasion
+                first_event = events[0]
+                occasion = _infer_occasion_from_event(first_event)
+            else:
+                occasion = 'casual'
+        except ValueError as e:
+            # Calendar credentials not configured, default to casual
+            print(f"Calendar not available: {e}")
             occasion = 'casual'
     
     # Determine formality

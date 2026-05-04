@@ -69,8 +69,11 @@ async def init_onboarding(request: Request, body: InitRequest) -> InitResponse:
 
 
 @router.post("/analyze")
-async def analyze_appearance(request: AnalyzeRequest) -> AnalyzeResponse:
+async def analyze_appearance(request: Request, body: AnalyzeRequest) -> AnalyzeResponse:
     """Execute parallel appearance analysis.
+    
+    Detects user's current location from IP address to capture accurate
+    weather and location data for the scan (not profile home location).
     
     Calls three Perfect Corp APIs in parallel:
     - skin-analysis
@@ -80,7 +83,8 @@ async def analyze_appearance(request: AnalyzeRequest) -> AnalyzeResponse:
     Stores results in database and cache, generates personalized greeting.
     
     Args:
-        request: AnalyzeRequest with user_id and base64 selfie
+        request: FastAPI request object (to get client IP)
+        body: AnalyzeRequest with user_id and base64 selfie
         
     Returns:
         AnalyzeResponse with body_model, skin_scan, and greeting
@@ -89,7 +93,22 @@ async def analyze_appearance(request: AnalyzeRequest) -> AnalyzeResponse:
         HTTPException: 400 for invalid input, 500 for processing errors
     """
     try:
-        result = await onboarding_service.analyze(request.user_id, request.selfie)
+        # Get client IP address for scan location detection
+        client_ip = request.client.host if request.client else None
+        
+        # If behind proxy (e.g., Nginx, Cloudflare), get real IP from headers
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+        
+        # Skip localhost/private IPs
+        if client_ip and (client_ip.startswith("127.") or client_ip.startswith("192.168.") or client_ip.startswith("10.")):
+            logger.info(f"Skipping IP detection for private IP: {client_ip}")
+            client_ip = None
+        
+        logger.info(f"Analyzing appearance for user {body.user_id} from IP {client_ip}")
+        
+        result = await onboarding_service.analyze(body.user_id, body.selfie, ip_address=client_ip)
         return AnalyzeResponse(**result)
     except ValueError as e:
         logger.error(f"Invalid selfie data: {str(e)}")
