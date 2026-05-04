@@ -24,7 +24,7 @@ export async function retryWithBackoff<T>(
     onRetry,
   } = options;
 
-  let lastError: Error;
+  let lastError: Error | undefined;
   let delay = initialDelay;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -48,7 +48,8 @@ export async function retryWithBackoff<T>(
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  // This should never be reached, but TypeScript needs it
+  throw lastError || new Error("Retry failed with unknown error");
 }
 
 /**
