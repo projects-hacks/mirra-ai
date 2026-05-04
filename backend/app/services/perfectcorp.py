@@ -14,6 +14,37 @@ HEADERS = {"Authorization": f"Bearer {settings.PERFECT_CORP_API_KEY}"}
 V21_ENDPOINTS = {"hair-transfer"}
 
 
+class PerfectCorpAPIError(Exception):
+    """Custom exception for Perfect Corp API errors with error codes."""
+    
+    def __init__(self, error_code: str, error_message: str, task_type: str):
+        self.error_code = error_code
+        self.error_message = error_message
+        self.task_type = task_type
+        super().__init__(f"[{task_type}] {error_code}: {error_message}")
+    
+    def is_retryable(self) -> bool:
+        """Check if this error should be retried."""
+        retryable_codes = ["429", "500", "504", "unknown_internal"]
+        return any(code in self.error_code for code in retryable_codes)
+    
+    def get_user_message(self) -> str:
+        """Get user-friendly error message."""
+        error_messages = {
+            "error_face_angle": "Please face the camera directly and keep your head straight.",
+            "error_src_face_too_small": "Please move closer to the camera so your face fills more of the frame.",
+            "error_face_position_invalid": "Please center your face in the frame and ensure it's fully visible.",
+            "error_lighting_dark": "Please move to a better-lit area for clearer analysis.",
+            "error_below_min_image_size": "Image quality is too low. Please use a higher resolution camera.",
+        }
+        
+        for key, message in error_messages.items():
+            if key in self.error_code:
+                return message
+        
+        return "Unable to analyze image. Please try taking another photo."
+
+
 def _api_version(task_type: str) -> str:
     """Return the correct API version prefix for a task type."""
     return "v2.1" if task_type in V21_ENDPOINTS else "v2.0"
@@ -56,8 +87,31 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
         # Upload the selfie/source image
         file_id = await upload_image(task_type, image_bytes, client)
 
-        # Build task payload
-        task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
+        # Build task payload based on API type
+        if task_type in ["skin-analysis", "skin-tone-analysis", "face-attr-analysis"]:
+            # Use correct request format for analysis APIs
+            dst_actions = params.pop("dst_actions", [])
+            face_angle_strictness = params.pop("face_angle_strictness_level", "low")
+            format_type = params.pop("format", "json")
+            
+            task_payload = {
+                "request_id": 0,
+                "payload": {
+                    "file_sets": {"src_ids": [file_id]},
+                    "actions": [{
+                        "id": 0,
+                        "params": {"face_angle_strictness_level": face_angle_strictness},
+                        "dst_actions": dst_actions
+                    }]
+                }
+            }
+            
+            # Add format for skin-analysis
+            if task_type == "skin-analysis":
+                task_payload["payload"]["actions"][0]["params"]["format"] = format_type
+        else:
+            # VTO tasks use simpler format
+            task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
 
         # Create the task
         task_res = await client.post(
@@ -82,8 +136,14 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
                 return data
             if data["task_status"] == "error":
                 import logging
-                logging.getLogger(__name__).error(f"Perfect Corp API error response: {data}")
-                raise Exception(f"Perfect Corp error: {data.get('error', data)}")  
+                error_code = data.get("error_code", "unknown")
+                error_msg = data.get("error_message", str(data))
+                logging.getLogger(__name__).error(
+                    f"Perfect Corp API error - Task: {task_type}, Code: {error_code}, Message: {error_msg}"
+                )
+                
+                # Raise specific exception with error code for better handling
+                raise PerfectCorpAPIError(error_code, error_msg, task_type)
 
         raise TimeoutError(f"Task {task_id} timed out")
 

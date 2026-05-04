@@ -138,8 +138,21 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
         return get_mock(task_type)
 
     try:
+        async def api_call():
+            try:
+                return await call_api(task_type, selfie_bytes, params)
+            except Exception as e:
+                # Import here to avoid circular dependency
+                from app.services.perfectcorp import PerfectCorpAPIError
+                
+                # Only retry if error is retryable
+                if isinstance(e, PerfectCorpAPIError) and not e.is_retryable():
+                    logger.warning(f"Non-retryable error for {task_type}: {e.error_code}")
+                    raise  # Don't retry non-retryable errors
+                raise
+        
         result = await _retry_with_backoff(
-            lambda: call_api(task_type, selfie_bytes, params),
+            api_call,
             max_retries=MAX_RETRIES,
             base_delay=BASE_RETRY_DELAY,
             task_name=task_type,
@@ -149,9 +162,16 @@ async def _call_api_with_circuit_breaker(task_type: str, selfie_bytes: bytes, pa
     except Exception as e:
         _circuit_breaker.record_failure()
         logger.error(f"Perfect Corp API call failed for {task_type}: {str(e)}")
+        
+        # Import here to avoid circular dependency
+        from app.services.perfectcorp import PerfectCorpAPIError
+        
+        # Log user-friendly message for non-retryable errors
+        if isinstance(e, PerfectCorpAPIError):
+            logger.info(f"User-friendly message: {e.get_user_message()}")
+        
         # Fall back to mock data
         from app.core.mock_interceptor import get_mock
-
         return get_mock(task_type)
 
 
@@ -247,11 +267,20 @@ class OnboardingService:
                         "age_spot", "radiance", "moisture", "dark_circle", "eye_bag",
                         "droopy_upper_eyelid", "droopy_lower_eyelid", "firmness"
                     ],
-                    "format": "json"
+                    "format": "json",
+                    "face_angle_strictness_level": "low"  # 20° tolerance for better onboarding UX
                 },
             )
-            skin_tone_task = _call_api_with_circuit_breaker("skin-tone-analysis", selfie_bytes)
-            face_attributes_task = _call_api_with_circuit_breaker("face-attr-analysis", selfie_bytes)
+            skin_tone_task = _call_api_with_circuit_breaker(
+                "skin-tone-analysis",
+                selfie_bytes,
+                {"face_angle_strictness_level": "low"}  # 20° tolerance for better onboarding UX
+            )
+            face_attributes_task = _call_api_with_circuit_breaker(
+                "face-attr-analysis",
+                selfie_bytes,
+                {"face_angle_strictness_level": "low"}  # 20° tolerance for better onboarding UX
+            )
 
             # Gather results (returns exceptions instead of raising)
             results = await asyncio.gather(
@@ -358,7 +387,8 @@ class OnboardingService:
                     "skin_scores": skin_scores,
                     "skin_tone": skin_tone_obj,
                     "face_shape": face_shape_obj,
-                }
+                },
+                on_conflict="user_id"
             ).execute()
 
             # Step 4: Insert comprehensive skin_scans row for time-series tracking

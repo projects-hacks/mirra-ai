@@ -9,3 +9,4 @@ google-auth-oauthlib==1.2.0
 google-api-python-client==2.150.0
 pydantic-settings==2.5.0
 pillow==10.4.0
+pytz==2024.1
