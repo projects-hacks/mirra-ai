@@ -97,26 +97,21 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
 
         # Build task payload based on API type
         if task_type in ["skin-analysis", "skin-tone-analysis", "face-attr-analysis"]:
-            # Use correct request format for analysis APIs
-            dst_actions = params.pop("dst_actions", [])
-            face_angle_strictness = params.pop("face_angle_strictness_level", "low")
-            format_type = params.pop("format", "json")
-            
+            # Analysis APIs use simpler format with src_file_id at root level
             task_payload = {
-                "request_id": 0,
-                "payload": {
-                    "file_sets": {"src_ids": [file_id]},
-                    "actions": [{
-                        "id": 0,
-                        "params": {"face_angle_strictness_level": face_angle_strictness},
-                        "dst_actions": dst_actions
-                    }]
-                }
+                "src_file_id": file_id
             }
             
-            # Add format for skin-analysis
+            # Add dst_actions for skin-analysis
             if task_type == "skin-analysis":
-                task_payload["payload"]["actions"][0]["params"]["format"] = format_type
+                dst_actions = params.pop("dst_actions", [])
+                if dst_actions:
+                    task_payload["dst_actions"] = dst_actions
+            
+            # Add features for face-attr-analysis
+            if task_type == "face-attr-analysis":
+                # Face attributes API might need features parameter
+                task_payload["features"] = ["faceshape", "agegender", "facialratio", "eyes", "lips", "nose"]
         else:
             # VTO tasks use simpler format
             task_payload: dict[str, Any] = {"src_file_id": file_id, **params}
