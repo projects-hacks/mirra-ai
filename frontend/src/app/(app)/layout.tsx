@@ -13,6 +13,7 @@ const TITLES: Record<string, string> = {
   "/skin-history": "Skin History",
   "/glowup": "GlowUp",
   "/closet": "Closet",
+  "/outfit": "Outfit Builder",
   "/try-on": "Try-On Studio",
 };
 
@@ -48,7 +49,9 @@ export default function AppLayout({
       <AppHeader title={title} user={user} />
 
       <main className="bottom-nav-offset px-4 pb-8 pt-4">
-        {children}
+        <div key={pathname} className="route-transition">
+          {children}
+        </div>
       </main>
 
       <BottomNav />

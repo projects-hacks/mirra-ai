@@ -18,11 +18,14 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] px-3 pb-[var(--safe-bottom)] sm:px-6"
+      className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] px-3 pb-[calc(var(--safe-bottom)+0.35rem)] sm:px-6"
       aria-label="Primary navigation"
     >
       <div className="page-shell">
-        <div className="glass-panel mx-auto flex h-[var(--nav-height)] max-w-2xl items-center justify-around rounded-[1.5rem] px-2 shadow-[0_16px_40px_rgba(26,28,30,0.14)]">
+        <div
+          className="glass-panel mx-auto flex h-[var(--nav-height)] max-w-2xl items-center justify-around rounded-[1.5rem] px-2"
+          style={{ boxShadow: "0 18px 44px rgba(2, 6, 23, 0.38)" }}
+        >
           {NAV_ITEMS.map((item) => (
             <BottomNavItem
               key={item.path}

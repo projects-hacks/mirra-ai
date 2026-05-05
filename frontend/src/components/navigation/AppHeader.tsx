@@ -12,7 +12,10 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-[var(--z-nav)] px-4 pt-4">
+    <header
+      className="sticky top-0 z-[var(--z-nav)] px-4"
+      style={{ paddingTop: "calc(var(--safe-top) + 0.85rem)" }}
+    >
       <div className="page-shell flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.24em]" style={{ color: "var(--on-surface-variant)" }}>
@@ -25,8 +28,12 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
         <button
           type="button"
           onClick={() => router.push("/profile")}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/40 bg-white/60"
-          style={{ backdropFilter: "blur(14px)" }}
+          className="flex h-11 w-11 items-center justify-center rounded-full border"
+          style={{
+            backdropFilter: "blur(14px)",
+            background: "rgba(15, 19, 39, 0.72)",
+            borderColor: "rgba(154, 170, 226, 0.22)",
+          }}
           aria-label="Open profile"
         >
           {user?.avatarUrl ? (

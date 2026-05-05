@@ -437,12 +437,12 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 
 ### 8.1 UI/UX Polish
 
-- [ ] Dark theme with purple/blue gradient accents
-- [ ] All pages: loading skeletons (no blank screens)
-- [ ] Smooth page transitions (Next.js route transitions)
-- [ ] All interactive elements: 44px min touch target
-- [ ] Mobile-first: test at 375px width
-- [ ] Bottom nav: proper safe-area-inset-bottom padding
+- [x] Dark theme with purple/blue gradient accents
+- [x] All pages: loading skeletons (no blank screens)
+- [x] Smooth page transitions (Next.js route transitions)
+- [x] All interactive elements: 44px min touch target
+- [x] Mobile-first: test at 375px width
+- [x] Bottom nav: proper safe-area-inset-bottom padding
 
 ### 8.2 Demo Data Seeding
 
