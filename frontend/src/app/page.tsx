@@ -25,13 +25,12 @@ const FEATURE_CARDS = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const { user, signIn, loading } = useAuth();
+  const { signIn, loading } = useAuth();
 
   const ctaLabel = useMemo(() => {
     if (loading) return "Checking session...";
-    if (user) return "Start Capture";
     return "Try Now";
-  }, [loading, user]);
+  }, [loading]);
 
   return (
     <main className="min-h-[100dvh] overflow-x-hidden bg-[linear-gradient(180deg,#f6f1ec_0%,#efe4d6_22%,#dbe5ef_100%)] text-[var(--ink-900,#18212b)]">
@@ -65,11 +64,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (user) {
-                      router.push("/capture");
-                    } else {
-                      void signIn();
-                    }
+                    void signIn();
                   }}
                   disabled={loading}
                   className="rounded-full bg-[#1e293b] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(24,33,43,0.18)] transition-transform hover:-translate-y-0.5 disabled:opacity-60"

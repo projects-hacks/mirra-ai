@@ -71,7 +71,7 @@ export default function AgentInsightCard({
 
   if (isLoading) {
     return (
-      <section className="rounded-[1.5rem] bg-[#151719] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
+      <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
         <div className="flex items-center gap-3">
           <Loader2 size={18} className="animate-spin" />
           <p className="text-sm text-white/70">Loading dashboard context...</p>
@@ -82,7 +82,7 @@ export default function AgentInsightCard({
 
   if (!insight) {
     return (
-      <section className="rounded-[1.5rem] bg-[#151719] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
+      <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
         <div className="flex items-start gap-3">
           <Sparkles size={20} className="mt-1 text-white/70" />
           <div>
@@ -100,11 +100,11 @@ export default function AgentInsightCard({
   const stepsComplete = visibleSteps >= insight.steps.length;
 
   return (
-    <section className="rounded-[1.5rem] bg-[#151719] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
+    <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Mirra Agent</p>
-          <h2 className="mt-2 text-2xl text-white">Reasoning trace</h2>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">Reasoning trace</h2>
         </div>
         <Route size={22} className="text-white/50" />
       </div>
@@ -115,7 +115,7 @@ export default function AgentInsightCard({
           return (
             <div
               key={`${step.text}-${index}`}
-              className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm transition-all duration-300"
+              className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm ring-1 ring-white/8 transition-all duration-300"
               style={{ opacity: visible ? 1 : 0.35, transform: visible ? "translateY(0)" : "translateY(4px)" }}
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10">
@@ -138,7 +138,7 @@ export default function AgentInsightCard({
               key={recommendation.title}
               type="button"
               onClick={() => recommendation.action && onRecommendationTap?.(recommendation.action)}
-              className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#151719] transition-transform hover:-translate-y-0.5"
+              className="min-h-10 rounded-full bg-white px-4 py-2 text-sm font-medium text-[#111827] transition-transform hover:-translate-y-0.5"
             >
               {recommendation.title}
             </button>

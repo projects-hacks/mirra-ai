@@ -53,8 +53,18 @@ function CallbackHandler() {
           }
         }
 
-        // Session established successfully - redirect to main page
-        router.replace("/");
+        try {
+          const { data } = await supabase
+            .from("profiles")
+            .select("onboarded")
+            .eq("id", session.user.id)
+            .single();
+
+          const isOnboarded = (data as { onboarded?: boolean } | null)?.onboarded ?? false;
+          router.replace(isOnboarded ? "/dashboard" : "/capture");
+        } catch {
+          router.replace("/capture");
+        }
         
       } catch (err) {
         console.error("OAuth callback error:", err);
