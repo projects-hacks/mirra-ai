@@ -16,7 +16,7 @@ export function SelfieCaptureScreen({
   const [preferNativeFallback, setPreferNativeFallback] = useState(false);
   const { videoRef, capture, isReady, error: nativeCameraError } = useCamera();
 
-  const { loadSDK, openCamera, closeCamera, isSDKLoading, error } = useCameraKit({
+  const { loadSDK, openCamera, closeCamera, isSDKLoaded, isSDKLoading, error } = useCameraKit({
     onFaceDetectionCaptured: async (images) => {
       if (images && images.length > 0) {
         const dataUrl = typeof images[0].image === "string"
@@ -44,6 +44,11 @@ export function SelfieCaptureScreen({
   }, [loadSDK]);
 
   const handleStartScan = () => {
+    if (!useNativeCamera && !isSDKLoaded) {
+      setPreferNativeFallback(true);
+      return;
+    }
+
     if (useNativeCamera) {
       const selfie = capture();
       if (selfie) {
@@ -78,7 +83,7 @@ export function SelfieCaptureScreen({
           <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
             {useNativeCamera
               ? "Camera Kit is unavailable, so we switched to your device camera. Center your face and capture when you're ready."
-              : "We&apos;ll use the Perfect Corp Face SDK to perform a detailed scan of your skin health. Please ensure you are in a well-lit room."}
+              : "We'll use the Perfect Corp Face SDK to perform a detailed scan of your skin health. Please ensure you are in a well-lit room."}
           </p>
         </div>
 
@@ -89,7 +94,7 @@ export function SelfieCaptureScreen({
         >
           {useNativeCamera
             ? (isReady ? "Capture Selfie" : "Preparing Camera...")
-            : (isSDKLoading ? "Loading Camera Kit..." : "Start Face Scan")}
+            : (isSDKLoading ? "Loading Camera Kit..." : isSDKLoaded ? "Start Face Scan" : "Use Device Camera")}
         </button>
 
         {!useNativeCamera && (

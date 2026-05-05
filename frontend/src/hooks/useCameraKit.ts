@@ -114,6 +114,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
   
   const eventHandlersRef = useRef<Map<string, (data?: unknown) => void>>(new Map());
   const sdkScriptRef = useRef<HTMLScriptElement | null>(null);
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCameraOpenRef = useRef(false);
   const isOpeningRef = useRef(false);
 
@@ -203,6 +204,10 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     // Define ymkAsyncInit before loading script
     window.ymkAsyncInit = function() {
       debugFlow("camera-kit", "ymkAsyncInit fired", { hasYMK: Boolean(window.YMK) });
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
       if (!window.YMK) {
         setError(new Error('YMK SDK failed to initialize'));
         setIsSDKLoading(false);
@@ -216,6 +221,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     // Load SDK script
     const script = document.createElement('script');
+    script.id = 'YMK-module';
     script.src = 'https://plugins-media.makeupar.com/v2.2-camera-kit/sdk.js';
     script.async = true;
     script.onload = () => {
@@ -232,6 +238,16 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     document.body.appendChild(script);
     sdkScriptRef.current = script;
+
+    loadTimeoutRef.current = setTimeout(() => {
+      if (!window.YMK) {
+        const err = new Error("Camera Kit did not finish loading. Falling back to device camera is recommended.");
+        debugFlow("camera-kit", "SDK load timeout", err);
+        setError(err);
+        setIsSDKLoading(false);
+        eventsRef.current.onError?.(err);
+      }
+    }, 8000);
   }, [isSDKLoading, isSDKLoaded, registerEventHandlers]);
 
   // Open camera with config
@@ -348,6 +364,11 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         } catch (err) {
           console.error('Error closing camera on unmount:', err);
         }
+      }
+
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
       }
     };
   }, []);
