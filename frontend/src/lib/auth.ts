@@ -41,7 +41,11 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo: `${globalThis.location.origin}/auth/callback`,
-      queryParams: { response_type: "token" },
+      scopes: "openid profile email https://www.googleapis.com/auth/calendar.readonly",
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   });
 }

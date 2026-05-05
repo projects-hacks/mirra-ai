@@ -13,9 +13,21 @@ function CallbackHandler() {
     const handleCallback = async () => {
       try {
         const supabase = getSupabase();
-        
-        // The session is automatically detected and stored by Supabase
-        // Just verify we have a session
+
+        const url = new URL(globalThis.location.href);
+        const callbackError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
+        if (callbackError) {
+          throw new Error(callbackError);
+        }
+
+        const code = url.searchParams.get("code");
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            throw exchangeError;
+          }
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
