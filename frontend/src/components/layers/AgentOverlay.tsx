@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Message, ProofCard as ProofCardData, ToolResultMessage, User, VTOResult } from "@/types";
+import type {
+  Message,
+  ProofCard as ProofCardData,
+  SkinAnalysis,
+  ToolResultMessage,
+  User,
+  VTOResult,
+} from "@/types";
 import AgentCard from "@/components/cards/AgentCard";
 import ItemCardRow from "@/components/cards/ItemCardRow";
 import ProofCard from "@/components/cards/ProofCard";
+import SkinSimulationCard from "@/components/cards/SkinSimulationCard";
+import SkinAnalysisCard from "@/components/cards/SkinAnalysisCard";
 import { ToolName } from "@/lib/constants";
 
 interface AgentOverlayProps {
@@ -12,6 +21,7 @@ interface AgentOverlayProps {
   user: User | null;
   vtoResult: VTOResult | null;
   onRecapture: () => void;
+  originalSelfieUrl?: string;
 }
 
 /**
@@ -36,8 +46,17 @@ interface ProofCardToolData {
   card?: ProofCardData;
 }
 
+interface SkinSimulationToolData {
+  simulation_url?: string;
+  intensities_used?: Record<string, number>;
+}
+
 function isToolResultMessage(message: Message): message is ToolResultMessage {
   return message.type === "tool_result";
+}
+
+function isToolResultFor(message: Message, tool: ToolName): message is ToolResultMessage {
+  return isToolResultMessage(message) && message.tool === tool;
 }
 
 function formatMatchClosetData(data: unknown): MatchClosetItem[] {
@@ -68,6 +87,14 @@ function getProofCardData(data: unknown): ProofCardToolData | null {
   return data as ProofCardToolData;
 }
 
+function getSkinSimulationData(data: unknown): SkinSimulationToolData | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  return data as SkinSimulationToolData;
+}
+
 /**
  * Layer 3 — Floating glassmorphic agent cards on top of camera.
  * Shows the last agent message + most recent tool result.
@@ -78,6 +105,7 @@ export default function AgentOverlay({
   user,
   vtoResult,
   onRecapture,
+  originalSelfieUrl,
 }: Readonly<AgentOverlayProps>) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -115,6 +143,21 @@ export default function AgentOverlay({
   const shouldShowProofCard =
     Boolean(latestProofCard && proofCardData?.card) &&
     latestProofCard?.id !== dismissedProofCardId;
+
+  // Skin simulation results
+  const skinSimResults = messages.filter(
+    (message): message is ToolResultMessage =>
+      isToolResultFor(message, ToolName.SIMULATE_SKIN)
+  );
+  const latestSkinSim = skinSimResults.at(-1) ?? null;
+  const skinSimulationData = getSkinSimulationData(latestSkinSim?.data);
+
+  // Skin analysis results
+  const skinAnalysisResults = messages.filter(
+    (message): message is ToolResultMessage =>
+      isToolResultFor(message, ToolName.ANALYZE_SKIN)
+  );
+  const latestSkinAnalysis = skinAnalysisResults.at(-1) ?? null;
 
   // Format match_closet results for ItemCardRow
   const formattedData =
@@ -177,6 +220,22 @@ export default function AgentOverlay({
               setDismissedProofCardId(latestProofCard?.id ?? null);
             }}
             onClose={() => setDismissedProofCardId(latestProofCard?.id ?? null)}
+          />
+        )}
+
+        {/* Skin Simulation Card */}
+        {latestSkinSim && originalSelfieUrl && skinSimulationData?.simulation_url && (
+          <SkinSimulationCard
+            originalUrl={originalSelfieUrl}
+            simulatedUrl={skinSimulationData.simulation_url}
+            intensities={skinSimulationData.intensities_used ?? {}}
+          />
+        )}
+
+        {/* Skin Analysis Card */}
+        {latestSkinAnalysis && !latestSkinSim && (
+          <SkinAnalysisCard
+            scores={latestSkinAnalysis.data as SkinAnalysis}
           />
         )}
 

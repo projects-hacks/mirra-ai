@@ -1,312 +1,261 @@
-# Mirra — Product Requirements Document
-### *The Health App for How You Look*
+# Mirra — Product Requirements Document v2
+### *Your AI Appearance Operator*
 
 > **Hackathon:** Perfect Corp × Startup World Cup  
 > **Deadline:** May 7, 2026 @ 2:00 PM PDT  
-> **Judging Criteria:** Perfect Corp API Usage + Consumer/Retail Value  
+> **Judging:** Perfect Corp API Usage + Consumer/Retail Value  
 > **Submission:** Project page + screenshots + 1-3 min demo video  
-> **Last Updated:** May 4, 2026
+> **Updated:** May 5, 2026 — **PIVOT: Tap-driven guided experience (voice removed from critical path)**
 
 ---
 
 ## 1. What Mirra Is
 
-> Mirra is an AI-powered appearance health platform. It analyzes your skin, tracks your skin journey over time, manages your closet, and builds complete looks — all through one voice conversation.
+> Mirra is an AI-powered appearance & lifestyle platform. It analyzes your skin, tracks your skin journey, recommends products, builds outfits from your closet, and lets you virtually try on anything — all powered by **agentic AI** that makes smart decisions from your data.
 
 **Think:** Apple Health for your body → **Mirra for how you look.**
 
-Most try-on apps are product catalogs with AR on top. Mirra is fundamentally different:
-- It **starts with your skin health**, not products
-- It **uses what you already own** before suggesting purchases
-- It **shows you the path** — "here's what your skin looks like now, here's what it could look like with treatment"
+**What makes it "agentic":**
+- You take ONE selfie → AI runs skin analysis + face attributes + skin tone in parallel
+- AI auto-generates skincare suggestions based on your worst scores
+- AI auto-matches your closet to occasions + weather without you asking
+- AI fills wardrobe gaps with real shoppable products
+- AI shows you exactly what you'll look like BEFORE you spend money
+
+**NOT a chatbot. NOT a try-on catalog. It's an autonomous appearance advisor.**
 
 ---
 
-## 2. The Three Pillars
+## 2. The Five Features
 
-### Pillar 1: SKIN HEALTH (Analyze → Track → Improve → Visualize)
-
-This is the **core differentiator** and the deepest Perfect Corp API integration.
+### Feature 1: SKIN HEALTH (Analyze → Track → Simulate → Shop)
 
 | Step | What Happens | Perfect Corp API |
 |------|-------------|-----------------|
-| **Analyze** | Selfie → 14 skin concern scores (moisture, acne, wrinkle, pore, texture, oiliness, etc.) + skin age | `skin-analysis` |
-| **Understand** | Detect undertone, depth, hair/lip/eye colors for shade matching | `skin-tone-analysis` |
-| **Track** | Store scores in Supabase → trend line over weeks/months ("your acne improved 15%") | Our logic (Supabase) |
-| **Recommend** | AI suggests products based on skin concerns ("your moisture score is low → try HA serum") | `search_products` (Serper) |
-| **Simulate** | Show before/after: "This is what your skin could look like with consistent treatment" | `skin-simulation` ⭐ NEW |
+| **Analyze** | Selfie → 14 skin scores + skin age | `skin-analysis` |
+| **Understand** | Undertone, depth, hair/lip/eye colors | `skin-tone-analysis` |
+| **Track** | Trend line over weeks: "acne improved 15%" | Supabase |
+| **Simulate** | Before/after: "your skin with treatment" | `skin-simulation` ⭐ |
+| **Shop** | AI recommends products for your worst scores | Serper |
 
-**The Skin Simulation API** (`POST /s2s/v2.0/task/skin-simulation`) is the killer feature:
-- Takes a selfie + intensity values (0.0-1.0) for 10 skin concerns
-- Returns a **composited "after" image** showing what the user's skin would look like after improvement
-- Concerns: `wrinkle`, `radiance`, `acne`, `pores`, `texture`, `dark_circle`, `redness`, `oiliness`, `eye_bags`, `spots`
-- **User sees:** "Here's your face now. Here's your face after 3 months of consistent skincare."
+**User flow:** Open Skin tab → see scores → tap "See improvement" → before/after slider → tap concern → see recommended product with real price.
 
-**User Flow:**
-```
-User opens Mirra → Camera captures selfie
-→ Skin Analysis runs (2-3 sec) → "Your moisture is 48/100, acne 88/100"
-→ "Your skin is a bit drier than last week. Want to see improvement options?"
-→ Skin Simulation shows before/after ("here's you with hydrated skin")
-→ Serper finds real HA Serum for $16
-→ Proof Card: "The Ordinary HA Serum — $16 — targets your #1 concern (moisture)"
-```
+### Feature 2: GLOWUP STUDIO (AI Makeover)
 
-### Pillar 2: FASHION (Closet → Match → Try-On → Shop Gaps)
+| Step | What Happens | API |
+|------|-------------|-----|
+| **Face Analysis** | Detect face shape, proportions | `face-attr-analysis` |
+| **Makeup** | AI-recommended makeup (shade-matched) | `2d-vto/makeup` |
+| **Hair** | Try celebrity hairstyles | `hair-transfer` |
+| **Accessories** | Earrings + necklace matched to face | `2d-vto/earring`, `2d-vto/necklace` |
+
+**User flow:** Tap "GlowUp" → AI suggests looks based on face shape + skin tone → apply step by step → compare before/after.
+
+### Feature 3: CLOSET & OUTFIT BUILDER
 
 | Step | What Happens | API/Logic |
 |------|-------------|-----------|
-| **Inventory** | User's closet stored in Supabase with images, categories, colors | Supabase + Gemini metadata extraction |
-| **Match** | Given occasion + weather + calendar → rank closet items by fit | Our matching engine |
-| **Visualize** | Show the user wearing the outfit via VTO | Perfect Corp `cloth-v3` |
-| **Fill Gaps** | If closet can't cover the occasion, search for products | Serper Google Shopping |
-| **Try-On** | Show user wearing the new product before buying | Perfect Corp `cloth-v3` |
+| **Inventory** | Upload photos → AI extracts metadata | Gemini 2.5 Flash |
+| **Match** | Pick occasion → AI ranks closet items | Matching engine |
+| **Try-On** | VTO: see yourself wearing the outfit | `cloth-v3` |
+| **Fill Gaps** | Closet can't cover it? Shop real products | Serper |
 
-**User Flow:**
-```
-User: "I have a board meeting at 10"
-→ Check weather (72°F, dry)
-→ Match closet → Navy blazer (92% match), white shirt (88%)
-→ Clothes VTO renders user wearing blazer
-→ "You own everything. Cost: $0."
+**User flow:** Pick occasion → see matched items → tap "Try On" → VTO renders on selfie → gaps found → shop → try on new items too.
 
-User: "And a date tonight"
-→ Match closet → Gap: no dress for romantic occasion
-→ Serper finds dress options
-→ Clothes VTO renders each option on user
-→ Earrings VTO adds accessories
-→ Proof Card with owned vs new items
-```
+### Feature 4: VIRTUAL TRY-ON STUDIO
 
-### Pillar 3: PROOF CARD (Transparency Before Purchase)
+Direct access to all VTO capabilities:
+- **Clothes** → upload any garment image or tap a product
+- **Makeup** → lip, eye, blush, foundation (shade-matched)
+- **Hair** → transfer from reference images
+- **Earrings / Necklace** → from product images
 
-The Proof Card is Mirra's "approval moment" — it exists so the user **never spends money blindly**.
+### Feature 5: PROOF CARD (Transparency Before Purchase)
 
 ```
 ┌─────────────────────────────────────┐
 │  ✓ PROOF CARD                       │
-│                                      │
-│  [VTO image of user in full look]   │
-│                                      │
-│  "Date Night — Romantic"             │
-│                                      │
-│  Tone Match:   █████████░ 97%        │
-│  Style Fit:    ████████░░ 94%        │
-│  Skin Safe:    ✓ No conflicts        │
-│                                      │
-│  From Your Closet ($0):              │
-│  · Navy blazer                       │
-│  · Sam Edelman heels                 │
-│                                      │
-│  New Items:                          │
-│  · Reformation Midi Dress    $98     │
-│  · Mejuri Gold Drop Hoops    $29     │
-│  · The Ordinary HA Serum     $16     │
-│  ─────────────────────────────       │
-│  Total new spend:            $143    │
-│                                      │
-│  [Approve] [Adjust] [Save]           │
+│  [VTO image of full look]           │
+│                                     │
+│  Tone Match:   █████████░ 97%       │
+│  Style Fit:    ████████░░ 94%       │
+│  Skin Safe:    ✓ No conflicts       │
+│                                     │
+│  From Closet ($0):  Navy blazer     │
+│  New: Dress $98 · Earrings $29      │
+│  Total new spend:          $127     │
+│                                     │
+│  [Approve] [Adjust] [Save]          │
 └─────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Complete User Journey (One Session)
+## 3. App Structure (Pages)
 
 ```
-Open App → Camera activates → Selfie captured silently
-
-→ Skin Analysis (14 scores + skin age)
-
-User speaks or taps feature:
-
-  "How's my skin?"
-    → Show skin scores + trend vs last scan
-    → Skin Simulation: before/after visualization
-    → Recommend products (Serper)
-    → Proof Card for skincare purchase
-
-  "I have an event"
-    → Check weather + calendar
-    → Match closet items
-    → Gaps? No → Clothes VTO → "Cost: $0"
-    → Gaps? Yes → Search products (Serper) → Clothes VTO → Proof Card
-
-  "Try on makeup"
-    → Makeup VTO (shade-matched to skin tone)
-
-  "Change my hair"
-    → Hair Style VTO
-
-  "Show me earrings"
-    → Earrings VTO
+/                   → Landing + Selfie Capture (Camera Kit)
+/dashboard          → Home: Skin overview + Quick actions
+/skin               → Skin analysis scores + trend charts + simulation
+/skin/history       → Full scan timeline with comparisons
+/glowup             → AI Makeover Studio
+/closet             → Wardrobe inventory + upload
+/outfit             → Occasion matcher + outfit builder
+/try-on             → Direct VTO studio (clothes/makeup/hair/accessories)
+/products/:id       → Product detail + try-on CTA
 ```
 
 ---
 
-## 4. Perfect Corp API Integration (Hackathon Requirement)
+## 4. Perfect Corp API Usage (9/9)
 
-### APIs We Use — With Exact Endpoints
-
-| # | API | Endpoint | Type | What It Does | Backend File |
-|---|-----|----------|------|-------------|--------------|
-| 1 | **AI Skin Analysis** | `skin-analysis` | JSON | 14 skin scores + skin_age | `tools/skin_tools.py` |
-| 2 | **AI Skin Tone** | `skin-tone-analysis` | JSON | Undertone, depth, hair/lip/eye colors | `tools/skin_tools.py` |
-| 3 | **AI Face Attributes** | `face-attr-analysis` | JSON | Face shape, eye shape, proportions | `tools/skin_tools.py` |
-| 4 | **AI Skin Simulation** | `skin-simulation` | Image | Before/after improvement visualization | **NEW — needs implementation** |
-| 5 | **AI Clothes VTO** | `cloth-v3` | Image | Selfie + garment → composited outfit | `tools/fashion_tools.py` |
-| 6 | **AI Makeup VTO** | `2d-vto/makeup` | Image | Selfie + effects JSON → makeup | `tools/beauty_tools.py` |
-| 7 | **AI Earrings VTO** | `2d-vto/earring` | Image | Selfie + earring → composited | `tools/accessory_tools.py` |
-| 8 | **AI Necklace VTO** | `2d-vto/necklace` | Image | Selfie + necklace → composited | `tools/accessory_tools.py` |
-| 9 | **AI Hairstyle** | `hair-transfer` | Image | Selfie + ref hair → new style | `tools/hair_tools.py` |
-
-### Skin Simulation API Contract (New)
-```
-POST /s2s/v2.0/file/skin-simulation       → upload selfie, get file_id
-PUT  {upload_url}                           → upload binary
-POST /s2s/v2.0/task/skin-simulation        → create task
-  Body: {
-    "src_file_id": "...",
-    "wrinkle": 0.7,       // 0.0 = no change, 1.0 = max improvement
-    "acne": 0.8,
-    "pores": 0.5,
-    "texture": 0.6,
-    "dark_circle": 0.4,
-    "redness": 0.3,
-    "oiliness": 0.5,
-    "eye_bags": 0.3,
-    "spots": 0.4,
-    "radiance": 0.7
-  }
-GET  /s2s/v2.0/task/skin-simulation/{id}   → poll → result image URL
-```
-
-### Universal API Flow (All APIs)
-```
-1. POST /s2s/v2.0/file/{task-type}     → get upload URL + file_id
-2. PUT  {upload_url}                    → upload image binary
-3. POST /s2s/v2.0/task/{task-type}      → start task, get task_id
-4. GET  /s2s/v2.0/task/{task-type}/{id} → poll until success/error
-5. Response: result image URL (24hr) or JSON scores
-```
-
-### API Budget
-- **Total:** 1000 units (hackathon code `Pegasus1000`)
-- **1 unit = 1 successful API task**
-- **Strategy:** Mock during dev → live for testing + demo recording
+| # | API | Where Used | Demo Moment |
+|---|-----|-----------|-------------|
+| 1 | `skin-analysis` | Skin tab — 14 scores + skin age | "Your moisture is 48/100" |
+| 2 | `skin-tone-analysis` | Skin tab — undertone/depth | "Warm undertone, medium depth" |
+| 3 | `face-attr-analysis` | GlowUp — face shape for recs | "Oval face — these earrings work" |
+| 4 | `skin-simulation` | Skin tab — before/after slider | "Here's you after 3 months" ⭐ |
+| 5 | `cloth-v3` | Outfit builder + try-on studio | VTO: user wearing the dress |
+| 6 | `2d-vto/makeup` | GlowUp studio | Shade-matched lip + eye |
+| 7 | `2d-vto/earring` | GlowUp + accessories | Gold drops for oval face |
+| 8 | `2d-vto/necklace` | GlowUp + accessories | Pendant matched to neckline |
+| 9 | `hair-transfer` | GlowUp studio | Celebrity hairstyle transfer |
 
 ---
 
-## 5. External APIs
+## 5. "Agentic AI" — The Core Differentiator
 
-| API | Purpose | Status |
-|-----|---------|--------|
-| **Deepgram Voice Agent** | STT (Nova-3) + Think (GPT-5-mini) + TTS (Aura-2) | ✅ Working |
-| **Gemini 2.5 Flash** | AI metadata extraction from closet photos | ✅ Working |
-| **Serper** | Google Shopping search with real prices | ✅ Wired |
-| **Open-Meteo** | Weather for context-aware recommendations | ✅ Wired |
-| **Supabase** | Postgres + Auth + Storage | ✅ Working |
+**Perfect Corp APIs = the EYES.** They see skin scores, face shapes, try-on images.  
+**Our Gemini Agent = the BRAIN.** It connects the dots, reasons, and explains.  
+**The UI shows BOTH** — raw results AND the AI's thinking process.
+
+### What the User Sees (Visible Agent Reasoning)
+
+```
+🔍 Mirra is analyzing...
+  ✓ Skin scan complete — 14 concerns scored
+  ✓ Pulled today's weather: SF, 72°F, 32% humidity
+  ✓ Compared to your last scan (Apr 28)
+
+💡 "Your moisture dropped 12 points this week. Today's low
+   humidity (32%) is making it worse. Good news — acne improved
+   8%, your cleanser is working."
+
+🎯 Recommendations:
+  1. HA Serum ($16) — targets your #1 concern
+  2. SPF 50 — UV index is 7 today
+
+🔮 "Want to see what consistent hydration could do?"
+  → [Simulate Improvement]
+```
+
+The AI's reasoning trace is **rendered in real-time** — the user watches the agent think, call tools, and connect data points. This is what makes it "agentic" vs a static dashboard.
+
+### Agentic Behaviors
+
+| Behavior | What the Agent Does | What the User Sees |
+|----------|--------------------|--------------------|
+| **Cross-data insight** | Connects skin scores + weather + history | "Moisture dropped because humidity is low today" |
+| **Auto-derive intensity** | Worst scores → simulation intensity | "Simulating maximum improvement for your top 3 concerns" |
+| **Smart product search** | Maps concern to ingredient | "Searching for hyaluronic acid serums..." |
+| **Closet gap detection** | Matches closet → finds missing pieces | "You don't own a formal dress — here are 3 options" |
+| **Shade matching** | Skin tone → makeup palette | "Based on your warm undertone, these lip shades work" |
+| **Face-shape recs** | Oval face → earring style | "Oval faces look great with drop earrings" |
+| **Weather-aware advice** | UV/humidity → product suggestion | "High UV today — adding SPF to your routine" |
 
 ---
 
-## 6. Architecture
+## 6. Tech Stack
 
 ```
 FRONTEND (Next.js 14 + TypeScript + Tailwind)
-  Camera Mirror (native getUserMedia)
-  Voice Orb (tap-to-talk → WebSocket audio)
-  Agent Overlay (cards, VTO results, proofs)
-  Closet Page (/closet — grid + upload)
-  Skin History (/skin-history — trends)
+  Camera Kit (Perfect Corp JS SDK — quality-gated selfies)
+  Pages: Dashboard, Skin, GlowUp, Closet, Outfit, Try-On
+  Components: SkinAnalysisCard, SkinSimulationCard, ProofCard, ItemCardRow
   PWA · Vercel
-         │ WebSocket (voice) + REST (API)
+         │ REST API calls
          ▼
 BACKEND (FastAPI · Python 3.12)
-  Deepgram Voice Agent WS Proxy
-    STT: Nova-3 → Think: GPT-5-mini → TTS: Aura-2-Thalia
-    → Intercepts FunctionCallRequest
-         │ tool_executor.py
+  REST Endpoints (replacing WebSocket voice pipeline)
+    POST /api/skin/analyze     → skin_tools.analyze_skin
+    POST /api/skin/simulate    → skin_tools.simulate_skin
+    POST /api/vto/clothes      → fashion_tools.try_on_clothes
+    POST /api/vto/makeup       → beauty_tools.try_on_makeup
+    POST /api/vto/earrings     → accessory_tools.try_on_earrings
+    POST /api/vto/necklace     → accessory_tools.try_on_necklace
+    POST /api/vto/hair         → hair_tools.change_hairstyle
+    POST /api/glowup           → orchestrate face analysis + recs
+    POST /api/outfit/match     → matching_engine.match_items
+    GET  /api/products/search  → serper.search
+    POST /api/proof-card       → proof_card_generator.generate
+         │
          ▼
-  TOOL LAYER (14 tools)
-    SKIN:     analyze_skin, analyze_skin_tone, analyze_face, simulate_skin
-    FASHION:  try_on_clothes, match_closet
-    BEAUTY:   try_on_makeup, change_hairstyle
-    ACCESS:   try_on_earrings, try_on_necklace
-    CONTEXT:  check_weather, check_calendar
-    SHOP:     search_products, generate_proof_card
-
-  SUPABASE (Postgres)
+  PERFECT CORP (9 APIs) · SERPER · OPEN-METEO · GEMINI
+         │
+         ▼
+  SUPABASE (Postgres + Auth + Storage)
     closet_items · body_model · skin_scans
-    proof_cards · profiles · outfit_history
+    proof_cards · profiles · skin_simulations
 ```
 
 ---
 
-## 7. Why the Camera Feed Exists
+## 7. Demo Script (90 seconds)
 
-The camera is **the core interaction surface**, not a gimmick:
+### [0:00–0:08] Hook
+> "Your appearance is the first thing people see. Mirra is the AI that manages it."
 
-1. **Selfie for skin analysis** — All skin/face APIs require a photo
-2. **Canvas for VTO** — Try-on results overlay on camera layer
-3. **Canvas for Skin Simulation** — Before/after comparison on the user's face
-4. **Mirror metaphor** — User talks to their reflection
+### [0:08–0:30] Skin Health
+> Open app → Selfie captured → Skin analysis runs instantly
+> Dashboard shows: 14 scores, skin age, trend chart
+> Tap "See improvement" → Skin simulation before/after slider
+> "HA Serum — $16 — targets your #1 concern"
+> **[3 APIs: skin-analysis + skin-tone + skin-simulation]**
 
-Without camera → no selfie → no Perfect Corp API calls → no product.
+### [0:30–0:50] GlowUp
+> Tap "GlowUp" → AI detects oval face, warm undertone
+> "Try this look" → Makeup applied (shade-matched)
+> Hairstyle transferred from reference
+> Earrings + necklace added
+> **[4 APIs: face-attr + makeup VTO + hair + earrings]**
 
----
+### [0:50–1:10] Outfit Builder
+> Tap "What should I wear?" → Select "Board Meeting"
+> AI matches closet → Navy blazer, white shirt ranked
+> Clothes VTO → User sees the outfit on themselves
+> "Everything from your closet. $0."
+> **[1 API: clothes VTO + matching engine]**
 
-## 8. Demo Script (90 seconds)
+### [1:10–1:25] Proof Card
+> Gap detected: no formal dress for date night
+> AI finds 3 options → VTO try-on
+> Proof Card: owned ($0) + new ($127) + match scores
+> **[Proof Card + Serper]**
 
-### [0:00-0:08] Hook
-> "Your appearance is the first thing people see. Mirra is the health app for how you look."
+### [1:25–1:30] Close
+> "Mirra. 9 Perfect Corp APIs. One intelligent experience."
 
-### [0:08-0:30] Skin Health
-> Camera opens. Mirra scans silently (2s).
-> "Your moisture is at 48 — down 12% from last week."
-> [Skin scores animate on screen]
-> "Want to see what consistent hydration could do?"
-> [Skin Simulation: before/after comparison]
-> "I found a $16 HA serum that targets your #1 concern."
-> **[Judges see: 3 Perfect Corp APIs — Skin Analysis + Skin Tone + Skin Simulation]**
-
-### [0:30-0:55] Fashion — Board Meeting
-> User: "I have a board meeting at 10."
-> "72° in SF. Your navy blazer works. Minimal makeup."
-> [Clothes VTO + Makeup VTO render]
-> "Everything from your closet. Cost: $0."
-> **[Judges see: owned-first]**
-
-### [0:55-1:15] Date Night + Proof
-> "And tonight? Go romantic."
-> [Dress VTO + Earrings VTO + Makeup re-render]
-> "You own the shoes. Dress and earrings — $127."
-> [Proof Card with match scores]
-> **[Judges see: Proof Card = transparency]**
-
-### [1:15-1:30] Close
-> "Mirra. Your skin health. Your closet. Your stylist. One conversation."
+**Total APIs shown: 9/9 ✓**
 
 ---
 
-## 9. Core Rules
+## 8. Core Design Principles
 
-| Rule | What It Means |
-|------|--------------|
-| **Health-First** | Start with skin analysis — products solve problems, not impulse buys |
-| **Owned-First** | Always check closet before suggesting purchases |
-| **Visual-First** | Show, don't describe — VTO, skin simulation, proof cards |
-| **One Conversation** | No tabs, no menus — AI decides which tools to call |
+| Principle | Meaning |
+|-----------|---------|
+| **Health-First** | Start with skin analysis — products solve problems |
+| **Owned-First** | Check closet before shopping |
+| **Visual-First** | Show, don't tell — VTO, simulation, proof cards |
+| **AI-Decided** | The AI makes connections between data points |
+| **One-Tap** | Every feature accessible in ≤ 2 taps |
 
 ---
 
-## 10. What We Cut (Scope Discipline)
+## 9. What We Cut
 
-| Feature | Why Cut |
-|---------|---------|
-| Google Calendar OAuth | Complex; hardcode events for demo |
-| Onboarding flow | Skip; straight to camera |
-| Style Profiles page | Violates "one conversation" |
-| Aging Simulation | Not core value |
-| Watch/Ring/Bracelet VTO | API units; earrings + necklace sufficient |
+| Feature | Why |
+|---------|-----|
+| Voice pipeline (Deepgram) | Fragile in demo, replaced by tap UI |
+| Google Calendar OAuth | Hardcode events for demo |
 | PWA offline mode | Not visible in demo |
-| Look Diary / History | Nice-to-have, not core |
+| Watch/Ring/Bracelet VTO | API units; earrings + necklace sufficient |

@@ -33,7 +33,7 @@ IMAGE_DOWNLOAD_TIMEOUT_SECONDS = 30
 #   Anthropic (type: anthropic) — needs key in Deepgram dashboard:
 #     claude-3-5-haiku-latest, claude-sonnet-4-20250514
 
-DEEPGRAM_THINK_MODEL = "gpt-5-mini"
+DEEPGRAM_THINK_MODEL = "gpt-4o-mini"
 DEEPGRAM_THINK_TEMPERATURE = 0.7
 
 

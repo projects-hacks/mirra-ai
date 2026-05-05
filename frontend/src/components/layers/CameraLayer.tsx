@@ -34,35 +34,31 @@ export default function CameraLayer({
 
   return (
     <div className="absolute inset-0 z-[var(--z-camera)] h-[100dvh] w-[100dvw] overflow-hidden">
-      {/* JS Camera Kit Container (renders its own UI with face detection) */}
-      {isUsingCameraKit && (
-        <div
-          ref={containerRef}
-          className="absolute inset-0 w-full h-full"
-          style={{ 
-            opacity: shouldFreeze ? 0 : 1,
-            visibility: shouldFreeze ? "hidden" : "visible",
-            transition: "opacity 0.3s ease, visibility 0.3s ease"
-          }}
-        />
-      )}
+      {/* Perfect Corp SDK requires this permanent mount point by id. */}
+      <div
+        id="YMK-module"
+        ref={containerRef}
+        className={`absolute inset-0 z-10 h-full w-full ${isUsingCameraKit ? "pointer-events-auto" : "pointer-events-none"}`}
+        style={{
+          opacity: shouldFreeze ? 0 : 1,
+          transition: "opacity 0.3s ease",
+        }}
+      />
 
       {/* Native Camera Feed (fallback) */}
-      {!isUsingCameraKit && (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{
-            transform: "scaleX(-1)",
-            opacity: shouldFreeze ? 0 : 1,
-            visibility: shouldFreeze ? "hidden" : "visible",
-            transition: "opacity 0.3s ease, visibility 0.3s ease"
-          }}
-        />
-      )}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="absolute inset-0 z-0 h-full w-full object-cover"
+        style={{
+          transform: "scaleX(-1)",
+          opacity: shouldFreeze || isUsingCameraKit ? 0 : 1,
+          visibility: shouldFreeze || isUsingCameraKit ? "hidden" : "visible",
+          transition: "opacity 0.3s ease, visibility 0.3s ease"
+        }}
+      />
 
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(246,241,236,0.22)_0%,transparent_18%,transparent_62%,rgba(246,241,236,0.34)_100%)]" />
 

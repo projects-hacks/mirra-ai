@@ -200,7 +200,7 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
         file_id = await upload_image(task_type, image_bytes, client)
 
         # Build task payload based on API type
-        if task_type in ["skin-analysis", "skin-tone-analysis", "face-attr-analysis"]:
+        if task_type in ["skin-analysis", "skin-tone-analysis", "face-attr-analysis", "skin-simulation"]:
             task_payload = _build_analysis_task_payload(task_type, file_id, params)
         else:
             task_payload = _build_vto_task_payload(file_id, params)

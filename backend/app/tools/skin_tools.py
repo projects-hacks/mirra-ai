@@ -96,3 +96,112 @@ async def analyze_face(selfie_bytes: bytes, user_id: str | None = None) -> dict:
         await cache.delete(f"{CachePrefix.BODY}:{user_id}")
 
     return face
+
+
+# ── Skin concern → simulation intensity mapping ──────────────────
+# The skin analysis API returns scores 0-100 where HIGHER = BETTER (healthier).
+# The simulation API takes 0.0-1.0 where HIGHER = MORE improvement to show.
+# So: low analysis score → skin has problems → high simulation intensity.
+_CONCERN_TO_SIM_KEY = {
+    "acne": "acne",
+    "wrinkle": "wrinkle",
+    "pore": "pores",
+    "texture": "texture",
+    "dark_circle": "dark_circle",       # dark_circle_v2 in analysis
+    "redness": "redness",
+    "oiliness": "oiliness",
+    "eye_bag": "eye_bags",
+    "age_spot": "spots",
+    "radiance": "radiance",
+}
+
+
+def _derive_intensities_from_scores(scores: dict) -> dict[str, float]:
+    """Convert skin analysis scores → simulation intensities.
+
+    Low score (bad skin) → high intensity (lots of improvement to show).
+    High score (good skin) → low intensity (little improvement needed).
+
+    Mapping: intensity = (100 - ui_score) / 100, clamped to [0.1, 0.9]
+    We never go to 0.0 (no change visible) or 1.0 (unrealistically perfect).
+    """
+    intensities = {}
+    for concern_key, sim_key in _CONCERN_TO_SIM_KEY.items():
+        # Handle both "wrinkle": {"ui_score": 82} and "wrinkle": 82 formats
+        score_data = scores.get(concern_key, scores.get(f"{concern_key}_v2"))
+        if score_data is None:
+            continue
+
+        if isinstance(score_data, dict):
+            ui_score = score_data.get("ui_score", score_data.get("raw_score", 75))
+        else:
+            ui_score = float(score_data)
+
+        # Invert: low score → high intensity
+        intensity = (100 - ui_score) / 100.0
+        # Clamp to [0.1, 0.9] — always show *some* change, never unrealistic
+        intensity = max(0.1, min(0.9, intensity))
+        intensities[sim_key] = round(intensity, 2)
+
+    return intensities
+
+
+async def simulate_skin(
+    selfie_bytes: bytes,
+    intensities: dict | None = None,
+    user_id: str | None = None,
+) -> dict:
+    """Run skin simulation to show before/after improvement visualization.
+
+    If `intensities` is empty or not provided, auto-derives them from
+    the user's latest skin scan (most recent `skin_scans` row in Supabase).
+
+    Args:
+        selfie_bytes: JPEG/PNG selfie image.
+        intensities: Optional dict of concern → 0.0-1.0 intensity overrides.
+        user_id: Supabase user ID for fetching latest scan.
+
+    Returns:
+        {"simulation_url": "https://...", "intensities_used": {...}}
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Auto-derive from latest skin scan if no intensities provided
+    if not intensities and user_id and supabase:
+        try:
+            scan = (
+                supabase.table("skin_scans")
+                .select("scores")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if scan.data and scan.data[0].get("scores"):
+                intensities = _derive_intensities_from_scores(scan.data[0]["scores"])
+                logger.info(f"Auto-derived simulation intensities from skin scan: {intensities}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch skin scan for auto-derivation: {e}")
+
+    # Fallback defaults if still empty — show moderate improvement across the board
+    if not intensities:
+        intensities = {
+            "wrinkle": 0.5, "radiance": 0.6, "acne": 0.5, "pores": 0.4,
+            "texture": 0.5, "dark_circle": 0.4, "redness": 0.3,
+            "oiliness": 0.3, "eye_bags": 0.3, "spots": 0.4,
+        }
+        logger.info("Using fallback simulation intensities (no skin scan available)")
+
+    result = await perfectcorp.call_api(
+        VTOTaskType.SKIN_SIMULATION, selfie_bytes, intensities
+    )
+
+    # The simulation API returns a result image URL
+    simulation_url = result.get("url") or result.get("result", {}).get("url", "")
+
+    return {
+        "simulation_url": simulation_url,
+        "intensities_used": intensities,
+    }
+

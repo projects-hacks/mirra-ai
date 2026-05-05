@@ -4,14 +4,22 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { debugFlow } from "@/lib/debug";
 
 // ── Types ───────────────────────────────────────────
 
 export type CameraKitMode = 'face' | 'body';
 export type ImageFormat = 'base64' | 'blob';
+export type FaceDetectionMode =
+  | 'makeup'
+  | 'skincare'
+  | 'shadefinder'
+  | 'facereshape'
+  | 'earring'
+  | 'necklace';
 
 export interface CameraKitConfig {
-  faceDetectionMode: 'makeup' | 'skincare';
+  faceDetectionMode: FaceDetectionMode;
   imageFormat: ImageFormat;
   language?: string;
 }
@@ -39,9 +47,10 @@ export interface CameraKitEvents {
 interface YMKCameraKitSDK {
   init: (config: CameraKitConfig) => void;
   openCameraKit: () => void;
-  closeCameraKit: () => void;
-  addEventListener: (event: string, callback: (data?: any) => void) => void;
-  removeEventListener: (event: string, callback: (data?: any) => void) => void;
+  closeCameraKit?: () => void;
+  close?: () => void;
+  addEventListener: (event: string, callback: (data?: unknown) => void) => void;
+  removeEventListener: (event: string, callback: (data?: unknown) => void) => void;
 }
 
 declare global {
@@ -49,6 +58,49 @@ declare global {
     YMK?: YMKCameraKitSDK;
     ymkAsyncInit?: () => void;
   }
+}
+
+function isCapturedImage(value: unknown): value is CapturedImage {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "image" in value &&
+    (
+      typeof (value as { image: unknown }).image === "string" ||
+      (value as { image: unknown }).image instanceof Blob
+    )
+  );
+}
+
+function extractCapturedImages(value: unknown): CapturedImage[] {
+  if (Array.isArray(value)) {
+    return value.filter(isCapturedImage);
+  }
+
+  if (isCapturedImage(value)) {
+    return [value];
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidates = [
+    record.images,
+    record.image,
+    record.data,
+    record.detail,
+    record.result,
+    record.payload,
+  ];
+
+  for (const candidate of candidates) {
+    const images = extractCapturedImages(candidate);
+    if (images.length > 0) return images;
+  }
+
+  return [];
 }
 
 // ── Hook ────────────────────────────────────────────
@@ -60,11 +112,80 @@ export function useCameraKit(events: CameraKitEvents = {}) {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<Error | null>(null);
   
-  const eventHandlersRef = useRef<Map<string, (data?: any) => void>>(new Map());
+  const eventHandlersRef = useRef<Map<string, (data?: unknown) => void>>(new Map());
   const sdkScriptRef = useRef<HTMLScriptElement | null>(null);
+  const isCameraOpenRef = useRef(false);
+  const isOpeningRef = useRef(false);
 
   // Load SDK script
+  const eventsRef = useRef(events);
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
+  const registerEventHandlers = useCallback(() => {
+    if (!window.YMK || eventHandlersRef.current.size > 0) return;
+
+    const handlers = {
+      opened: () => {
+        debugFlow("camera-kit", "event:opened");
+        isOpeningRef.current = false;
+        isCameraOpenRef.current = true;
+        setIsCameraOpen(true);
+        eventsRef.current.onOpened?.();
+      },
+      loading: (data: unknown) => {
+        const progress = typeof data === "object" && data && "progress" in data
+          ? Number((data as { progress: unknown }).progress)
+          : 0;
+        debugFlow("camera-kit", "event:loading", { progress });
+        setLoadingProgress(progress);
+        eventsRef.current.onLoading?.(progress);
+      },
+      loaded: () => {
+        debugFlow("camera-kit", "event:loaded");
+        setLoadingProgress(100);
+        eventsRef.current.onLoaded?.();
+      },
+      faceDetectionStarted: () => {
+        debugFlow("camera-kit", "event:faceDetectionStarted");
+        eventsRef.current.onFaceDetectionStarted?.();
+      },
+      faceDetectionCaptured: (capturedResult: unknown) => {
+        const images = extractCapturedImages(capturedResult);
+        debugFlow("camera-kit", "event:faceDetectionCaptured", {
+          imageCount: images.length,
+          firstImageType: images[0]?.image instanceof Blob ? "blob" : typeof images[0]?.image,
+          firstImageSize: images[0]?.image instanceof Blob ? images[0].image.size : images[0]?.image.length,
+          width: images[0]?.width,
+          height: images[0]?.height,
+        });
+        eventsRef.current.onFaceDetectionCaptured?.(images);
+      },
+      closed: () => {
+        debugFlow("camera-kit", "event:closed");
+        isOpeningRef.current = false;
+        isCameraOpenRef.current = false;
+        setIsCameraOpen(false);
+        setLoadingProgress(0);
+        eventsRef.current.onClosed?.();
+      },
+    };
+
+    Object.entries(handlers).forEach(([event, handler]) => {
+      eventHandlersRef.current.set(event, handler);
+      window.YMK!.addEventListener(event, handler);
+    });
+    debugFlow("camera-kit", "registered event handlers", { events: Object.keys(handlers) });
+  }, []);
+
   const loadSDK = useCallback(() => {
+    debugFlow("camera-kit", "loadSDK called", {
+      isSDKLoading,
+      isSDKLoaded,
+      hasYMK: Boolean(window.YMK),
+      hasYMKModule: Boolean(document.getElementById("YMK-module")),
+    });
     if (isSDKLoading || isSDKLoaded) return;
     
     setIsSDKLoading(true);
@@ -72,6 +193,8 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     // Check if SDK is already loaded
     if (window.YMK) {
+      debugFlow("camera-kit", "SDK already present on window");
+      registerEventHandlers();
       setIsSDKLoaded(true);
       setIsSDKLoading(false);
       return;
@@ -79,45 +202,14 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     // Define ymkAsyncInit before loading script
     window.ymkAsyncInit = function() {
+      debugFlow("camera-kit", "ymkAsyncInit fired", { hasYMK: Boolean(window.YMK) });
       if (!window.YMK) {
         setError(new Error('YMK SDK failed to initialize'));
         setIsSDKLoading(false);
         return;
       }
 
-      // Register event listeners
-      const handlers = {
-        opened: () => {
-          setIsCameraOpen(true);
-          events.onOpened?.();
-        },
-        loading: (data: { progress: number }) => {
-          setLoadingProgress(data.progress);
-          events.onLoading?.(data.progress);
-        },
-        loaded: () => {
-          setLoadingProgress(100);
-          events.onLoaded?.();
-        },
-        faceDetectionStarted: () => {
-          events.onFaceDetectionStarted?.();
-        },
-        faceDetectionCaptured: (capturedResult: { images: CapturedImage[] }) => {
-          events.onFaceDetectionCaptured?.(capturedResult.images);
-        },
-        closed: () => {
-          setIsCameraOpen(false);
-          setLoadingProgress(0);
-          events.onClosed?.();
-        },
-      };
-
-      // Store handlers for cleanup
-      Object.entries(handlers).forEach(([event, handler]) => {
-        eventHandlersRef.current.set(event, handler);
-        window.YMK!.addEventListener(event, handler);
-      });
-
+      registerEventHandlers();
       setIsSDKLoaded(true);
       setIsSDKLoading(false);
     };
@@ -127,47 +219,74 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     script.src = 'https://plugins-media.makeupar.com/v2.2-camera-kit/sdk.js';
     script.async = true;
     script.onload = () => {
+      debugFlow("camera-kit", "SDK script onload");
       // YMKAsyncInit will be called automatically by the SDK
     };
     script.onerror = () => {
       const err = new Error('Failed to load Camera Kit SDK');
+      debugFlow("camera-kit", "SDK script onerror", err);
       setError(err);
       setIsSDKLoading(false);
-      events.onError?.(err);
+      eventsRef.current.onError?.(err);
     };
 
     document.body.appendChild(script);
     sdkScriptRef.current = script;
-  }, [isSDKLoading, isSDKLoaded, events]);
+  }, [isSDKLoading, isSDKLoaded, registerEventHandlers]);
 
   // Open camera with config
   const openCamera = useCallback((config: Partial<CameraKitConfig> = {}) => {
+    debugFlow("camera-kit", "openCamera requested", {
+      config,
+      hasYMK: Boolean(window.YMK),
+      hasYMKModule: Boolean(document.getElementById("YMK-module")),
+      isOpening: isOpeningRef.current,
+      isCameraOpen: isCameraOpenRef.current,
+    });
     if (!window.YMK) {
       const err = new Error('Camera Kit SDK not loaded');
+      debugFlow("camera-kit", "openCamera blocked: SDK missing");
       setError(err);
-      events.onError?.(err);
-      return;
+      eventsRef.current.onError?.(err);
+      return false;
+    }
+
+    if (isOpeningRef.current || isCameraOpenRef.current) {
+      debugFlow("camera-kit", "openCamera skipped: already opening/open");
+      return true;
     }
 
     try {
+      isOpeningRef.current = true;
       const defaultConfig: CameraKitConfig = {
-        faceDetectionMode: 'skincare', // Use 'skincare' for onboarding analysis
+        faceDetectionMode: 'skincare',
         imageFormat: 'base64',
         language: 'enu',
         ...config,
       };
 
       window.YMK.init(defaultConfig);
+      debugFlow("camera-kit", "YMK.init called", defaultConfig);
       window.YMK.openCameraKit();
+      debugFlow("camera-kit", "YMK.openCameraKit called");
+      return true;
     } catch (err) {
+      isOpeningRef.current = false;
       const error = err instanceof Error ? err : new Error('Failed to open camera');
+      debugFlow("camera-kit", "openCamera threw", error);
       setError(error);
-      events.onError?.(error);
+      eventsRef.current.onError?.(error);
+      return false;
     }
-  }, [events]);
+  }, []);
 
   // Close camera
   const closeCamera = useCallback(() => {
+    debugFlow("camera-kit", "closeCamera requested", {
+      hasYMK: Boolean(window.YMK),
+      isOpening: isOpeningRef.current,
+      isCameraOpen: isCameraOpenRef.current,
+    });
     if (!window.YMK) {
       console.warn('Camera Kit SDK not available for closing');
       return;
@@ -176,23 +295,37 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     try {
       if (typeof window.YMK.closeCameraKit === 'function') {
         window.YMK.closeCameraKit();
+        debugFlow("camera-kit", "YMK.closeCameraKit called");
+      } else if (typeof window.YMK.close === 'function') {
+        window.YMK.close();
+        debugFlow("camera-kit", "YMK.close called");
       } else {
-        console.warn('closeCameraKit method not available');
+        debugFlow("camera-kit", "close skipped: no close method available");
       }
+      isOpeningRef.current = false;
+      isCameraOpenRef.current = false;
     } catch (err) {
       console.error('Error closing camera:', err);
       const error = err instanceof Error ? err : new Error('Failed to close camera');
+      debugFlow("camera-kit", "closeCamera threw", error);
       setError(error);
-      events.onError?.(error);
+      eventsRef.current.onError?.(error);
     }
-  }, [events]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
+    const eventHandlers = eventHandlersRef.current;
     return () => {
+      debugFlow("camera-kit", "cleanup start", {
+        handlerCount: eventHandlers.size,
+        hasYMK: Boolean(window.YMK),
+        isOpening: isOpeningRef.current,
+        isCameraOpen: isCameraOpenRef.current,
+      });
       // Remove event listeners
       if (window.YMK) {
-        eventHandlersRef.current.forEach((handler, event) => {
+        eventHandlers.forEach((handler, event) => {
           try {
             window.YMK!.removeEventListener(event, handler);
           } catch (err) {
@@ -201,30 +334,23 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         });
       }
 
-      // Close camera if open
-      if (isCameraOpen && window.YMK) {
+      // Close only if this hook actually opened/opening Camera Kit. Calling
+      // closeCameraKit while no SDK view exists can throw inside the vendor SDK.
+      if (window.YMK && (isCameraOpenRef.current || isOpeningRef.current)) {
         try {
           if (typeof window.YMK.closeCameraKit === 'function') {
             window.YMK.closeCameraKit();
+          } else if (typeof window.YMK.close === 'function') {
+            window.YMK.close();
           }
+          isCameraOpenRef.current = false;
+          isOpeningRef.current = false;
         } catch (err) {
           console.error('Error closing camera on unmount:', err);
         }
       }
-
-      // Remove SDK script
-      if (sdkScriptRef.current && sdkScriptRef.current.parentNode) {
-        try {
-          sdkScriptRef.current.parentNode.removeChild(sdkScriptRef.current);
-        } catch (err) {
-          console.error('Error removing SDK script:', err);
-        }
-      }
-
-      // Cleanup global
-      delete window.ymkAsyncInit;
     };
-  }, [isCameraOpen]);
+  }, []);
 
   return {
     isSDKLoaded,

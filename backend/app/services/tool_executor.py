@@ -28,6 +28,12 @@ async def execute_tool(name: str, args: dict[str, Any], selfie_b64: str | None =
             return await _require_selfie(selfie_bytes, skin_tools.analyze_skin_tone, user_id=user_id)
         case ToolName.ANALYZE_FACE:
             return await _require_selfie(selfie_bytes, skin_tools.analyze_face, user_id=user_id)
+        case ToolName.SIMULATE_SKIN:
+            return await _require_selfie(
+                selfie_bytes, skin_tools.simulate_skin,
+                intensities=args.get("intensities") or {},
+                user_id=user_id,
+            )
         case ToolName.TRY_ON_CLOTHES:
             return await _require_selfie(
                 selfie_bytes, fashion_tools.try_on_clothes,

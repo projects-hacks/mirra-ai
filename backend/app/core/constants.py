@@ -55,6 +55,7 @@ class VTOTaskType(StrEnum):
     NECKLACE = "2d-vto/necklace"
     WATCH = "2d-vto/watch"
     SCARF = "2d-vto/scarf"
+    SKIN_SIMULATION = "skin-simulation"
 
 
 class SkinConcern(StrEnum):
@@ -139,6 +140,7 @@ class ToolName(StrEnum):
     ANALYZE_SKIN = "analyze_skin"
     ANALYZE_SKIN_TONE = "analyze_skin_tone"
     ANALYZE_FACE = "analyze_face"
+    SIMULATE_SKIN = "simulate_skin"
     TRY_ON_CLOTHES = "try_on_clothes"
     TRY_ON_MAKEUP = "try_on_makeup"
     TRY_ON_EARRINGS = "try_on_earrings"

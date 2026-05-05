@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { CAMERA } from "@/lib/constants";
+import { debugFlow } from "@/lib/debug";
 
 /* ── Native camera capture types ──────────────────── */
 
@@ -38,16 +39,18 @@ export function useCamera(): UseCameraReturn {
 
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isUsingCameraKit] = useState(false);
+  const isUsingCameraKit = false;
 
   useEffect(() => {
     let cancelled = false;
 
     async function initCamera() {
+      debugFlow("native-camera", "initCamera");
       await startNativeCamera();
     }
 
     async function startNativeCamera(retries = 3) {
+      debugFlow("native-camera", "startNativeCamera", { retries });
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -64,13 +67,23 @@ export function useCamera(): UseCameraReturn {
         }
 
         streamRef.current = stream;
+        const videoTrack = stream.getVideoTracks()[0];
+        debugFlow("native-camera", "getUserMedia success", {
+          trackLabel: videoTrack?.label,
+          settings: videoTrack?.getSettings(),
+        });
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
+          debugFlow("native-camera", "video play success", {
+            videoWidth: videoRef.current.videoWidth,
+            videoHeight: videoRef.current.videoHeight,
+          });
           setIsReady(true);
         }
       } catch (err) {
+        debugFlow("native-camera", "startNativeCamera error", err);
         if (!cancelled) {
           if (retries > 0) {
             console.warn(`Camera start failed, retrying... (${retries} attempts left)`, err);
@@ -82,6 +95,7 @@ export function useCamera(): UseCameraReturn {
               ? "Camera permission denied. Please allow camera access."
               : "Failed to start camera.";
           setError(msg);
+          debugFlow("native-camera", "camera error state set", { message: msg });
         }
       }
     }
@@ -90,6 +104,7 @@ export function useCamera(): UseCameraReturn {
 
     return () => {
       cancelled = true;
+      debugFlow("native-camera", "cleanup");
       ymkRef.current?.destroy();
       ymkRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -109,13 +124,28 @@ export function useCamera(): UseCameraReturn {
     if (video && stream && (!streamAttachedRef.current || video.srcObject !== stream)) {
       video.srcObject = stream;
       streamAttachedRef.current = true;
+      debugFlow("native-camera", "attach stream to mounted video");
       video.play()
-        .then(() => setIsReady(true))
-        .catch(console.error);
+        .then(() => {
+          debugFlow("native-camera", "delayed video play success", {
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
+          });
+          setIsReady(true);
+        })
+        .catch((error) => {
+          debugFlow("native-camera", "delayed video play error", error);
+          console.error(error);
+        });
     }
   });
 
   const capture = useCallback((): string | null => {
+    debugFlow("native-camera", "capture requested", {
+      isReady,
+      isUsingCameraKit,
+      hasVideo: Boolean(videoRef.current),
+    });
     // If using Camera Kit, trigger its capture (result arrives via onCapture)
     if (isUsingCameraKit && ymkRef.current) {
       ymkRef.current.capture();
@@ -125,7 +155,10 @@ export function useCamera(): UseCameraReturn {
 
     // Native capture via canvas
     const video = videoRef.current;
-    if (!video || !isReady) return null;
+    if (!video || !isReady) {
+      debugFlow("native-camera", "capture skipped", { hasVideo: Boolean(video), isReady });
+      return null;
+    }
 
     const vw = video.videoWidth;
     const vh = video.videoHeight;
@@ -166,10 +199,21 @@ export function useCamera(): UseCameraReturn {
       console.warn(`Camera resolution too low: ${video.videoWidth}px`);
     }
 
+    debugFlow("native-camera", "capture complete", {
+      sourceWidth: vw,
+      sourceHeight: vh,
+      targetWidth,
+      targetHeight,
+      sourceX,
+      sourceY,
+      dataUrlLength: dataUrl.length,
+    });
+
     return dataUrl;
   }, [isReady, isUsingCameraKit]);
 
   const stop = useCallback(() => {
+    debugFlow("native-camera", "stop requested");
     ymkRef.current?.stopCamera();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;

@@ -5,6 +5,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 export const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+export const ENABLE_CAMERA_KIT = process.env.NEXT_PUBLIC_ENABLE_CAMERA_KIT !== "false";
 
 // ── API Endpoints ──────────────────────────────────
 export const Endpoint = {
@@ -43,6 +44,7 @@ export enum ToolName {
   ANALYZE_SKIN = "analyze_skin",
   ANALYZE_SKIN_TONE = "analyze_skin_tone",
   ANALYZE_FACE = "analyze_face",
+  SIMULATE_SKIN = "simulate_skin",
   TRY_ON_CLOTHES = "try_on_clothes",
   TRY_ON_MAKEUP = "try_on_makeup",
   TRY_ON_EARRINGS = "try_on_earrings",
@@ -60,6 +62,7 @@ export const LOADING_TEXT: Record<string, string> = {
   [ToolName.ANALYZE_SKIN]: "Scanning your skin…",
   [ToolName.ANALYZE_SKIN_TONE]: "Detecting skin tone…",
   [ToolName.ANALYZE_FACE]: "Analyzing face features…",
+  [ToolName.SIMULATE_SKIN]: "Simulating skin improvement…",
   [ToolName.TRY_ON_CLOTHES]: "Trying that on…",
   [ToolName.TRY_ON_MAKEUP]: "Applying makeup…",
   [ToolName.TRY_ON_EARRINGS]: "Adding earrings…",

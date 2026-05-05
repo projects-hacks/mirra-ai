@@ -17,6 +17,7 @@ import {
   createLoadingMessage,
   createToolResultMessage,
 } from "@/components/providers/AppProvider";
+import { debugFlow } from "@/lib/debug";
 
 interface UseVoiceAgentReturn {
   connect: (selfie: string) => void;
@@ -27,6 +28,7 @@ interface UseVoiceAgentReturn {
   startListening: () => void;
   stopListening: () => void;
   error: string | null;
+  lastSelfieUrl: string | null;
 }
 
 /**
@@ -52,8 +54,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSelfieUrl, setLastSelfieUrl] = useState<string | null>(null);
   const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [, setNextPlayTime] = useState(0);
+  const nextPlayTimeRef = useRef(0);
 
   const dispatch = useAppDispatch();
   const setMirraWebSocket = useCallback((socket?: WebSocket) => {
@@ -62,6 +65,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
   // ── Cleanup ─────────────────────────────────────
   const cleanup = useCallback(() => {
+    debugFlow("voice", "cleanup audio");
     workletRef.current?.disconnect();
     sourceRef.current?.disconnect();
     audioCtxRef.current?.close();
@@ -77,6 +81,10 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
   async function playAudio(data: Blob | ArrayBuffer) {
     try {
+      debugFlow("voice", "playAudio chunk", {
+        inputType: data instanceof Blob ? "blob" : "arrayBuffer",
+        size: data instanceof Blob ? data.size : data.byteLength,
+      });
       const ctx = audioCtxRef.current ?? new AudioContext({ sampleRate: 24000 });
       if (!audioCtxRef.current) audioCtxRef.current = ctx;
 
@@ -98,12 +106,11 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       // Schedule: play right after the previous chunk ends (gapless)
       const now = ctx.currentTime;
-      setNextPlayTime((previousNextPlayTime) => {
-        const startTime = Math.max(now, previousNextPlayTime);
-        source.start(startTime);
-        return startTime + audioBuffer.duration;
-      });
+      const startTime = Math.max(now, nextPlayTimeRef.current);
+      source.start(startTime);
+      nextPlayTimeRef.current = startTime + audioBuffer.duration;
     } catch {
+      debugFlow("voice", "playAudio skipped undecodable chunk");
       // Silently skip undecodable audio chunks
     }
   }
@@ -113,21 +120,34 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     (event: MessageEvent) => {
       // Binary = audio data → play it
       if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+        debugFlow("voice", "WS message: binary audio", {
+          size: event.data instanceof Blob ? event.data.size : event.data.byteLength,
+        });
         void playAudio(event.data);
         return;
       }
 
       try {
         const msg = JSON.parse(event.data);
+        debugFlow("voice", "WS message: text", {
+          type: msg.type,
+          role: msg.role,
+          tool: msg.tool,
+          status: msg.status,
+          hasError: Boolean(msg.error),
+          keys: Object.keys(msg),
+        });
 
         switch (msg.type) {
           case "ConversationText":
             if (msg.role === "assistant" || msg.role === "agent") {
+              debugFlow("voice", "conversation assistant text", { content: msg.content });
               dispatch({
                 type: "ADD_MESSAGE",
                 payload: createAgentMessage(msg.content),
               });
             } else if (msg.role === "user") {
+              debugFlow("voice", "conversation user text", { content: msg.content });
               dispatch({
                 type: "ADD_MESSAGE",
                 payload: createUserMessage(msg.content),
@@ -135,14 +155,17 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
             }
             break;
           case "AgentStartedSpeaking":
-            setNextPlayTime(0);
+            debugFlow("voice", "agent started speaking");
+            nextPlayTimeRef.current = 0;
             break;
           case "SettingsApplied":
           case WSServerMsg.SESSION_READY:
+            debugFlow("voice", "settings/session ready");
             dispatch({ type: "SET_CONNECTED", payload: true });
             break;
           case WSServerMsg.VTO_RESULT:
             if (msg.status === "running") {
+              debugFlow("voice", "tool running", { tool: msg.tool });
               const toolName = msg.tool as ToolName;
               const text = LOADING_TEXT[toolName] ?? "Processing…";
               dispatch({ type: "SET_PROCESSING", payload: true });
@@ -152,8 +175,22 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
                 payload: createLoadingMessage(toolName, text),
               });
             } else if (msg.status === "complete") {
+              debugFlow("voice", "tool complete", {
+                tool: msg.tool,
+                hasError: Boolean(msg.error),
+                error: msg.error,
+                hasImageUrl: Boolean(msg.image_url),
+                hasSimulationUrl: Boolean(msg.simulation_url),
+                hasScores: Boolean(msg.scores),
+                keys: Object.keys(msg),
+              });
               dispatch({ type: "REMOVE_LOADING", payload: msg.tool });
-              if (msg.image_url) {
+              if (msg.error) {
+                dispatch({
+                  type: "ADD_MESSAGE",
+                  payload: createAgentMessage(msg.error),
+                });
+              } else if (msg.image_url) {
                 dispatch({
                   type: "SET_VTO_RESULT",
                   payload: {
@@ -161,6 +198,14 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
                     toolName: msg.tool,
                     timestamp: Date.now(),
                   },
+                });
+              } else if (msg.simulation_url) {
+                dispatch({
+                  type: "ADD_MESSAGE",
+                  payload: createToolResultMessage(msg.tool, {
+                    simulation_url: msg.simulation_url,
+                    intensities_used: msg.intensities_used,
+                  }),
                 });
               } else if (msg.scores || msg.data) {
                 dispatch({
@@ -173,6 +218,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
             }
             break;
           case WSServerMsg.ERROR:
+            debugFlow("voice", "server error", { message: msg.message });
             setError(msg.message ?? "Something went wrong");
             dispatch({ type: "SET_PROCESSING", payload: false });
             break;
@@ -187,6 +233,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
             break;
         }
       } catch {
+        debugFlow("voice", "failed to parse WS message", event.data);
         console.error("Failed to parse WS message");
       }
     },
@@ -196,6 +243,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   // ── Start Listening (mic → WS) ──────────────────
   const startListening = useCallback(async () => {
     const ws = wsRef.current;
+    debugFlow("voice", "startListening requested", { wsReadyState: ws?.readyState });
     if (ws?.readyState !== WebSocket.OPEN) return;
 
     try {
@@ -208,12 +256,17 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         },
       });
       streamRef.current = stream;
+      debugFlow("voice", "microphone getUserMedia success", {
+        settings: stream.getAudioTracks()[0]?.getSettings(),
+      });
 
       const audioCtx = new AudioContext({ sampleRate: 24000 });
       audioCtxRef.current = audioCtx;
+      debugFlow("voice", "audio context created", { sampleRate: audioCtx.sampleRate });
 
       // Load AudioWorklet processor
       await audioCtx.audioWorklet.addModule("/audio-processor.js");
+      debugFlow("voice", "audio worklet loaded");
 
       const source = audioCtx.createMediaStreamSource(stream);
       sourceRef.current = source;
@@ -236,7 +289,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       // Notify server
       ws.send(JSON.stringify({ type: WSClientMsg.READY }));
+      debugFlow("voice", "sent READY");
     } catch (err) {
+      debugFlow("voice", "startListening error", err);
       setError("Microphone access denied");
       console.error("Mic error:", err);
     }
@@ -245,6 +300,11 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   // ── Connect ─────────────────────────────────────
   const connect = useCallback(
     function connectToVoice(selfie: string, autoStart: boolean = true) {
+      debugFlow("voice", "connect requested", {
+        autoStart,
+        selfieLength: selfie.length,
+        existingReadyState: wsRef.current?.readyState,
+      });
       if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
       setIsConnecting(true);
@@ -253,6 +313,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
       // Timeout: if WS doesn't open in 10s, give up
       connectTimeoutRef.current = setTimeout(() => {
         if (wsRef.current?.readyState !== WebSocket.OPEN) {
+          debugFlow("voice", "connect timeout");
           wsRef.current?.close();
           wsRef.current = null;
           setIsConnecting(false);
@@ -263,8 +324,10 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       const ws = new WebSocket(`${WS_URL}${Endpoint.WS_VOICE}`);
       wsRef.current = ws;
+      debugFlow("voice", "WebSocket constructed", { url: `${WS_URL}${Endpoint.WS_VOICE}` });
 
       ws.onopen = () => {
+        debugFlow("voice", "WebSocket open");
         if (connectTimeoutRef.current) {
           clearTimeout(connectTimeoutRef.current);
         }
@@ -283,6 +346,9 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
             data: selfie,
           })
         );
+        debugFlow("voice", "sent initial selfie", { selfieLength: selfie.length });
+        
+        setLastSelfieUrl(selfie);
 
         if (autoStart) {
           // Need a slight delay to ensure backend has sent Settings to Deepgram
@@ -294,7 +360,13 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
       ws.onmessage = handleMessage;
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        debugFlow("voice", "WebSocket close", {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          retryCount: retryCountRef.current,
+        });
         setIsConnected(false);
         setIsConnecting(false);
         cleanup();
@@ -310,13 +382,15 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
             ];
           retryCountRef.current++;
           setIsConnecting(true);
+          debugFlow("voice", "WebSocket reconnect scheduled", { delay, retryCount: retryCountRef.current });
           setTimeout(() => connectToVoice(selfie), delay);
         } else {
           setError("Connection lost. Please refresh.");
         }
       };
 
-      ws.onerror = () => {
+      ws.onerror = (event) => {
+        debugFlow("voice", "WebSocket error", event);
         setError("Connection error");
       };
     },
@@ -325,6 +399,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
   // ── Disconnect ──────────────────────────────────
   const disconnect = useCallback(() => {
+    debugFlow("voice", "disconnect requested");
     retryCountRef.current = WS_CONFIG.MAX_RETRIES; // prevent reconnect
     wsRef.current?.close();
     wsRef.current = null;
@@ -338,8 +413,10 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   // ── Stop Listening ──────────────────────────────
   const stopListening = useCallback(() => {
     const ws = wsRef.current;
+    debugFlow("voice", "stopListening requested", { wsReadyState: ws?.readyState });
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: WSClientMsg.STOP }));
+      debugFlow("voice", "sent STOP");
     }
 
     workletRef.current?.disconnect();
@@ -352,6 +429,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
     setIsListening(false);
     dispatch({ type: "SET_LISTENING", payload: false });
+    debugFlow("voice", "stopListening complete");
   }, [dispatch]);
 
   // ── Cleanup on unmount ──────────────────────────
@@ -372,5 +450,6 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     startListening,
     stopListening,
     error,
+    lastSelfieUrl,
   };
 }

@@ -28,12 +28,39 @@ SYSTEM_PROMPT = _PROMPT_PATH.read_text()
 
 GREETING = "Hey! I'm Mirra. What are we styling today?"
 
+SELFIE_REQUIRED_TOOLS = {
+    ToolName.ANALYZE_SKIN,
+    ToolName.ANALYZE_SKIN_TONE,
+    ToolName.ANALYZE_FACE,
+    ToolName.SIMULATE_SKIN,
+    ToolName.TRY_ON_CLOTHES,
+    ToolName.TRY_ON_MAKEUP,
+    ToolName.TRY_ON_EARRINGS,
+    ToolName.TRY_ON_NECKLACE,
+    ToolName.CHANGE_HAIRSTYLE,
+}
+
+FRESH_SELFIE_WAIT_TIMEOUT_SECONDS = 45.0
+
 
 def _function_definitions() -> list[dict]:
     return [
         {"name": ToolName.ANALYZE_SKIN, "description": "Analyze skin condition from selfie — wrinkles, pores, acne, texture, moisture, and 10+ concerns. Returns scores 1-100.", "parameters": {"type": "object", "properties": {}}},
         {"name": ToolName.ANALYZE_SKIN_TONE, "description": "Detect skin undertone, depth, and color profile from selfie.", "parameters": {"type": "object", "properties": {}}},
         {"name": ToolName.ANALYZE_FACE, "description": "Detect face shape and proportions from selfie.", "parameters": {"type": "object", "properties": {}}},
+        {
+            "name": ToolName.SIMULATE_SKIN,
+            "description": "Show before/after skin improvement visualization. Uses the user's latest skin analysis scores to compute how much improvement to show for each concern. Returns an image URL of the simulated 'after' photo.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "intensities": {
+                        "type": "object",
+                        "description": "Optional manual intensity overrides (0.0-1.0) for: wrinkle, acne, pores, texture, dark_circle, redness, oiliness, eye_bags, spots, radiance. If omitted, auto-derived from the user's most recent skin scan."
+                    }
+                }
+            }
+        },
         {"name": ToolName.TRY_ON_CLOTHES, "description": "Virtual try-on a garment on the user's selfie. Requires a public URL to the garment image.", "parameters": {"type": "object", "properties": {"garment_url": {"type": "string", "description": "Public URL of the garment image"}, "garment_category": {"type": "string", "enum": ["upper", "lower", "full"], "description": "Type of garment: upper (top/jacket), lower (pants/skirt), full (dress)"}}, "required": ["garment_url"]}},
         {"name": ToolName.TRY_ON_MAKEUP, "description": "Apply virtual makeup effects (lip, blush, eyeliner, etc.) on user's selfie.", "parameters": {"type": "object", "properties": {"effects": {"type": "array", "items": {"type": "object"}, "description": "Array of makeup effect objects with category, pattern, palettes"}}}},
         {"name": ToolName.TRY_ON_EARRINGS, "description": "Virtual try-on earrings on user's selfie.", "parameters": {"type": "object", "properties": {"earring_url": {"type": "string", "description": "Public URL of the earring image"}}, "required": ["earring_url"]}},
@@ -81,6 +108,13 @@ async def _handle_function_call(func: dict, dg, ws: WebSocket, session: dict) ->
     args = json.loads(func.get("arguments", "{}"))
 
     logger.info(f"Function call: {func_name}({args})")
+    logger.info(
+        "Tool flow start: tool=%s selfie_seq=%s has_selfie=%s user_id=%s",
+        func_name,
+        session.get("selfie_seq", 0),
+        bool(session.get("selfie")),
+        session.get("user_id"),
+    )
 
     # Notify frontend that a tool is being executed
     await ws.send_text(json.dumps({
@@ -89,16 +123,59 @@ async def _handle_function_call(func: dict, dg, ws: WebSocket, session: dict) ->
         "status": "running",
     }))
 
-    # Give the frontend a moment to capture and send a fresh selfie
-    # This enables just-in-time image capture for the current context
-    await asyncio.sleep(0.8)
+    selfie_b64 = session.get("selfie")
+    if func_name in SELFIE_REQUIRED_TOOLS:
+        # Give the frontend a moment to show Camera Kit or capture natively.
+        # Require a selfie that arrived after this function call started so we
+        # never analyze a stale frame from the previous interaction.
+        selfie_seq_before = session.get("selfie_seq", 0)
+        session["selfie_event"] = asyncio.Event()
+        logger.info(
+            "Waiting for fresh selfie: tool=%s selfie_seq_before=%s timeout_seconds=%.1f",
+            func_name,
+            selfie_seq_before,
+            FRESH_SELFIE_WAIT_TIMEOUT_SECONDS,
+        )
+        try:
+            await asyncio.wait_for(
+                session["selfie_event"].wait(),
+                timeout=FRESH_SELFIE_WAIT_TIMEOUT_SECONDS,
+            )
+            logger.info(
+                "Fresh selfie event received: tool=%s selfie_seq_after=%s",
+                func_name,
+                session.get("selfie_seq", 0),
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Timed out waiting for fresh selfie for tool {func_name}")
+        finally:
+            session.pop("selfie_event", None)
+
+        selfie_b64 = (
+            session.get("selfie")
+            if session.get("selfie_seq", 0) > selfie_seq_before
+            else None
+        )
+        logger.info(
+            "Fresh selfie selected: tool=%s has_fresh_selfie=%s selfie_seq_after=%s",
+            func_name,
+            bool(selfie_b64),
+            session.get("selfie_seq", 0),
+        )
 
     # Execute the tool (will use the freshly received selfie if sent)
     result = await execute_tool(
         func_name,
         args,
-        session.get("selfie"),
+        selfie_b64,
         session.get("user_id"),
+    )
+    logger.info(
+        "Tool flow complete: tool=%s result_keys=%s has_error=%s error=%s",
+        func_name,
+        list(result.keys()),
+        "error" in result,
+        result.get("error"),
     )
 
     # Send response back to Deepgram (content must be a JSON string)
@@ -171,7 +248,15 @@ async def _handle_client_message(data: dict, msg_type: str, dg, session: dict) -
         # ── Our custom messages (DO NOT forward to Deepgram) ──
         case WSClientMessageType.SELFIE:
             session["selfie"] = data["data"]
-            logger.info("Selfie received")
+            session["selfie_seq"] = session.get("selfie_seq", 0) + 1
+            if "selfie_event" in session:
+                session["selfie_event"].set()
+            logger.info(
+                "Selfie received: selfie_seq=%s length=%s event_waiting=%s",
+                session["selfie_seq"],
+                len(data.get("data", "")),
+                "selfie_event" in session,
+            )
         case WSClientMessageType.READY:
             session["ready"] = True
             session["user_id"] = data.get("user_id")
@@ -198,10 +283,14 @@ def _create_message_forwarders(dg, ws: WebSocket, session: dict) -> tuple:
 
     async def client_to_dg():
         """Forward browser client messages to Deepgram."""
+        first_audio = True
         try:
             while True:
                 data = await ws.receive()
                 if "bytes" in data:
+                    if first_audio:
+                        logger.info("First audio chunk received from client")
+                        first_audio = False
                     # Audio data — forward directly
                     await dg.send(data["bytes"])
                 elif "text" in data:
@@ -242,8 +331,8 @@ async def _run_deepgram_connection(dg, ws: WebSocket, session: dict) -> None:
             try:
                 await task
             except asyncio.CancelledError:
-                # Re-raise cancellation after cleanup
-                raise
+                # Cancellation is expected, swallow it to prevent noisy tracebacks
+                pass
         
         # Re-raise any exceptions from completed tasks
         for task in done:
@@ -254,7 +343,7 @@ async def _run_deepgram_connection(dg, ws: WebSocket, session: dict) -> None:
         dg_task.cancel()
         client_task.cancel()
         # Re-raise cancellation after cleanup
-        raise
+        pass
 
 
 async def _should_retry_error(error_msg: str, retry_count: int, max_retries: int) -> bool:
@@ -274,7 +363,7 @@ async def _should_retry_error(error_msg: str, retry_count: int, max_retries: int
 async def voice_websocket(ws: WebSocket) -> None:
     await ws.accept()
     sid = id(ws)
-    session: dict = {"selfie": None, "user_id": None, "ready": False}
+    session: dict = {"selfie": None, "selfie_seq": 0, "user_id": None, "ready": False}
 
     try:
         await cache.set(f"{CachePrefix.SESSION}:{sid}", {"connected": True}, ttl=3600)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { getSession } from "@/lib/auth";
 
 interface RecommendedItem {
   id: string;
@@ -46,8 +47,15 @@ export default function RecommendationsCard({
           params.append("temperature", temperature.toString());
         }
 
+        const { data: { session } } = await getSession();
+        const headers: HeadersInit = {};
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/closet/recommendations/quick?${params}`
+          `${process.env.NEXT_PUBLIC_API_URL}/api/closet/recommendations/quick?${params}`,
+          { headers }
         );
 
         if (!response.ok) {

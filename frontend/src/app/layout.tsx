@@ -37,11 +37,7 @@ export default function RootLayout({
       <body className="h-full overflow-hidden">
         <AppProvider>{children}</AppProvider>
 
-        {/* Perfect Corp JS Camera Kit (Disabled to prevent WebAssembly lag)
-        <Script
-          src="https://plugins-media.makeupar.com/v2.2-camera-kit/sdk.js"
-          strategy="afterInteractive"
-        /> */}
+        {/* Perfect Corp JS Camera Kit is dynamically injected by useCameraKit to ensure ymkAsyncInit is ready */}
 
         {/* Service Worker Registration */}
         <Script id="sw-register" strategy="afterInteractive">
