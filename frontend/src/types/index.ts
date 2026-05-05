@@ -136,6 +136,45 @@ export interface AgentInsight {
   toolsUsed: string[];
 }
 
+export interface GlowupRecommendation {
+  category: "makeup" | "hair" | "accessories";
+  title: string;
+  why: string;
+}
+
+export interface GlowupMakeupPreset {
+  id: string;
+  title: string;
+  description: string;
+  best_for: string[];
+  effects: Array<Record<string, unknown>>;
+}
+
+export interface GlowupHairstyle {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+}
+
+export interface GlowupAnalysis {
+  face_attributes: Record<string, unknown>;
+  skin_tone: Record<string, unknown>;
+}
+
+export interface GlowupPlan extends GlowupAnalysis {
+  steps: AgentStep[];
+  insight: string;
+  recommendations: GlowupRecommendation[];
+  tool_calls_made: string[];
+  makeup_presets: GlowupMakeupPreset[];
+  hairstyles: GlowupHairstyle[];
+  accessory_queries: {
+    earrings: string;
+    necklace: string;
+  };
+}
+
 // ── Dashboard ──────────────────────────────────────
 export interface SkinSummary {
   overallScore: number;

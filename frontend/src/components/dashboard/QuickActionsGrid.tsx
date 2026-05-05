@@ -26,9 +26,9 @@ const ACTIONS = [
     color: "#f59e0b",
   },
   {
-    title: "Closet",
-    description: "Outfit memory",
-    href: "/closet",
+    title: "Outfit",
+    description: "Build a proof-ready look",
+    href: "/outfit",
     icon: Shirt,
     color: "#8b5cf6",
   },

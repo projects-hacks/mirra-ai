@@ -23,13 +23,14 @@ export function useCloset() {
   // Fetch closet on user login
   useEffect(() => {
     if (!user) return;
+    const userId = user.id;
 
     async function fetchCloset() {
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from("closet_items")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (!error && data) {

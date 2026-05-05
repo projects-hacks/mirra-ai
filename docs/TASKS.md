@@ -29,6 +29,11 @@
 | Selfie capture flow | `frontend/src/app/capture/page.tsx` + `frontend/src/components/onboarding/SelfieCaptureScreen.tsx` | ✅ |
 | Shared authenticated app shell | `frontend/src/app/(app)/layout.tsx` + `frontend/src/components/navigation/BottomNav.tsx` | ✅ |
 | Dashboard experience wrapper | `frontend/src/components/app/DashboardExperience.tsx` + `frontend/src/app/(app)/dashboard/page.tsx` | ✅ |
+| GlowUp studio page | `frontend/src/app/(app)/glowup/page.tsx` | ✅ |
+| GlowUp orchestrator endpoints | `backend/app/routers/glowup.py` | ✅ |
+| GlowUp makeup presets | `backend/app/data/makeup_presets.py` | ✅ |
+| Outfit builder page | `frontend/src/app/(app)/outfit/page.tsx` | ✅ |
+| Try-On studio page | `frontend/src/app/(app)/try-on/page.tsx` | ✅ |
 | Skin History page (trends, charts) | `frontend/src/app/skin-history/page.tsx` | ✅ |
 | Closet page (grid + upload) | `frontend/src/app/closet/page.tsx` | ✅ |
 | SkinAnalysisCard component | `frontend/src/components/cards/SkinAnalysisCard.tsx` | ✅ |
@@ -328,9 +333,9 @@ The landing page is the first thing judges see. It must feel premium.
 
 This is the "AI Makeover" feature — **the most visually impressive demo moment**.
 
-- [ ] Create `frontend/src/app/(app)/glowup/page.tsx`
+- [x] Create `frontend/src/app/(app)/glowup/page.tsx`
   - **Step 1: Face Analysis** (automatic on page load)
-    - Calls `POST /api/skin/analyze` (face attributes only) if not cached
+    - Calls `POST /api/glowup/analyze` if not cached
     - Shows: face shape, eye shape, proportions
     - "Based on your oval face and warm undertone..."
   - **Step 2: Makeup**
@@ -339,7 +344,7 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
     - Tap to apply → calls `POST /api/vto/makeup` with effects
     - Result overlaid on selfie with smooth transition
   - **Step 3: Hairstyle**
-    - Grid of 6-8 reference hairstyles (celebrity/styled)
+    - Grid of curated reference hairstyles
     - Tap to transfer → calls `POST /api/vto/hair`
     - Before/after toggle
   - **Step 4: Accessories**
@@ -353,9 +358,9 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 
 ### 5.2 GlowUp Backend Orchestrator
 
-- [ ] Create `backend/app/routers/glowup.py`
+- [x] Create `backend/app/routers/glowup.py`
   - `POST /api/glowup/analyze` — runs face-attr + skin-tone in parallel
-  - `POST /api/glowup/recommend` — given face analysis results, return suggested:
+  - `POST /api/glowup/recommend` — accepts either a selfie or normalized face/tone JSON and returns suggested:
     - Makeup effects JSON (shade-matched)
     - Hairstyle reference URLs
     - Accessory product queries
@@ -363,8 +368,8 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 
 ### 5.3 Pre-configured Makeup Looks
 
-- [ ] Create `backend/app/data/makeup_presets.py`
-  - 4-6 preset looks: "Natural Glow", "Evening Glam", "Bold Lip", "Smoky Eye"
+- [x] Create `backend/app/data/makeup_presets.py`
+  - 4 preset looks: "Natural Glow", "Evening Glam", "Bold Lip", "Smoky Eye"
   - Each preset: list of makeup effects (lip color, eye shadow, blush, foundation)
   - AI picks which presets work for the user's skin tone/undertone
   - These are the effects arrays passed to `try_on_makeup`
@@ -375,7 +380,7 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 
 ### 6.1 Occasion Matcher Page (`/outfit`)
 
-- [ ] Create `frontend/src/app/(app)/outfit/page.tsx`
+- [x] Create `frontend/src/app/(app)/outfit/page.tsx`
   - **Occasion Selector** — grid of occasions:
     - Board Meeting, Date Night, Casual Friday, Workout, Wedding Guest, Beach Day
   - On select:
@@ -394,9 +399,9 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 
 ### 6.2 Reuse existing closet page
 
-- [ ] The existing `/closet/page.tsx` already has grid + upload
-- [ ] Ensure it's accessible from the bottom nav
-- [ ] Link from outfit page: "Manage Closet →"
+- [x] The existing `/closet/page.tsx` already has grid + upload
+- [x] Ensure it's accessible from the bottom nav
+- [x] Link from outfit page: "Manage Closet →"
 
 ---
 
@@ -404,8 +409,8 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 
 ### 7.1 VTO Studio Page (`/try-on`)
 
-- [ ] Create `frontend/src/app/(app)/try-on/page.tsx`
-  - **Category tabs**: Clothes, Makeup, Hair, Earrings, Necklace
+- [x] Create `frontend/src/app/(app)/try-on/page.tsx`
+  - **Category tabs**: Clothes, Makeup, Hair, Accessories
   - **Clothes tab**:
     - URL input: paste a product image URL → try on
     - Or: search products → tap to try on

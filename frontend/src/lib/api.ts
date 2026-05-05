@@ -1,6 +1,6 @@
 import { API_URL, ApiRoutes } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
-import type { AgentInsight, Product, SkinSummary, WeatherInfo } from "@/types";
+import type { AgentInsight, GlowupAnalysis, GlowupPlan, Product, SkinSummary, WeatherInfo } from "@/types";
 
 export interface RetryOptions {
   maxRetries?: number;
@@ -381,11 +381,23 @@ export const outfitApi = {
 };
 
 export const glowupApi = {
+  analyze: (selfie: Blob) => {
+    const form = formWithSelfie(selfie);
+    return fetchWithFormData<GlowupAnalysis>(ApiRoutes.GLOWUP_ANALYZE, form);
+  },
+
   recommend: (selfie: Blob) => {
     const form = formWithSelfie(selfie);
-    return fetchWithFormData<AgentInsight & Record<string, unknown>>(
+    return fetchWithFormData<GlowupPlan>(
       ApiRoutes.GLOWUP_RECOMMEND,
       form
     );
+  },
+
+  recommendFromAnalysis: (faceAttributes: Record<string, unknown>, skinTone: Record<string, unknown>) => {
+    const form = new FormData();
+    form.append("face_attributes_json", JSON.stringify(faceAttributes));
+    form.append("skin_tone_json", JSON.stringify(skinTone));
+    return fetchWithFormData<GlowupPlan>(ApiRoutes.GLOWUP_RECOMMEND, form);
   },
 };

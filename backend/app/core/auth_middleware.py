@@ -47,6 +47,7 @@ PUBLIC_PATHS: Set[str] = {
     "/api/vto/necklace",
     "/api/vto/hair",
     "/api/products/search",
+    "/api/glowup/analyze",
     "/api/glowup/recommend",
 }
 
