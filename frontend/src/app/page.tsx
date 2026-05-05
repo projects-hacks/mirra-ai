@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 const FEATURE_CARDS = [
@@ -27,46 +26,11 @@ const FEATURE_CARDS = [
 export default function LandingPage() {
   const router = useRouter();
   const { user, signIn, loading } = useAuth();
-  const [redirecting, setRedirecting] = useState(false);
-
-  useEffect(() => {
-    const userId = user?.id;
-    if (loading || !userId) return;
-    const authenticatedUserId: string = userId;
-
-    let cancelled = false;
-
-    async function routeAuthenticatedUser() {
-      setRedirecting(true);
-      try {
-        const supabase = getSupabase();
-        const { data } = await supabase
-          .from("profiles")
-          .select("onboarded")
-          .eq("id", authenticatedUserId)
-          .single();
-
-        const isOnboarded = (data as { onboarded?: boolean } | null)?.onboarded ?? false;
-        if (!cancelled) {
-          router.replace(isOnboarded ? "/dashboard" : "/capture");
-        }
-      } catch {
-        if (!cancelled) {
-          router.replace("/capture");
-        }
-      }
-    }
-
-    void routeAuthenticatedUser();
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, router, user?.id]);
 
   const ctaLabel = useMemo(() => {
     if (loading) return "Checking session...";
-    if (user) return "Continue To Capture";
-    return "Get Started";
+    if (user) return "Start Capture";
+    return "Try Now";
   }, [loading, user]);
 
   return (
@@ -107,7 +71,7 @@ export default function LandingPage() {
                       void signIn();
                     }
                   }}
-                  disabled={loading || redirecting}
+                  disabled={loading}
                   className="rounded-full bg-[#1e293b] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(24,33,43,0.18)] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
                 >
                   {ctaLabel}
