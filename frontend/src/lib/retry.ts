@@ -9,13 +9,13 @@
  * Delays execution until after wait milliseconds have elapsed
  * since the last time it was invoked
  */
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
+export function debounce<Args extends unknown[], Return>(
+  func: (...args: Args) => Return,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: Args) => void {
   let timeout: NodeJS.Timeout | null = null;
 
-  return function executedFunction(...args: Parameters<T>) {
+  return function executedFunction(...args: Args) {
     const later = () => {
       timeout = null;
       func(...args);
@@ -32,13 +32,13 @@ export function debounce<T extends (...args: any[]) => any>(
  * Throttle function
  * Ensures function is called at most once per specified time period
  */
-export function throttle<T extends (...args: any[]) => any>(
-  func: T,
+export function throttle<Args extends unknown[], Return>(
+  func: (...args: Args) => Return,
   limit: number
-): (...args: Parameters<T>) => void {
+): (...args: Args) => void {
   let inThrottle: boolean;
 
-  return function executedFunction(...args: Parameters<T>) {
+  return function executedFunction(...args: Args) {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;

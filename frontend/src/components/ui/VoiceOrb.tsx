@@ -48,7 +48,10 @@ export default function VoiceOrb({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div
+      className="fixed left-1/2 z-[var(--z-orb)] flex -translate-x-1/2 flex-col items-center gap-2"
+      style={{ bottom: "var(--orb-bottom)" }}
+    >
       <button
         onClick={onClick}
         disabled={disabled}
@@ -56,17 +59,26 @@ export default function VoiceOrb({
         style={{
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? "not-allowed" : "pointer",
+          boxShadow: "0 16px 42px rgba(26, 28, 30, 0.2)",
         }}
         aria-label={isListening ? "Stop listening" : "Start listening"}
       >
-        {renderIcon()}
+        <span
+          className="absolute inset-[-10px] rounded-full"
+          aria-hidden="true"
+        />
+        <span className="relative z-10">{renderIcon()}</span>
       </button>
 
       <span
-        className="text-xs font-medium"
+        className="rounded-full px-3 py-1 text-xs font-medium"
         style={{
-          color: error ? "var(--error)" : "rgba(255,255,255,0.7)",
-          textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+          color: error ? "var(--error)" : "var(--on-surface)",
+          background: "rgba(255, 255, 255, 0.72)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          border: "1px solid rgba(255,255,255,0.56)",
+          boxShadow: "0 8px 24px rgba(26, 28, 30, 0.08)",
         }}
       >
         {label}

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -714,7 +715,7 @@ export default function ItemDetailModal({
               Delete Item?
             </h3>
             <p style={{ color: 'var(--on-surface-variant)' }} className="mb-6">
-              Are you sure you want to delete "{item?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{item?.name}&quot;? This action cannot be undone.
             </p>
             <div className="flex gap-2">
               <button

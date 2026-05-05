@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -26,6 +27,8 @@ interface ExtractedMetadata {
 }
 
 type CaptureMode = "camera" | "upload" | null;
+const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 /**
  * Photo Upload Modal Component
@@ -50,25 +53,6 @@ export default function PhotoUploadModal({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
-  // Supported file types
-  const SUPPORTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-
-
-  // Handle Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleClose();
-      }
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isOpen]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -95,8 +79,13 @@ export default function PhotoUploadModal({
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
-      cleanup();
+      const timeoutId = window.setTimeout(() => {
+        cleanup();
+      }, 0);
       document.body.style.overflow = '';
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
     return () => {
       document.body.style.overflow = '';
@@ -108,6 +97,19 @@ export default function PhotoUploadModal({
     cleanup();
     onClose();
   }, [cleanup, onClose]);
+
+  // Handle Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [handleClose, isOpen]);
 
   // Validate file
   const validateFile = useCallback((file: File): string | null => {

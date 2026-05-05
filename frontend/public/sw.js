@@ -61,17 +61,16 @@ globalThis.addEventListener("activate", (event) => {
 
 // ── Fetch Event ────────────────────────────────────
 globalThis.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const url = new URL(event.request.url);
 
   // Skip non-cacheable requests
-  if (shouldBypassCache(url, request)) return;
+  if (shouldBypassCache(url)) return;
 
-  event.respondWith(routeRequest(request, url));
+  event.respondWith(routeRequest(event.request, url));
 });
 
 /** Determine if a request should bypass the service worker entirely */
-function shouldBypassCache(url, request) {
+function shouldBypassCache(url) {
   return (
     url.protocol === "chrome-extension:" ||
     url.pathname.includes("/auth/callback") ||

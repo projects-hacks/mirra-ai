@@ -127,10 +127,10 @@ export default function FeatureMenu() {
         aria-label="Open feature menu"
         aria-expanded={isVisible}
         aria-controls="feature-menu-panel"
-        className="fixed z-40 glass-card p-3 transition-all duration-200 hover:scale-105 active:scale-95"
+        className="fixed z-[var(--z-nav)] glass-card p-3 transition-all duration-200 hover:scale-105 active:scale-95"
         style={{
-          top: "max(1rem, env(safe-area-inset-top))",
-          left: "max(1rem, env(safe-area-inset-left))",
+          top: "calc(var(--safe-top) + 1rem)",
+          left: "max(1rem, var(--safe-left))",
           minWidth: "44px",
           minHeight: "44px",
           WebkitTapHighlightColor: "transparent",
@@ -149,7 +149,7 @@ export default function FeatureMenu() {
           {/* Backdrop */}
           <button
             type="button"
-            className="fixed inset-0 z-40 transition-opacity duration-300"
+            className="fixed inset-0 z-[var(--z-cards)] transition-opacity duration-300"
             style={{
               background: "rgba(0, 0, 0, 0.2)",
               backdropFilter: "blur(4px)",
@@ -166,14 +166,14 @@ export default function FeatureMenu() {
             aria-label="Available features"
             className="fixed top-0 left-0 right-0 z-40 max-h-[80vh] overflow-y-auto"
             style={{
-              paddingTop: "max(1rem, env(safe-area-inset-top))",
-              paddingLeft: "env(safe-area-inset-left)",
-              paddingRight: "env(safe-area-inset-right)",
+              paddingTop: "calc(var(--safe-top) + 0.75rem)",
+              paddingLeft: "var(--safe-left)",
+              paddingRight: "var(--safe-right)",
               animation: "slide-down 0.3s ease-in-out",
             }}
           >
             <div
-              className="glass-card mx-4 mt-16 mb-4 p-6 space-y-6"
+              className="glass-card page-shell mx-auto mt-16 mb-4 space-y-6 p-5 sm:p-6"
               style={{
                 backdropFilter: "blur(24px)",
                 WebkitBackdropFilter: "blur(24px)",

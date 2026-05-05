@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // ── Props Interface ─────────────────────────────────
 interface CameraPermissionScreenProps {
@@ -68,53 +68,7 @@ export function CameraPermissionScreen({
   const [isRequesting, setIsRequesting] = useState(false);
   const [browser] = useState(getBrowserName());
 
-  // Check initial permission state
-  useEffect(() => {
-    checkPermissionState();
-  }, []);
-
-  const checkPermissionState = async () => {
-    try {
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setError("Camera access is not supported in this browser.");
-        setPermissionState("denied");
-        return;
-      }
-
-      // Try to query permission state (not supported in all browsers)
-      if (navigator.permissions?.query) {
-        try {
-          const result = await navigator.permissions.query({
-            name: "camera" as PermissionName,
-          });
-          
-          setPermissionState(result.state as "prompt" | "granted" | "denied");
-          
-          if (result.state === "granted") {
-            // Verify camera is actually accessible
-            await requestCameraPermission();
-          }
-          
-          // Listen for permission changes
-          result.addEventListener("change", () => {
-            setPermissionState(result.state as "prompt" | "granted" | "denied");
-          });
-        } catch {
-          // Permission query not supported, default to prompt
-          setPermissionState("prompt");
-        }
-      } else {
-        // Permissions API not supported, default to prompt
-        setPermissionState("prompt");
-      }
-    } catch (err) {
-      console.error("Error checking permission state:", err);
-      setPermissionState("prompt");
-    }
-  };
-
-  const requestCameraPermission = async () => {
+  const requestCameraPermission = useCallback(async () => {
     setIsRequesting(true);
     setError(null);
 
@@ -130,7 +84,7 @@ export function CameraPermissionScreen({
 
       // Permission granted - stop the stream and notify parent
       stream.getTracks().forEach((track) => track.stop());
-      
+
       setPermissionState("granted");
       onPermissionGranted();
     } catch (err) {
@@ -139,7 +93,7 @@ export function CameraPermissionScreen({
       // Handle different error types
       if (err instanceof Error) {
         const errorName = err.name;
-        
+
         if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
           setPermissionState("denied");
           setError("Camera access was denied. Please enable camera access to continue.");
@@ -171,7 +125,57 @@ export function CameraPermissionScreen({
         onPermissionDenied();
       }
     }
-  };
+  }, [onPermissionDenied, onPermissionGranted]);
+
+  const checkPermissionState = useCallback(async () => {
+    try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Camera access is not supported in this browser.");
+        setPermissionState("denied");
+        return;
+      }
+
+      // Try to query permission state (not supported in all browsers)
+      if (navigator.permissions?.query) {
+        try {
+          const result = await navigator.permissions.query({
+            name: "camera" as PermissionName,
+          });
+
+          setPermissionState(result.state as "prompt" | "granted" | "denied");
+
+          if (result.state === "granted") {
+            // Verify camera is actually accessible
+            await requestCameraPermission();
+          }
+
+          // Listen for permission changes
+          result.addEventListener("change", () => {
+            setPermissionState(result.state as "prompt" | "granted" | "denied");
+          });
+        } catch {
+          // Permission query not supported, default to prompt
+          setPermissionState("prompt");
+        }
+      } else {
+        // Permissions API not supported, default to prompt
+        setPermissionState("prompt");
+      }
+    } catch (err) {
+      console.error("Error checking permission state:", err);
+      setPermissionState("prompt");
+    }
+  }, [requestCameraPermission]);
+
+  // Check initial permission state
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void checkPermissionState();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [checkPermissionState]);
 
   const handleRetry = () => {
     setError(null);

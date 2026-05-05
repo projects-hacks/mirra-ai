@@ -21,7 +21,7 @@ export default function OfflineIndicator() {
     >
       <div className="flex items-center justify-center gap-2">
         <span className="material-symbols-outlined text-sm">cloud_off</span>
-        <span>You're offline. Some features may not be available.</span>
+        <span>You&apos;re offline. Some features may not be available.</span>
       </div>
     </div>
   );

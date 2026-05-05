@@ -21,7 +21,7 @@ function CalendarPromptScreen() {
           Connect Your Calendar
         </h2>
         <p className="text-sm mb-6" style={{ color: "var(--on-surface-variant)" }}>
-          Want to connect your calendar so I know what's coming up?
+          Want to connect your calendar so I know what&apos;s coming up?
         </p>
         <div className="flex gap-3">
           <button onClick={skipCalendar} className="btn-secondary flex-1">
@@ -128,7 +128,7 @@ function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
           All Set!
         </h2>
         <p className="text-sm mb-4" style={{ color: "var(--on-surface-variant)" }}>
-          Got it. Let's build your first look.
+          Got it. Let&apos;s build your first look.
         </p>
         {isCompleting && (
           <div className="flex items-center justify-center gap-2 text-xs" style={{ color: "var(--on-surface-muted)" }}>

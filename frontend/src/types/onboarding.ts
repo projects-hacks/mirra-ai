@@ -52,7 +52,7 @@ export interface FaceShape {
   shape: string;
   age?: number | null;
   gender?: string | null;
-  facial_ratios?: Record<string, any>;
+  facial_ratios?: Record<string, unknown>;
   eye_shape?: string | null;
   eye_size?: string | null;
   eyelid_type?: string | null;

@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   getAllCategories,
   getAllOccasions,
@@ -32,7 +33,7 @@ interface ExtractedMetadata {
   confidence_scores?: Record<string, number>;
 }
 
-interface ClosetItemMetadata {
+export interface ClosetItemMetadata {
   name: string;
   category: string;
   subcategory?: string;
@@ -54,6 +55,35 @@ const CATEGORIES = getAllCategories();
 const OCCASIONS = getAllOccasions();
 const SEASONS = getAllSeasons();
 
+function createInitialFormData(
+  initialMetadata: ExtractedMetadata | null
+): ClosetItemMetadata {
+  if (!initialMetadata) {
+    return {
+      name: "",
+      category: "",
+      color: "",
+      color_hex: "#000000",
+      occasions: [],
+      seasons: [],
+    };
+  }
+
+  return {
+    name: initialMetadata.subcategory || initialMetadata.category || "",
+    category: initialMetadata.category || "",
+    subcategory: initialMetadata.subcategory,
+    color: initialMetadata.primary_color || "",
+    color_hex: initialMetadata.color_hex || "#000000",
+    brand: initialMetadata.brand,
+    material: initialMetadata.material,
+    pattern: initialMetadata.pattern,
+    formality: initialMetadata.formality,
+    occasions: initialMetadata.occasions || [],
+    seasons: initialMetadata.seasons || [],
+  };
+}
+
 /**
  * Metadata Form Component
  * Allows users to review and edit AI-extracted metadata before saving closet items
@@ -65,39 +95,15 @@ export default function MetadataForm({
   onSubmit,
   onCancel,
 }: Readonly<MetadataFormProps>) {
-  const [formData, setFormData] = useState<ClosetItemMetadata>({
-    name: "",
-    category: "",
-    color: "",
-    color_hex: "#000000",
-    occasions: [],
-    seasons: [],
-  });
+  const [formData, setFormData] = useState<ClosetItemMetadata>(() =>
+    createInitialFormData(initialMetadata)
+  );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Pre-fill form with extracted metadata
-  useEffect(() => {
-    if (initialMetadata) {
-      setFormData({
-        name: initialMetadata.subcategory || initialMetadata.category || "",
-        category: initialMetadata.category || "",
-        subcategory: initialMetadata.subcategory,
-        color: initialMetadata.primary_color || "",
-        color_hex: initialMetadata.color_hex || "#000000",
-        brand: initialMetadata.brand,
-        material: initialMetadata.material,
-        pattern: initialMetadata.pattern,
-        formality: initialMetadata.formality,
-        occasions: initialMetadata.occasions || [],
-        seasons: initialMetadata.seasons || [],
-      });
-    }
-  }, [initialMetadata]);
-
   // Handle input changes
   const handleChange = useCallback(
-    (field: keyof ClosetItemMetadata, value: any) => {
+    (field: keyof ClosetItemMetadata, value: ClosetItemMetadata[keyof ClosetItemMetadata]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
       // Clear error for this field
       if (errors[field]) {

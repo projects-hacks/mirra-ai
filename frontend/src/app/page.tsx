@@ -163,7 +163,7 @@ export default function HomePage() {
   // Show main interface if authenticated and onboarded
   return (
     <ErrorBoundary>
-      <div className="relative h-full w-full overflow-hidden">
+      <div className="relative h-[100dvh] w-full overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.55),transparent_35%)]">
       {/* Layer 0: Camera / Selfie / VTO */}
       <CameraLayer
         containerRef={containerRef}
@@ -198,15 +198,12 @@ export default function HomePage() {
         onRecapture={handleRecapture}
       />
 
-      {/* Layer 2 Bottom: Voice Orb */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
-        <VoiceOrb
-          isListening={voice.isListening}
-          isConnecting={voice.isConnecting}
-          error={voice.error}
-          onClick={handleVoiceToggle}
-        />
-      </div>
+      <VoiceOrb
+        isListening={voice.isListening}
+        isConnecting={voice.isConnecting}
+        error={voice.error}
+        onClick={handleVoiceToggle}
+      />
       </div>
     </ErrorBoundary>
   );

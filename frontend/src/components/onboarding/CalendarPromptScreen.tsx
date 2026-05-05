@@ -38,7 +38,7 @@ export function CalendarPromptScreen({ onConnect, onSkip }: Readonly<CalendarPro
           <div className="text-4xl mb-2">📅</div>
           <h2 className="text-2xl font-bold text-white">Connect Your Calendar</h2>
           <p className="text-sm text-white/80">
-            Want to connect your calendar so I know what's coming up?
+            Want to connect your calendar so I know what&apos;s coming up?
           </p>
         </div>
 

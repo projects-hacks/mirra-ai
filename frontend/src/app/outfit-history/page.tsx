@@ -11,14 +11,25 @@ interface OutfitLog {
   id: string;
   proof_card_id: string | null;
   occasion: string;
-  weather: any;
-  items: any[];
+  weather: OutfitWeather | null;
+  items: OutfitItem[];
   outcome: 'pending' | 'wore' | 'skipped' | 'returned' | 'loved';
   rating: number | null;
   feedback: string | null;
   compliments: boolean;
   photos: string[];
   created_at: string;
+}
+
+interface OutfitWeather {
+  temperature?: number;
+  condition?: string;
+}
+
+interface OutfitItem {
+  name?: string;
+  category?: string;
+  brand?: string;
 }
 
 interface OutfitSummary {
@@ -117,52 +128,6 @@ export default function OutfitHistoryPage() {
 
     fetchData();
   }, [userId, router]);
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  // Get outcome badge color
-  const getOutcomeBadgeClass = (outcome: string) => {
-    switch (outcome) {
-      case 'wore':
-        return 'bg-green-500/20 text-green-300 border-green-500/30';
-      case 'loved':
-        return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-      case 'skipped':
-        return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-      case 'returned':
-        return 'bg-red-500/20 text-red-300 border-red-500/30';
-      case 'pending':
-        return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-    }
-  };
-
-  // Get outcome icon
-  const getOutcomeIcon = (outcome: string) => {
-    switch (outcome) {
-      case 'wore':
-        return 'check_circle';
-      case 'loved':
-        return 'favorite';
-      case 'skipped':
-        return 'cancel';
-      case 'returned':
-        return 'undo';
-      case 'pending':
-        return 'schedule';
-      default:
-        return 'help';
-    }
-  };
 
   // Calculate date range
   const getDateRange = (range: string): { start: string | null; end: string | null } => {

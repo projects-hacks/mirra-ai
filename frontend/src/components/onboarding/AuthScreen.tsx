@@ -9,9 +9,10 @@ interface AuthScreenProps {
   onError: (error: Error) => void;
 }
 
-export function AuthScreen({ onAuthComplete, onError }: Readonly<AuthScreenProps>) {
+export function AuthScreen({ onAuthComplete: _onAuthComplete, onError }: Readonly<AuthScreenProps>) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  void _onAuthComplete;
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);

@@ -15,14 +15,28 @@ interface ProofCard {
   tone_match: number;
   style_fit: number;
   skin_safe: boolean;
-  owned_items: any[];
-  new_items: any[];
+  owned_items: ProofCardItem[];
+  new_items: ProofCardItem[];
   total_cost: number;
   approved: boolean;
   result_image_url: string;
-  weather: any;
+  weather: WeatherSnapshot | null;
   calendar_event: string;
   created_at: string;
+}
+
+interface ProofCardItem {
+  id?: string;
+  name?: string;
+  category?: string;
+  brand?: string;
+  price?: number;
+  url?: string;
+}
+
+interface WeatherSnapshot {
+  temperature?: number;
+  condition?: string;
 }
 
 export default function LookDiaryPage() {
@@ -94,16 +108,6 @@ export default function LookDiaryPage() {
     fetchProofCards();
   }, [userId, router]);
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
   // Calculate date range
   const getDateRange = (range: string): { start: string | null; end: string | null } => {
     const now = new Date();
@@ -163,8 +167,6 @@ export default function LookDiaryPage() {
     filteredCards.forEach((card) => {
       const date = new Date(card.created_at);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthLabel = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
       if (!groups[monthKey]) {
         groups[monthKey] = [];
       }
@@ -363,9 +365,22 @@ export default function LookDiaryPage() {
                         created_at: card.created_at,
                         tone_match_score: card.tone_match / 100,
                         style_fit_score: card.style_fit / 100,
-                        owned_items: card.owned_items,
-                        new_items: card.new_items,
-                        weather: card.weather,
+                        owned_items: card.owned_items.map((item, index) => ({
+                          id: item.id ?? `${card.id}-owned-${index}`,
+                          name: item.name ?? 'Closet item',
+                          category: item.category ?? 'unknown',
+                        })),
+                        new_items: card.new_items.map((item) => ({
+                          name: item.name ?? 'Recommended item',
+                          price: item.price ?? 0,
+                          url: item.url ?? '',
+                        })),
+                        weather: card.weather
+                          ? {
+                              temperature: card.weather.temperature ?? 0,
+                              condition: card.weather.condition ?? 'Unknown',
+                            }
+                          : undefined,
                         calendar_event: typeof card.calendar_event === 'string' 
                           ? undefined 
                           : card.calendar_event,

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -82,8 +83,14 @@ export function SelfieCaptureScreen({
   }, [mapCameraError, stopCamera]);
 
   useEffect(() => {
-    initCamera();
-    return () => stopCamera();
+    const timeoutId = window.setTimeout(() => {
+      void initCamera();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      stopCamera();
+    };
   }, [initCamera, stopCamera]);
 
   const handleCapture = useCallback(() => {

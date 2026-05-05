@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 interface ProgressiveImageProps {
@@ -15,12 +15,7 @@ interface ProgressiveImageProps {
   objectFit?: 'contain' | 'cover';
 }
 
-/**
- * Progressive Image Component
- * Loads images progressively with blur placeholder
- * Optimized for mobile with lazy loading
- */
-export default function ProgressiveImage({
+function ProgressiveImageInner({
   src,
   alt,
   width,
@@ -33,12 +28,6 @@ export default function ProgressiveImage({
 }: ProgressiveImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  // Reset loading state when src changes
-  useEffect(() => {
-    setIsLoading(true);
-    setError(false);
-  }, [src]);
 
   if (error) {
     return (
@@ -55,7 +44,6 @@ export default function ProgressiveImage({
 
   return (
     <div className={`relative ${className}`} style={!fill ? { width, height } : undefined}>
-      {/* Blur placeholder */}
       {isLoading && (
         <div
           className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_100%]"
@@ -63,7 +51,6 @@ export default function ProgressiveImage({
         />
       )}
 
-      {/* Actual image */}
       <Image
         src={src}
         alt={alt}
@@ -87,10 +74,10 @@ export default function ProgressiveImage({
   );
 }
 
-/**
- * Progressive Image with Thumbnail
- * Loads thumbnail first, then full image
- */
+export default function ProgressiveImage(props: ProgressiveImageProps) {
+  return <ProgressiveImageInner key={props.src} {...props} />;
+}
+
 interface ProgressiveImageWithThumbnailProps extends ProgressiveImageProps {
   thumbnailSrc?: string;
 }
@@ -108,20 +95,22 @@ export function ProgressiveImageWithThumbnail({
   objectFit = 'cover',
 }: ProgressiveImageWithThumbnailProps) {
   const [currentSrc, setCurrentSrc] = useState(thumbnailSrc || src);
-  const [isFullImageLoaded, setIsFullImageLoaded] = useState(false);
+  const [isFullImageLoaded, setIsFullImageLoaded] = useState(!thumbnailSrc);
 
   useEffect(() => {
     if (!thumbnailSrc) {
-      setIsFullImageLoaded(true);
       return;
     }
 
-    // Preload full image
     const img = new window.Image();
     img.src = src;
     img.onload = () => {
       setCurrentSrc(src);
       setIsFullImageLoaded(true);
+    };
+
+    return () => {
+      img.onload = null;
     };
   }, [src, thumbnailSrc]);
 

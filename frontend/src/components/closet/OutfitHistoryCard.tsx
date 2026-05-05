@@ -1,14 +1,28 @@
 'use client';
 
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @next/next/no-img-element */
+
 import { useState } from 'react';
+
+interface OutfitWeather {
+  temperature?: number;
+  condition?: string;
+}
+
+interface OutfitItem {
+  name?: string;
+  category?: string;
+  brand?: string;
+}
 
 interface OutfitHistoryCardProps {
   log: {
     id: string;
     proof_card_id: string | null;
     occasion: string;
-    weather: any;
-    items: any[];
+    weather: OutfitWeather | null;
+    items: OutfitItem[];
     outcome: 'pending' | 'wore' | 'skipped' | 'returned' | 'loved';
     rating: number | null;
     feedback: string | null;

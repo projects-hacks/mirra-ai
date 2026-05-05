@@ -122,8 +122,9 @@ export const SKIN_CONCERNS: Array<{ key: string; label: string }> = [
  */
 export function processSkinScores(
   scores: Record<string, number> | SkinAnalysis,
-  _previousScores?: Record<string, number> | SkinAnalysis
+  previousScores?: Record<string, number> | SkinAnalysis
 ): SkinConcern[] {
+  void previousScores;
   const scoresObj = scores as Record<string, number>;
 
   return SKIN_CONCERNS.map(({ key, label }) => {

@@ -26,7 +26,17 @@ export function useAuth() {
   const { user } = useAppState();
   const channelRef = useRef<BroadcastChannel | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTokenRef = useRef<() => Promise<void>>(async () => {});
   const [loading, setLoading] = useState(true);
+
+  // ── 17.4: BroadcastChannel helpers ────────────────────
+  const broadcast = useCallback((msg: AuthBroadcast) => {
+    try {
+      channelRef.current?.postMessage(msg);
+    } catch {
+      // BroadcastChannel may not be available in some contexts
+    }
+  }, []);
 
   // ── 17.1: Schedule proactive token refresh 5 min before expiry ──
   const scheduleTokenRefresh = useCallback((expiresAt: number | undefined) => {
@@ -42,14 +52,14 @@ export function useAuth() {
 
     if (refreshInMs <= 0) {
       // Token already close to expiry — refresh immediately
-      refreshToken();
+      void refreshTokenRef.current();
       return;
     }
 
     refreshTimerRef.current = setTimeout(() => {
-      refreshToken();
+      void refreshTokenRef.current();
     }, refreshInMs);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const refreshToken = useCallback(async () => {
     const { data, error } = await refreshSession();
@@ -68,16 +78,13 @@ export function useAuth() {
     const mapped = mapUser(data.session.user);
     broadcast({ event: "TOKEN_REFRESHED", user: mapped });
     scheduleTokenRefresh(data.session.expires_at);
-  }, [dispatch, scheduleTokenRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [broadcast, dispatch, scheduleTokenRefresh]);
 
-  // ── 17.4: BroadcastChannel helpers ────────────────────
-  function broadcast(msg: AuthBroadcast) {
-    try {
-      channelRef.current?.postMessage(msg);
-    } catch { /* BroadcastChannel may not be available in some contexts */ }
-  }
+  useEffect(() => {
+    refreshTokenRef.current = refreshToken;
+  }, [refreshToken]);
 
-  function handleBroadcast(msg: AuthBroadcast) {
+  const handleBroadcast = useCallback((msg: AuthBroadcast) => {
     switch (msg.event) {
       case "SIGNED_IN":
         dispatch({ type: "SET_USER", payload: msg.user });
@@ -91,7 +98,7 @@ export function useAuth() {
         dispatch({ type: "SET_USER", payload: msg.user });
         break;
     }
-  }
+  }, [dispatch]);
 
   // ── Main effect: init auth, cross-tab channel, refresh timer ──
   useEffect(() => {
@@ -146,7 +153,7 @@ export function useAuth() {
       channelRef.current?.close();
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  }, [dispatch, scheduleTokenRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [broadcast, dispatch, handleBroadcast, scheduleTokenRefresh]);
 
   // ── signInWithGoogle ───────────────────────────────────
   const signIn = useCallback(async () => {
@@ -169,7 +176,7 @@ export function useAuth() {
     dispatch({ type: "RESET" });
     localStorage.clear();
     if (typeof globalThis.window !== "undefined") globalThis.location.href = "/";
-  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [broadcast, dispatch]);
 
   return {
     user,

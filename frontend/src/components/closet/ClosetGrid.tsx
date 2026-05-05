@@ -7,26 +7,28 @@ import CategoryFilter from "./CategoryFilter";
 import { getAllOccasions, getAllSeasons, FORMALITY_MIN, FORMALITY_MAX } from "@/lib/closet-constants";
 
 interface ClosetGridProps {
-  items: Array<{
-    id: string;
-    name: string;
-    category: string;
-    color: string;
-    imageUrl: string;
-    brand?: string;
-    purchasePrice?: number;
-    timesWorn?: number;
-    lastWorn?: string;
-    occasions?: string[];
-    seasons?: string[];
-    formality?: number;
-    createdAt?: string;
-  }>;
+  items: ClosetGridItem[];
   onAddItem?: () => void;
-  onSelectItem?: (item: any) => void;
+  onSelectItem?: (item: ClosetGridItem) => void;
   selectionMode?: boolean;
   selectedItems?: Set<string>;
   onToggleSelect?: (itemId: string) => void;
+}
+
+interface ClosetGridItem {
+  id: string;
+  name: string;
+  category: string;
+  color: string;
+  imageUrl: string;
+  brand?: string;
+  purchasePrice?: number;
+  timesWorn?: number;
+  lastWorn?: string;
+  occasions?: string[];
+  seasons?: string[];
+  formality?: number;
+  createdAt?: string;
 }
 
 type SortOption = "recent" | "worn" | "cpw" | "alpha" | "most_worn";
@@ -65,6 +67,7 @@ const ClosetGrid = memo(function ClosetGrid({
   });
   
   const parentRef = useRef<HTMLDivElement>(null);
+  const [columnCount, setColumnCount] = useState(4);
 
   // Load preferences from session storage
   useEffect(() => {
@@ -73,6 +76,23 @@ const ClosetGrid = memo(function ClosetGrid({
     
     if (savedSort) setSortBy(savedSort as SortOption);
     if (savedFilters) setFilters(JSON.parse(savedFilters));
+  }, []);
+
+  useEffect(() => {
+    const syncColumns = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setColumnCount(2);
+      } else if (width < 1024) {
+        setColumnCount(3);
+      } else {
+        setColumnCount(4);
+      }
+    };
+
+    syncColumns();
+    window.addEventListener("resize", syncColumns);
+    return () => window.removeEventListener("resize", syncColumns);
   }, []);
 
   // Save preferences to session storage
@@ -184,8 +204,7 @@ const ClosetGrid = memo(function ClosetGrid({
   // Use virtualization only for large lists (>50 items)
   const useVirtualization = sortedItems.length > 50;
 
-  // Setup virtualizer for grid (4 columns)
-  const columnCount = 4;
+  // Setup virtualizer for responsive grid
   const rowCount = Math.ceil(sortedItems.length / columnCount);
 
   const rowVirtualizer = useVirtualizer({
@@ -221,14 +240,11 @@ const ClosetGrid = memo(function ClosetGrid({
     <div className="w-full">
       {/* Header */}
       <div className="mb-8">
-        <h1
-          className="font-h1 text-h1 mb-2"
-          style={{ color: "var(--primary)" }}
-        >
+        <h1 className="mb-2 text-3xl font-semibold tracking-tight sm:text-4xl" style={{ color: "var(--primary)", fontFamily: "var(--font-serif)" }}>
           Digital Closet
         </h1>
         <p
-          className="font-body-lg text-body-lg max-w-2xl"
+          className="max-w-2xl text-sm sm:text-base"
           style={{ color: "var(--on-surface-variant)" }}
         >
           Manage your collection. Mix, match, and discover new combinations with
@@ -244,7 +260,7 @@ const ClosetGrid = memo(function ClosetGrid({
       />
 
       {/* Search and Sort Controls */}
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row">
         {/* Search Input */}
         <div className="flex-1 relative">
           <span
@@ -264,7 +280,7 @@ const ClosetGrid = memo(function ClosetGrid({
         </div>
 
         {/* Sort Dropdown */}
-        <div className="relative min-w-[200px]">
+        <div className="relative min-w-[200px] lg:w-[240px]">
           <span
             className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px]"
             style={{ color: "var(--on-surface-variant)" }}
@@ -325,7 +341,7 @@ const ClosetGrid = memo(function ClosetGrid({
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {/* Color Filter */}
             <div>
               <label
@@ -459,8 +475,8 @@ const ClosetGrid = memo(function ClosetGrid({
       {sortedItems.length > 0 ? (
         <div
           ref={parentRef}
-          className="h-[calc(100vh-300px)] overflow-auto"
-          style={{ contain: "strict" }}
+          className={useVirtualization ? "overflow-auto" : ""}
+          style={useVirtualization ? { contain: "strict", maxHeight: "min(70vh, calc(100dvh - 20rem))" } : undefined}
         >
           {useVirtualization ? (
             // Virtualized grid for large lists
@@ -490,7 +506,10 @@ const ClosetGrid = memo(function ClosetGrid({
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div
+                      className="grid gap-4"
+                      style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+                    >
                       {rowItems.map((item) => (
                         <ClosetItemCard
                           key={item.id}
@@ -508,7 +527,10 @@ const ClosetGrid = memo(function ClosetGrid({
             </div>
           ) : (
             // Regular grid for small lists
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div
+              className="grid gap-4 sm:gap-5"
+              style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+            >
               {sortedItems.map((item) => (
                 <ClosetItemCard
                   key={item.id}
@@ -556,10 +578,11 @@ const ClosetGrid = memo(function ClosetGrid({
       {onAddItem && (
         <button
           onClick={onAddItem}
-          className="fixed bottom-24 md:bottom-8 right-6 z-40 rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300 border border-white/20"
+          className="fixed right-5 z-[var(--z-nav)] flex h-14 w-14 items-center justify-center rounded-full border border-white/20 shadow-lg transition-transform duration-300 hover:scale-105 md:right-8"
           style={{
             background: "var(--primary)",
             color: "var(--on-primary)",
+            bottom: "calc(var(--nav-height) + var(--safe-bottom) + 1rem)",
           }}
         >
           <span className="material-symbols-outlined text-[28px]">

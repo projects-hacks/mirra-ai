@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { getSupabase } from "@/lib/supabase";
 import ClosetGrid from "@/components/closet/ClosetGrid";
 import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
-import MetadataForm from "@/components/closet/MetadataForm";
+import MetadataForm, { type ClosetItemMetadata } from "@/components/closet/MetadataForm";
 import ClosetStatistics from "@/components/closet/ClosetStatistics";
 import ItemDetailModal from "@/components/closet/ItemDetailModal";
 import BatchActionToolbar from "@/components/closet/BatchActionToolbar";
 import RecommendationsCard from "@/components/closet/RecommendationsCard";
-import ClosetNav from "@/components/navigation/ClosetNav";
+import BottomNav from "@/components/navigation/BottomNav";
 
 interface ClosetItem {
   id: string;
@@ -40,6 +40,23 @@ interface ExtractedMetadata {
   occasions?: string[];
   seasons?: string[];
   confidence_scores?: Record<string, number>;
+}
+
+interface ClosetApiItem {
+  id: string;
+  name: string;
+  category: string;
+  color?: string;
+  primary_color?: string;
+  image_url?: string;
+  image?: string;
+  brand?: string;
+  price?: number;
+  times_worn?: number;
+}
+
+interface ClosetApiResponse {
+  items?: ClosetApiItem[];
 }
 
 /**
@@ -92,10 +109,10 @@ export default function ClosetPage() {
         throw new Error("Failed to fetch closet items");
       }
 
-      const data = await response.json();
+      const data: ClosetApiResponse = await response.json();
       
       // Transform API response to match ClosetGrid interface
-      const transformedItems = (data.items || []).map((item: any) => ({
+      const transformedItems = (data.items || []).map((item) => ({
         id: item.id,
         name: item.name,
         category: item.category,
@@ -117,12 +134,16 @@ export default function ClosetPage() {
 
   // Load items on mount
   useEffect(() => {
-    fetchClosetItems();
+    const timeoutId = window.setTimeout(() => {
+      void fetchClosetItems();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchClosetItems]);
 
   // Handle photo upload completion
   const handleUploadComplete = useCallback(
-    (imageUrl: string, metadata: any) => {
+    (imageUrl: string, metadata: ExtractedMetadata) => {
       setUploadedImageUrl(imageUrl);
       setExtractedMetadata(metadata);
       setIsUploadModalOpen(false);
@@ -133,7 +154,7 @@ export default function ClosetPage() {
 
   // Handle metadata form submission
   const handleMetadataSubmit = useCallback(
-    async (metadata: any) => {
+    async (metadata: ClosetItemMetadata) => {
       try {
         const supabase = getSupabase();
         const {
@@ -197,7 +218,7 @@ export default function ClosetPage() {
   }, []);
 
   // Handle item selection
-  const handleSelectItem = useCallback((item: any) => {
+  const handleSelectItem = useCallback((item: ClosetItem) => {
     if (selectionMode) {
       return; // In selection mode, clicking is handled by toggle
     }
@@ -338,22 +359,21 @@ export default function ClosetPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 pb-24">
-      {/* Header with item count */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+    <div className="bottom-nav-offset min-h-[100dvh] bg-transparent">
+      <div className="page-header-shell">
+        <div className="page-shell flex items-center justify-between gap-4 px-4 py-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">My Closet</h1>
-            <p className="text-gray-400">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl" style={{ fontFamily: "var(--font-serif)" }}>My Closet</h1>
+            <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
               {items.length} {items.length === 1 ? "item" : "items"} in your wardrobe
             </p>
           </div>
           <button
             onClick={toggleSelectionMode}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`min-h-[44px] rounded-full px-4 py-2 transition-colors ${
               selectionMode
-                ? "bg-purple-600 text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
+                ? "bg-[var(--primary)] text-white"
+                : "glass-panel text-[var(--on-surface)]"
             }`}
           >
             <span className="material-symbols-outlined text-sm">
@@ -363,6 +383,8 @@ export default function ClosetPage() {
           </button>
         </div>
       </div>
+
+      <div className="page-shell px-4 py-6 sm:py-8">
 
       {/* Closet Statistics */}
       {items.length > 0 && <ClosetStatistics />}
@@ -379,6 +401,7 @@ export default function ClosetPage() {
         selectedItems={selectedItems}
         onToggleSelect={toggleItemSelection}
       />
+      </div>
 
       {/* Batch Action Toolbar */}
       <BatchActionToolbar
@@ -401,13 +424,16 @@ export default function ClosetPage() {
       />
 
       {/* Metadata Form */}
-      <MetadataForm
-        isOpen={isMetadataFormOpen}
-        imageUrl={uploadedImageUrl}
-        initialMetadata={extractedMetadata}
-        onSubmit={handleMetadataSubmit}
-        onCancel={handleMetadataCancel}
-      />
+      {isMetadataFormOpen && (
+        <MetadataForm
+          key={uploadedImageUrl ?? "metadata-form"}
+          isOpen={isMetadataFormOpen}
+          imageUrl={uploadedImageUrl}
+          initialMetadata={extractedMetadata}
+          onSubmit={handleMetadataSubmit}
+          onCancel={handleMetadataCancel}
+        />
+      )}
 
       {/* Item Detail Modal */}
       <ItemDetailModal
@@ -420,8 +446,7 @@ export default function ClosetPage() {
         onUpdate={fetchClosetItems}
       />
 
-      {/* Navigation */}
-      <ClosetNav />
+      <BottomNav />
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (

@@ -33,7 +33,7 @@ export default function CameraLayer({
   const shouldFreeze = !!vtoResult || (isProcessing && isVtoTask);
 
   return (
-    <div className="absolute inset-0 z-0">
+    <div className="absolute inset-0 z-[var(--z-camera)] h-[100dvh] w-[100dvw] overflow-hidden">
       {/* JS Camera Kit Container (renders its own UI with face detection) */}
       {isUsingCameraKit && (
         <div
@@ -54,7 +54,7 @@ export default function CameraLayer({
           autoPlay
           playsInline
           muted
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           style={{
             transform: "scaleX(-1)",
             opacity: shouldFreeze ? 0 : 1,
@@ -63,6 +63,8 @@ export default function CameraLayer({
           }}
         />
       )}
+
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(246,241,236,0.22)_0%,transparent_18%,transparent_62%,rgba(246,241,236,0.34)_100%)]" />
 
       {/* VTO Display with smooth transitions */}
       {(vtoResult || isProcessing) && selfie && (

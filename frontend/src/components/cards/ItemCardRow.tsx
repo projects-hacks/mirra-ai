@@ -1,16 +1,41 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
+
+interface RowItem {
+  id?: string;
+  source?: string;
+  owned?: boolean;
+  name?: string;
+  title?: string;
+  image_url?: string;
+  imageUrl?: string;
+  price?: string | number;
+  purchase_price?: string | number;
+}
+
+function getItems(data: unknown): RowItem[] {
+  if (Array.isArray(data)) {
+    return data as RowItem[];
+  }
+
+  if (data && typeof data === "object" && "items" in data) {
+    const items = (data as { items?: unknown }).items;
+    return Array.isArray(items) ? (items as RowItem[]) : [];
+  }
+
+  return [];
+}
 
 /** Horizontal scrollable row of product/closet item cards. */
 export default function ItemCardRow({ data }: Readonly<{ data: unknown }>) {
-  // Parse items from tool result data
-  const items = Array.isArray(data) ? data : (data as any)?.items ?? [];
+  const items = getItems(data);
 
   if (items.length === 0) return null;
 
   return (
     <div className="w-full overflow-x-auto float-in" style={{ scrollbarWidth: "none" }}>
       <div className="flex gap-3 px-1 pb-2">
-        {items.map((item: any) => (
+        {items.map((item) => (
           <div
             key={
               item.id ||

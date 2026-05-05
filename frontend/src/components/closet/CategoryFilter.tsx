@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useMemo } from "react";
 import { throttle } from "@/lib/retry";
 
 interface CategoryFilterProps {
@@ -20,10 +20,11 @@ const CategoryFilter = memo(function CategoryFilter({
   onCategoryChange,
 }: CategoryFilterProps) {
   // Throttle category changes to prevent rapid-fire updates
-  const handleCategoryChange = useCallback(
-    throttle((category: string) => {
-      onCategoryChange(category);
-    }, 300),
+  const handleCategoryChange = useMemo(
+    () =>
+      throttle((category: string) => {
+        onCategoryChange(category);
+      }, 300),
     [onCategoryChange]
   );
   return (

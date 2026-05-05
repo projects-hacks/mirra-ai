@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AnalysisResults, TaskStatus } from "@/types/onboarding";
 import { COMPLETION_DISPLAY_DELAY } from "@/constants/onboarding";
 
@@ -38,26 +38,14 @@ export function ScanProgressScreen({
     { id: "skinTone", label: "Analyzing skin tone", status: "pending" },
     { id: "faceShape", label: "Analyzing face shape", status: "pending" },
   ]);
-  const [overallProgress, setOverallProgress] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const overallProgress = Math.round(
+    (tasks.filter((task) => task.status === "complete").length / tasks.length) *
+      100
+  );
 
-  // Calculate overall progress based on completed tasks
-  useEffect(() => {
-    const completedCount = tasks.filter((t) => t.status === "complete").length;
-    const progress = Math.round((completedCount / tasks.length) * 100);
-    setOverallProgress(progress);
-  }, [tasks]);
-
-  // Start analysis on mount
-  useEffect(() => {
-    if (!isAnalyzing) {
-      startAnalysis();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const startAnalysis = async () => {
+  const startAnalysis = useCallback(async () => {
     setIsAnalyzing(true);
     setError(null);
 
@@ -124,15 +112,25 @@ export function ScanProgressScreen({
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, [onComplete, onError, selfie, userId]);
+
+  // Start analysis on mount
+  useEffect(() => {
+    if (!isAnalyzing) {
+      const timeoutId = window.setTimeout(() => {
+        void startAnalysis();
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [isAnalyzing, startAnalysis]);
 
   const handleRetry = () => {
     setError(null);
     setTasks((prev) =>
       prev.map((task) => ({ ...task, status: "pending" as TaskStatus }))
     );
-    setOverallProgress(0);
-    startAnalysis();
+    void startAnalysis();
   };
 
   return (

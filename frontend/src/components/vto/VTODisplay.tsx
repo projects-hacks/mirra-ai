@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /**
  * VTO Display Component
  * Handles display of selfie, VTO results, and loading states

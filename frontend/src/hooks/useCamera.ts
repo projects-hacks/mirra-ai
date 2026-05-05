@@ -38,7 +38,7 @@ export function useCamera(): UseCameraReturn {
 
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isUsingCameraKit, setIsUsingCameraKit] = useState(false);
+  const [isUsingCameraKit] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,9 +131,9 @@ export function useCamera(): UseCameraReturn {
     const vh = video.videoHeight;
 
     let targetWidth = vw;
-    let targetHeight = vh;
+    const targetHeight = vh;
     let sourceX = 0;
-    let sourceY = 0;
+    const sourceY = 0;
 
     // Force portrait: crop sides if landscape (3:4 aspect ratio)
     if (vw > vh) {

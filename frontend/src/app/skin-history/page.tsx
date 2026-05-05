@@ -1,8 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import BottomNav from "@/components/navigation/BottomNav";
 
 // ── Types ────────────────────────────────────────────
 interface SkinScores {
@@ -39,6 +41,10 @@ interface SkinScan {
   } | null;
   location_at_scan?: string | null;
   selfie_url?: string | null;
+}
+
+interface SkinScanRow extends Omit<SkinScan, "weather_at_scan"> {
+  weather_at_scan?: SkinScan["weather_at_scan"] | string;
 }
 
 // ── Helpers ──────────────────────────────────────────
@@ -336,7 +342,7 @@ export default function SkinHistoryPage() {
         .order("created_at", { ascending: false });
       
       if (data) {
-        const parsedScans = data.map((scan: any) => ({
+        const parsedScans = (data as SkinScanRow[]).map((scan) => ({
           ...scan,
           scores: typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores,
           weather_at_scan: typeof scan.weather_at_scan === 'string' ? JSON.parse(scan.weather_at_scan) : scan.weather_at_scan,
@@ -374,28 +380,28 @@ export default function SkinHistoryPage() {
 
   return (
     <div
-      className="min-h-screen pb-12"
+      className="bottom-nav-offset min-h-[100dvh]"
       style={{ background: "var(--bg)", color: "var(--on-surface)" }}
     >
       {/* Header */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
-        style={{ background: "rgba(var(--bg-rgb, 10,10,20),0.85)", backdropFilter: "blur(16px)" }}
-      >
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm"
-          style={{ color: "var(--on-surface-variant)" }}
-        >
-          ← Back
-        </button>
-        <h1 className="text-base font-semibold tracking-tight">Skin History</h1>
-        <div className="w-12" /> {/* Spacer for centering */}
+      <div className="page-header-shell">
+        <div className="page-shell flex items-center justify-between px-4 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex min-h-[44px] items-center gap-2 text-sm"
+            style={{ color: "var(--on-surface-variant)" }}
+          >
+            ← Back
+          </button>
+          <h1 className="text-base font-semibold tracking-tight sm:text-lg" style={{ fontFamily: "var(--font-serif)" }}>Skin History</h1>
+          <div className="w-12" />
+        </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-5 space-y-5 pt-4">
+      <div className="page-shell grid gap-6 px-4 pt-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         
         {scans.length === 0 ? (
-          <div className="glass-card text-center py-12">
+          <div className="glass-card py-12 text-center lg:col-span-2">
             <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
               No skin scans yet. Complete your first scan to see your history.
             </p>
@@ -403,7 +409,7 @@ export default function SkinHistoryPage() {
         ) : (
           <>
             {/* Stats overview */}
-            <div className="glass-card space-y-3">
+            <div className="glass-card space-y-3 lg:sticky lg:top-24">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Progress Overview</p>
                 <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>
@@ -412,12 +418,12 @@ export default function SkinHistoryPage() {
               </div>
               
               {/* Metric selector */}
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 snap-x snap-mandatory">
                 {metricOptions.map((option) => (
                   <button
                     key={option.key}
                     onClick={() => setSelectedMetric(option.key)}
-                    className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all"
+                    className="snap-start whitespace-nowrap rounded-full px-3 py-1.5 text-xs transition-all"
                     style={{
                       background: selectedMetric === option.key ? "var(--primary)" : "var(--surface-variant)",
                       color: selectedMetric === option.key ? "white" : "var(--on-surface-variant)",
@@ -476,6 +482,7 @@ export default function SkinHistoryPage() {
           </>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

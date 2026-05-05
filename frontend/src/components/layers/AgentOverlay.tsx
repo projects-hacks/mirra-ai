@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Message, User, VTOResult } from "@/types";
+import type { Message, ProofCard as ProofCardData, ToolResultMessage, User, VTOResult } from "@/types";
 import AgentCard from "@/components/cards/AgentCard";
 import ItemCardRow from "@/components/cards/ItemCardRow";
 import ProofCard from "@/components/cards/ProofCard";
@@ -18,26 +18,54 @@ interface AgentOverlayProps {
  * Format match_closet results into flat array for ItemCardRow
  * match_closet returns: { matches: { top: [...], bottom: [...] }, gaps: [...] }
  */
-function _formatMatchClosetData(data: any): any[] {
-  if (!data?.matches) return [];
-  
-  const items: any[] = [];
-  
-  // Flatten all categories into single array
-  Object.entries(data.matches).forEach(([category, matches]: [string, any]) => {
-    if (Array.isArray(matches)) {
-      matches.forEach((match: any) => {
-        items.push({
+interface MatchClosetItem {
+  id?: string;
+  name?: string;
+  title?: string;
+  imageUrl?: string;
+  image_url?: string;
+  owned?: boolean;
+  source?: string;
+}
+
+interface MatchClosetData {
+  matches?: Record<string, MatchClosetItem[]>;
+}
+
+interface ProofCardToolData {
+  card?: ProofCardData;
+}
+
+function isToolResultMessage(message: Message): message is ToolResultMessage {
+  return message.type === "tool_result";
+}
+
+function formatMatchClosetData(data: unknown): MatchClosetItem[] {
+  if (!data || typeof data !== "object" || !("matches" in data)) {
+    return [];
+  }
+
+  const matches = (data as MatchClosetData).matches;
+  if (!matches) return [];
+
+  return Object.values(matches).flatMap((categoryMatches) =>
+    Array.isArray(categoryMatches)
+      ? categoryMatches.map((match) => ({
           ...match,
           source: "closet",
           owned: true,
           image_url: match.imageUrl,
-        });
-      });
-    }
-  });
-  
-  return items;
+        }))
+      : []
+  );
+}
+
+function getProofCardData(data: unknown): ProofCardToolData | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  return data as ProofCardToolData;
 }
 
 /**
@@ -68,37 +96,47 @@ export default function AgentOverlay({
 
   // Product/closet cards from tool results
   const productResults = messages.filter(
-    (m) => m.type === "tool_result" && 
-    ((m as any).tool === ToolName.SEARCH_PRODUCTS || 
-     (m as any).tool === ToolName.MATCH_CLOSET)
+    (message): message is ToolResultMessage =>
+      isToolResultMessage(message) &&
+      (message.tool === ToolName.SEARCH_PRODUCTS ||
+        message.tool === ToolName.MATCH_CLOSET)
   );
   const latestProducts = productResults.at(-1) ?? null;
 
   // Proof card from tool results
   const proofCardResults = messages.filter(
-    (m) => m.type === "tool_result" && (m as any).tool === ToolName.GENERATE_PROOF_CARD
+    (message): message is ToolResultMessage =>
+      isToolResultMessage(message) &&
+      message.tool === ToolName.GENERATE_PROOF_CARD
   );
   const latestProofCard = proofCardResults.at(-1) ?? null;
-  const [showProofCard, setShowProofCard] = useState(false);
-
-  // Show proof card when it arrives
-  useEffect(() => {
-    if (latestProofCard) {
-      setShowProofCard(true);
-    }
-  }, [latestProofCard]);
+  const [dismissedProofCardId, setDismissedProofCardId] = useState<string | null>(null);
+  const proofCardData = getProofCardData(latestProofCard?.data);
+  const shouldShowProofCard =
+    Boolean(latestProofCard && proofCardData?.card) &&
+    latestProofCard?.id !== dismissedProofCardId;
 
   // Format match_closet results for ItemCardRow
-  const formattedData = latestProducts && (latestProducts as any).tool === ToolName.MATCH_CLOSET
-    ? _formatMatchClosetData((latestProducts as any).data)
-    : (latestProducts as any)?.data;
+  const formattedData =
+    latestProducts?.tool === ToolName.MATCH_CLOSET
+      ? formatMatchClosetData(latestProducts.data)
+      : latestProducts?.data;
 
   return (
-    <div className="absolute inset-x-0 bottom-20 sm:bottom-24 z-30 px-3 sm:px-4 pointer-events-none">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 top-0 z-[var(--z-agent)] px-3 sm:px-5">
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[rgba(249,249,249,0.6)] to-transparent"
+      />
       <div
         ref={scrollRef}
-        className="flex flex-col items-center gap-2 sm:gap-3 max-h-[55vh] sm:max-h-[60vh] overflow-y-auto pointer-events-auto"
-        style={{ scrollbarWidth: "none" }}
+        className="pointer-events-auto absolute inset-x-0 bottom-0 mx-auto flex max-h-[min(62vh,540px)] w-full max-w-[var(--camera-overlay-max)] flex-col items-center gap-3 overflow-y-auto rounded-t-[2rem] px-3 pt-24 sm:right-5 sm:left-auto sm:top-24 sm:bottom-28 sm:max-h-[calc(100dvh-9rem)] sm:rounded-[2rem] sm:border sm:border-white/45 sm:bg-[rgba(255,255,255,0.52)] sm:px-4 sm:pt-6 sm:shadow-[0_18px_50px_rgba(26,28,30,0.12)]"
+        style={{
+          scrollbarWidth: "none",
+          paddingBottom: "calc(var(--orb-size) + var(--orb-bottom) + 1rem)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+        }}
       >
         {/* Empty state */}
         {messages.length === 0 && (
@@ -118,27 +156,27 @@ export default function AgentOverlay({
         )}
 
         {/* Product / Closet cards row */}
-        {latestProducts && !showProofCard && (
+        {latestProducts && !shouldShowProofCard && (
           <ItemCardRow data={formattedData} />
         )}
 
         {/* Proof Card */}
-        {showProofCard && latestProofCard && (latestProofCard as any).data?.card && (
+        {shouldShowProofCard && proofCardData?.card && (
           <ProofCard
-            card={(latestProofCard as any).data.card}
+            card={proofCardData.card}
             onApprove={() => {
               console.log("Proof card approved");
-              setShowProofCard(false);
+              setDismissedProofCardId(latestProofCard?.id ?? null);
             }}
             onAdjust={() => {
               console.log("Adjusting proof card");
-              setShowProofCard(false);
+              setDismissedProofCardId(latestProofCard?.id ?? null);
             }}
             onSave={() => {
               console.log("Proof card saved");
-              setShowProofCard(false);
+              setDismissedProofCardId(latestProofCard?.id ?? null);
             }}
-            onClose={() => setShowProofCard(false)}
+            onClose={() => setDismissedProofCardId(latestProofCard?.id ?? null)}
           />
         )}
 

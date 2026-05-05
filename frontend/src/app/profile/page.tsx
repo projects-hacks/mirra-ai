@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -39,7 +40,7 @@ interface FaceShape {
   shape?: string;
   age?: number | null;
   gender?: string | null;
-  facial_ratios?: Record<string, any>;
+  facial_ratios?: Record<string, unknown>;
   eye_shape?: string | null;
   eye_size?: string | null;
   eyelid_type?: string | null;
@@ -75,6 +76,19 @@ interface EditableProfile {
   preferred_currency: string;
   budget_min: string;
   budget_max: string;
+}
+
+interface LatestScanRecord {
+  selfie_url?: string | null;
+}
+
+interface SkinScanRow extends Omit<SkinScan, "weather_at_scan"> {
+  weather_at_scan?: SkinScan["weather_at_scan"] | string;
+}
+
+interface SettledQueryResult {
+  data?: unknown;
+  count?: number | null;
 }
 
 // ── Helpers ──────────────────────────────────────────
@@ -212,19 +226,16 @@ export default function ProfilePage() {
       setUser(u);
       setEditForm((f) => ({ ...f, displayName: u.displayName }));
 
-      // Parallel fetch — cast to any to bypass Supabase's strict generic inference
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [bmRes, scansRes, closetRes, prefRes] = await Promise.allSettled([
+      const settledResults = (await Promise.allSettled([
         supabase.from("body_model").select("*").eq("user_id", u.id).single(),
         supabase.from("skin_scans").select("*").eq("user_id", u.id).order("created_at", { ascending: false }).limit(30),
         supabase.from("closet_items").select("id", { count: "exact", head: true }).eq("user_id", u.id),
         supabase.from("user_preferences").select("*").eq("user_id", u.id).single(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ]) as any[];
+      ])) as PromiseSettledResult<SettledQueryResult>[];
+      const [bmRes, scansRes, closetRes, prefRes] = settledResults;
 
       if (bmRes.status === "fulfilled" && bmRes.value?.data) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = bmRes.value.data as any;
+        const data = bmRes.value.data as Record<string, unknown>;
         setBodyModel({
           skin_scores: typeof data.skin_scores === 'string' ? JSON.parse(data.skin_scores) : data.skin_scores,
           skin_tone: typeof data.skin_tone === 'string' ? JSON.parse(data.skin_tone) : data.skin_tone,
@@ -233,8 +244,7 @@ export default function ProfilePage() {
       }
       
       if (scansRes.status === "fulfilled" && scansRes.value?.data) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const scans = (scansRes.value.data as any[]).map(scan => ({
+        const scans = (scansRes.value.data as SkinScanRow[]).map((scan) => ({
           ...scan,
           scores: typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores,
           weather_at_scan: typeof scan.weather_at_scan === 'string' ? JSON.parse(scan.weather_at_scan) : scan.weather_at_scan,
@@ -245,14 +255,18 @@ export default function ProfilePage() {
       if (closetRes.status === "fulfilled") setClosetCount((closetRes.value?.count as number) ?? 0);
       
       if (prefRes.status === "fulfilled" && prefRes.value?.data) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const p = prefRes.value.data as any;
-        setCalendarConnected(p.calendar_connected ?? false);
+        const p = prefRes.value.data as Record<string, unknown>;
+        setCalendarConnected(
+          typeof p.calendar_connected === "boolean" ? p.calendar_connected : false
+        );
         setEditForm((f) => ({
           ...f,
-          preferred_currency: p.preferred_currency ?? "USD",
-          budget_min: p.budget_min?.toString() ?? "",
-          budget_max: p.budget_max?.toString() ?? "",
+          preferred_currency:
+            typeof p.preferred_currency === "string" ? p.preferred_currency : "USD",
+          budget_min:
+            typeof p.budget_min === "number" ? p.budget_min.toString() : "",
+          budget_max:
+            typeof p.budget_max === "number" ? p.budget_max.toString() : "",
         }));
       }
 
@@ -294,7 +308,7 @@ export default function ProfilePage() {
   // ── Log out ──
   const handleLogOut = useCallback(async () => {
     try {
-      const ws = (window as any).__mirraWS;
+      const ws = (window as Window & { __mirraWS?: WebSocket }).__mirraWS;
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
@@ -339,21 +353,22 @@ export default function ProfilePage() {
       const supabase = getSupabase();
       
       // Get latest selfie from skin_scans
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: latestScan, error: scanError } = await supabase
         .from("skin_scans")
         .select("selfie_url")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single() as any;
+        .single();
       
-      if (scanError || !latestScan?.selfie_url) {
+      const latestSkinScan = latestScan as LatestScanRecord | null;
+
+      if (scanError || !latestSkinScan?.selfie_url) {
         throw new Error("No selfie found. Please complete onboarding first.");
       }
       
       // Download the selfie
-      const response = await fetch(latestScan.selfie_url);
+      const response = await fetch(latestSkinScan.selfie_url);
       if (!response.ok) {
         throw new Error("Failed to download selfie");
       }
@@ -409,7 +424,7 @@ export default function ProfilePage() {
         .limit(30);
       
       if (newScans) {
-        const parsedScans = newScans.map((scan: any) => ({
+        const parsedScans = (newScans as SkinScanRow[]).map((scan) => ({
           ...scan,
           scores: typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores,
           weather_at_scan: typeof scan.weather_at_scan === 'string' ? JSON.parse(scan.weather_at_scan) : scan.weather_at_scan,

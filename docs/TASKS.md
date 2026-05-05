@@ -289,7 +289,7 @@ The app must feel like a **native mobile PWA** — not a desktop site forced int
 - 44px minimum touch targets (Apple HIG)
 - Smooth 60fps scroll with overscroll bounce
 
-- [ ] 7.1 Implement mobile-first layout system
+- [x] 7.1 Implement mobile-first layout system
   - Open `frontend/src/app/globals.css`
   - Add CSS custom properties for safe areas:
     ```css
@@ -306,7 +306,7 @@ The app must feel like a **native mobile PWA** — not a desktop site forced int
   - Set `html, body` to `overflow: hidden; height: 100dvh;` for the main camera page
   - Use `100dvh` (dynamic viewport height) instead of `100vh` to handle mobile browser chrome
 
-- [ ] 7.2 Fix z-index stacking order
+- [x] 7.2 Fix z-index stacking order
   - Define a clear z-index scale in `globals.css`:
     ```css
     /* Z-index scale — never use arbitrary values */
@@ -321,14 +321,14 @@ The app must feel like a **native mobile PWA** — not a desktop site forced int
     ```
   - Update all components to use these variables instead of hardcoded z-index values
 
-- [ ] 7.3 Fix VoiceOrb placement and touch target
+- [x] 7.3 Fix VoiceOrb placement and touch target
   - Open `frontend/src/components/ui/VoiceOrb.tsx`
   - Position: `fixed`, `bottom: var(--orb-bottom)`, `left: 50%`, `transform: translateX(-50%)`
   - Size: 64px diameter (min 44px touch target met)
   - Add `padding: 10px` invisible touch area around the orb
   - Ensure it doesn't overlap with `AgentOverlay` scroll content by adding `padding-bottom: calc(var(--orb-size) + var(--orb-bottom) + 16px)` to the overlay
 
-- [ ] 7.4 Fix AgentOverlay scrolling behavior
+- [x] 7.4 Fix AgentOverlay scrolling behavior
   - Open `frontend/src/components/layers/AgentOverlay.tsx`
   - Set container to `overflow-y: auto; -webkit-overflow-scrolling: touch;`
   - Pin scroll to bottom on new messages (auto-scroll)
@@ -336,7 +336,7 @@ The app must feel like a **native mobile PWA** — not a desktop site forced int
   - Messages should scroll UP from bottom (latest at bottom, like iMessage)
   - Add gradient fade at top of overlay so camera shows through
 
-- [ ] 7.5 Create responsive bottom navigation
+- [x] 7.5 Create responsive bottom navigation
   - Create `frontend/src/components/navigation/BottomNav.tsx`
   - 4 tabs: Home (camera), Closet, Skin History, Profile
   - Height: `var(--nav-height)` + `var(--safe-bottom)` padding
@@ -344,14 +344,14 @@ The app must feel like a **native mobile PWA** — not a desktop site forced int
   - Only show on secondary pages (closet, skin-history, profile) — NOT on the main camera page
   - On the main camera page, navigation is handled by the VoiceOrb and FeatureMenu
 
-- [ ] 7.6 Fix CameraLayer for full-bleed mobile
+- [x] 7.6 Fix CameraLayer for full-bleed mobile
   - Open `frontend/src/components/layers/CameraLayer.tsx`
   - Video should fill `100dvw × 100dvh` with `object-fit: cover`
   - Apply mirror transform: `transform: scaleX(-1)` for selfie mode
   - VTO result images should overlay with `position: absolute; top: 0; left: 0;` matching the video dimensions
   - Add smooth crossfade transition (300ms) when VTO image appears/disappears
 
-- [ ] 7.7 Make closet page responsive
+- [x] 7.7 Make closet page responsive
   - Open `frontend/src/app/closet/page.tsx`
   - Grid: 2 columns on mobile (< 640px), 3 on tablet (640-1024px), 4 on desktop (> 1024px)
   - Item cards: square aspect ratio with `aspect-ratio: 3/4`
@@ -359,7 +359,7 @@ The app must feel like a **native mobile PWA** — not a desktop site forced int
   - Pull-to-refresh gesture support (optional but nice)
   - Include bottom nav on this page
 
-- [ ] 7.8 Make skin-history page responsive
+- [x] 7.8 Make skin-history page responsive
   - Open `frontend/src/app/skin-history/page.tsx`
   - Score cards: horizontal scroll on mobile (snap scroll)
   - Trend chart: full-width, 200px height on mobile
