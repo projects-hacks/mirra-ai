@@ -3,7 +3,37 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase";
+
+type AuthSession = Session & {
+  provider_token?: string | null;
+  provider_refresh_token?: string | null;
+};
+
+async function waitForSession() {
+  const supabase = getSupabase();
+  const initial = await supabase.auth.getSession();
+  if (initial.error) throw initial.error;
+  if (initial.data.session) return initial.data.session as AuthSession;
+
+  return new Promise<AuthSession>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      subscription.unsubscribe();
+      reject(new Error("No session established"));
+    }, 4000);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+      if (session?.user) {
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+        resolve(session as AuthSession);
+      }
+      }
+    );
+  });
+}
 
 function CallbackHandler() {
   const router = useRouter();
@@ -25,23 +55,9 @@ function CallbackHandler() {
           throw new Error(callbackError);
         }
 
-        const code = url.searchParams.get("code");
-        if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) {
-            throw exchangeError;
-          }
-        }
-
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          throw sessionError;
-        }
-
-        if (!session) {
-          throw new Error("No session established");
-        }
+        // `createBrowserClient` already handles PKCE URL detection.
+        // Waiting for the established session avoids double-exchanging the auth code.
+        const session = await waitForSession();
 
         // Extract Google provider token for calendar access
         const providerToken = session.provider_token;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getSupabase } from "@/lib/supabase";
+import { signInWithGoogle } from "@/lib/auth";
 import type { User } from "@/types/onboarding";
 
 interface AuthScreenProps {
@@ -19,20 +19,7 @@ export function AuthScreen({ onAuthComplete: _onAuthComplete, onError }: Readonl
     setError(null);
 
     try {
-      const supabase = getSupabase();
-      
-      // Client-side OAuth with PKCE (handled automatically by Supabase)
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${globalThis.location.origin}/auth/callback`,
-          scopes: 'openid profile email https://www.googleapis.com/auth/calendar.readonly',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
+      const { error: authError } = await signInWithGoogle();
 
       if (authError) {
         throw authError;

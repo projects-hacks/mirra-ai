@@ -1,6 +1,35 @@
 import { getSupabase } from "@/lib/supabase";
 import type { User } from "@/types";
 
+function normalizeOrigin(value: string) {
+  return value.endsWith("/") ? value.slice(0, -1) : value;
+}
+
+function isLocalHostname(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+export function getAuthRedirectUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) {
+    return `${normalizeOrigin(configured)}/auth/callback`;
+  }
+
+  if (typeof globalThis.window !== "undefined") {
+    const { origin, hostname } = globalThis.location;
+    if (isLocalHostname(hostname)) {
+      return `${normalizeOrigin(origin)}/auth/callback`;
+    }
+
+    console.warn(
+      "NEXT_PUBLIC_SITE_URL is not configured. Falling back to the current origin for OAuth redirects."
+    );
+    return `${normalizeOrigin(origin)}/auth/callback`;
+  }
+
+  return "http://localhost:3000/auth/callback";
+}
+
 export function mapUser(supaUser: {
   id: string;
   email?: string;
@@ -40,7 +69,7 @@ export async function signInWithGoogle() {
   return supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${globalThis.location.origin}/auth/callback`,
+      redirectTo: getAuthRedirectUrl(),
       scopes: "openid profile email https://www.googleapis.com/auth/calendar.readonly",
       queryParams: {
         access_type: "offline",
