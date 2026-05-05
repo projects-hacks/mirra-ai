@@ -27,7 +27,7 @@ function ProductCard({ product }: Readonly<{ product: Product }>) {
       )}
       <div className="flex flex-1 flex-col p-3">
         <p className="line-clamp-2 text-sm font-semibold leading-5">{product.title}</p>
-        <p className="mt-2 text-xs" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="mt-2 text-xs" style={{ color: "var(--on-card-variant)" }}>
           {product.source}
         </p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
@@ -41,17 +41,17 @@ function ProductCard({ product }: Readonly<{ product: Product }>) {
 
 export default function ProductRecommendations({ groups, isLoading = false }: Readonly<ProductRecommendationsProps>) {
   return (
-    <section className="rounded-[1.25rem] border border-black/8 bg-white/78 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
+    <section className="surface-card rounded-[1.25rem] border border-black/8 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
       <div>
         <p className="label-caps">Products</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Targeted recommendations</h2>
-        <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
+        <h2 className="section-display mt-2 text-xl sm:text-2xl">Targeted recommendations</h2>
+        <p className="body-copy mt-2 text-sm" style={{ color: "var(--on-card-variant)" }}>
           Live shopping results are matched to your lowest skin scores.
         </p>
       </div>
 
       {isLoading ? (
-        <p className="mt-5 rounded-2xl border border-black/6 bg-[#f8fafc] p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="surface-subcard mt-5 rounded-2xl border border-black/6 p-4 text-sm" style={{ color: "var(--on-card-variant)" }}>
           Searching product results...
         </p>
       ) : groups.length ? (
@@ -61,11 +61,11 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold">{group.concern.label}</p>
-                  <p className="text-xs" style={{ color: "var(--on-surface-muted)" }}>
+                  <p className="text-xs" style={{ color: "var(--on-card-muted)" }}>
                     Query: {group.query}
                   </p>
                 </div>
-                <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-medium">
+                <span className="surface-subcard rounded-full px-3 py-1 text-xs font-medium">
                   {group.concern.score}/100
                 </span>
               </div>
@@ -76,7 +76,7 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
                   ))}
                 </div>
               ) : (
-                <p className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+                <p className="surface-subcard rounded-2xl border border-black/6 p-4 text-sm" style={{ color: "var(--on-card-variant)" }}>
                   No live product results came back for this concern.
                 </p>
               )}
@@ -84,7 +84,7 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
           ))}
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-black/6 bg-[#f8fafc] p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="surface-subcard mt-5 rounded-2xl border border-black/6 p-4 text-sm" style={{ color: "var(--on-card-variant)" }}>
           Product recommendations appear after your scan scores load.
         </p>
       )}

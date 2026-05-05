@@ -28,7 +28,7 @@ export default function SkinSummaryCard({ summary, isLoading = false }: Readonly
   const score = summary?.overallScore ?? 0;
 
   return (
-    <section className="overflow-hidden rounded-[1.25rem] border border-black/8 bg-white/78 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
+    <section className="surface-card overflow-hidden rounded-[1.25rem] border border-black/8 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="label-caps">Skin Summary</p>
@@ -47,13 +47,13 @@ export default function SkinSummaryCard({ summary, isLoading = false }: Readonly
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4">
+        <div className="surface-subcard rounded-2xl border border-black/6 p-4">
           <p className="text-xs font-medium uppercase tracking-[0.12em]" style={{ color: "var(--on-surface-muted)" }}>
             Skin Age
           </p>
           <p className="metric-display mt-2 text-2xl">{summary?.skinAge ?? "--"}</p>
         </div>
-        <div className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4">
+        <div className="surface-subcard rounded-2xl border border-black/6 p-4">
           <p className="text-xs font-medium uppercase tracking-[0.12em]" style={{ color: "var(--on-surface-muted)" }}>
             Last Scan
           </p>
@@ -80,7 +80,7 @@ export default function SkinSummaryCard({ summary, isLoading = false }: Readonly
             </div>
           ))
         ) : (
-          <p className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="surface-subcard rounded-2xl border border-black/6 p-4 text-sm" style={{ color: "var(--on-card-variant)" }}>
             Capture a skin scan to populate score history and trend guidance.
           </p>
         )}

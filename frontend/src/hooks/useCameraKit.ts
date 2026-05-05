@@ -115,6 +115,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
   const eventHandlersRef = useRef<Map<string, (data?: unknown) => void>>(new Map());
   const sdkScriptRef = useRef<HTMLScriptElement | null>(null);
   const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCameraOpenRef = useRef(false);
   const isOpeningRef = useRef(false);
 
@@ -250,6 +251,30 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     }, 8000);
   }, [isSDKLoading, isSDKLoaded, registerEventHandlers]);
 
+  const resetOpenState = useCallback(() => {
+    isOpeningRef.current = false;
+    isCameraOpenRef.current = false;
+    setIsCameraOpen(false);
+  }, []);
+
+  const closeVendorCamera = useCallback(() => {
+    if (!window.YMK) return;
+
+    if (typeof window.YMK.closeCameraKit === "function") {
+      window.YMK.closeCameraKit();
+      debugFlow("camera-kit", "YMK.closeCameraKit called");
+      return;
+    }
+
+    if (typeof window.YMK.close === "function") {
+      window.YMK.close();
+      debugFlow("camera-kit", "YMK.close called");
+      return;
+    }
+
+    debugFlow("camera-kit", "close skipped: no close method available");
+  }, []);
+
   // Open camera with config
   const openCamera = useCallback((config: Partial<CameraKitConfig> = {}) => {
     debugFlow("camera-kit", "openCamera requested", {
@@ -267,9 +292,19 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       return false;
     }
 
-    if (isOpeningRef.current || isCameraOpenRef.current) {
+    if (isOpeningRef.current) {
       debugFlow("camera-kit", "openCamera skipped: already opening/open");
       return true;
+    }
+
+    if (isCameraOpenRef.current) {
+      debugFlow("camera-kit", "openCamera detected stale open state, forcing reopen");
+      try {
+        closeVendorCamera();
+      } catch (err) {
+        debugFlow("camera-kit", "force close before reopen failed", err);
+      }
+      resetOpenState();
     }
 
     try {
@@ -285,6 +320,18 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       debugFlow("camera-kit", "YMK.init called", defaultConfig);
       window.YMK.openCameraKit();
       debugFlow("camera-kit", "YMK.openCameraKit called");
+
+      if (openTimeoutRef.current) {
+        clearTimeout(openTimeoutRef.current);
+      }
+
+      openTimeoutRef.current = setTimeout(() => {
+        if (isOpeningRef.current && !isCameraOpenRef.current) {
+          debugFlow("camera-kit", "open timeout reached, resetting opening state");
+          isOpeningRef.current = false;
+        }
+      }, 5000);
+
       return true;
     } catch (err) {
       isOpeningRef.current = false;
@@ -294,7 +341,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       eventsRef.current.onError?.(error);
       return false;
     }
-  }, []);
+  }, [closeVendorCamera, resetOpenState]);
 
   // Close camera
   const closeCamera = useCallback(() => {
@@ -309,17 +356,8 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     }
 
     try {
-      if (typeof window.YMK.closeCameraKit === 'function') {
-        window.YMK.closeCameraKit();
-        debugFlow("camera-kit", "YMK.closeCameraKit called");
-      } else if (typeof window.YMK.close === 'function') {
-        window.YMK.close();
-        debugFlow("camera-kit", "YMK.close called");
-      } else {
-        debugFlow("camera-kit", "close skipped: no close method available");
-      }
-      isOpeningRef.current = false;
-      isCameraOpenRef.current = false;
+      closeVendorCamera();
+      resetOpenState();
     } catch (err) {
       console.error('Error closing camera:', err);
       const error = err instanceof Error ? err : new Error('Failed to close camera');
@@ -327,7 +365,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       setError(error);
       eventsRef.current.onError?.(error);
     }
-  }, []);
+  }, [closeVendorCamera, resetOpenState]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -354,13 +392,8 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       // closeCameraKit while no SDK view exists can throw inside the vendor SDK.
       if (window.YMK && (isCameraOpenRef.current || isOpeningRef.current)) {
         try {
-          if (typeof window.YMK.closeCameraKit === 'function') {
-            window.YMK.closeCameraKit();
-          } else if (typeof window.YMK.close === 'function') {
-            window.YMK.close();
-          }
-          isCameraOpenRef.current = false;
-          isOpeningRef.current = false;
+          closeVendorCamera();
+          resetOpenState();
         } catch (err) {
           console.error('Error closing camera on unmount:', err);
         }
@@ -370,8 +403,13 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         clearTimeout(loadTimeoutRef.current);
         loadTimeoutRef.current = null;
       }
+
+      if (openTimeoutRef.current) {
+        clearTimeout(openTimeoutRef.current);
+        openTimeoutRef.current = null;
+      }
     };
-  }, []);
+  }, [closeVendorCamera, resetOpenState]);
 
   return {
     isSDKLoaded,

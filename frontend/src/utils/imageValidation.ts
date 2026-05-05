@@ -150,7 +150,7 @@ export async function resizeImageIfNeeded(
       canvas.width = newWidth;
       canvas.height = newHeight;
       
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) {
         reject(new Error('Failed to get canvas context'));
         return;

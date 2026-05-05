@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import ClosetGrid from "@/components/closet/ClosetGrid";
 import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
@@ -59,6 +60,20 @@ interface ClosetApiResponse {
   items?: ClosetApiItem[];
 }
 
+async function parseResponseError(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = await response.json();
+    if (body && typeof body === "object") {
+      if ("detail" in body && typeof body.detail === "string") return body.detail;
+      if ("error_message" in body && typeof body.error_message === "string") return body.error_message;
+    }
+  } catch {
+    // Ignore JSON parse failures and fall back to status text below.
+  }
+
+  return response.statusText || fallback;
+}
+
 /**
  * Closet Browser Page
  * Main page for browsing and managing digital closet items
@@ -102,11 +117,20 @@ export default function ClosetPage() {
         setUserId(user.id);
       }
 
-      // Fetch items from API
-      const response = await fetch(`/api/closet?user_id=${user.id}`);
+      const { data: { session: activeSession } } = await supabase.auth.getSession();
+      if (!activeSession?.access_token) {
+        setError("Please sign in again to view your closet");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/closet?user_id=${encodeURIComponent(user.id)}`, {
+        headers: {
+          Authorization: `Bearer ${activeSession.access_token}`,
+        },
+      });
       
       if (!response.ok) {
-        throw new Error("Failed to fetch closet items");
+        throw new Error(await parseResponseError(response, "Failed to fetch closet items"));
       }
 
       const data: ClosetApiResponse = await response.json();
@@ -160,16 +184,18 @@ export default function ClosetPage() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
 
-        if (!user) {
+        if (!user || !session?.access_token) {
           throw new Error("User not authenticated");
         }
 
         // Create closet item
-        const response = await fetch("/api/closet", {
+        const response = await fetch(`${API_URL}/api/closet`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             user_id: user.id,
@@ -192,7 +218,7 @@ export default function ClosetPage() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to create closet item");
+          throw new Error(await parseResponseError(response, "Failed to create closet item"));
         }
 
         // Close form and refresh items
@@ -258,7 +284,7 @@ export default function ClosetPage() {
           throw new Error("Not authenticated");
         }
 
-        const response = await fetch("/api/closet/batch", {
+        const response = await fetch(`${API_URL}/api/closet/batch`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -271,7 +297,7 @@ export default function ClosetPage() {
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to ${action} items`);
+          throw new Error(await parseResponseError(response, `Failed to ${action} items`));
         }
 
         // Refresh items
@@ -299,7 +325,7 @@ export default function ClosetPage() {
         throw new Error("Not authenticated");
       }
 
-      const response = await fetch("/api/closet/batch", {
+      const response = await fetch(`${API_URL}/api/closet/batch`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -312,7 +338,7 @@ export default function ClosetPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete items");
+        throw new Error(await parseResponseError(response, "Failed to delete items"));
       }
 
       // Refresh items

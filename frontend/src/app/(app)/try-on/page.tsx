@@ -12,6 +12,7 @@ import type { GlowupAnalysis, GlowupHairstyle, GlowupMakeupPreset, GlowupPlan, P
 
 type TryOnTab = "clothes" | "makeup" | "hair" | "accessories";
 type AccessoryKind = "earrings" | "necklace";
+const DIRECT_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"];
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, base64Data] = dataUrl.split(",");
@@ -41,6 +42,22 @@ function extractImageUrl(result: VtoImageResponse): string | null {
 
 function productImageIsLikelyUsable(product: Product): boolean {
   return product.imageUrl.startsWith("http://") || product.imageUrl.startsWith("https://");
+}
+
+function isLikelyDirectImageUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
+
+    const normalizedPath = parsed.pathname.toLowerCase();
+    if (DIRECT_IMAGE_EXTENSIONS.some((extension) => normalizedPath.endsWith(extension))) {
+      return true;
+    }
+
+    return /(images?|media|cdn|cloudfront)/i.test(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function PreviewPanel({
@@ -96,6 +113,7 @@ export default function TryOnPage() {
   const [plan, setPlan] = useState<GlowupPlan | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [currentTitle, setCurrentTitle] = useState("Original Selfie");
+  const [isResetToOriginal, setIsResetToOriginal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +127,9 @@ export default function TryOnPage() {
   const [accessorySearch, setAccessorySearch] = useState("gold sculptural hoop earrings");
   const [accessoryResults, setAccessoryResults] = useState<Product[]>([]);
 
-  const previewImage = currentImage ?? vtoResult?.imageUrl ?? selfie ?? null;
+  const previewImage = isResetToOriginal
+    ? selfie ?? null
+    : currentImage ?? vtoResult?.imageUrl ?? selfie ?? null;
 
   useEffect(() => {
     if (!selfie) return;
@@ -136,20 +156,28 @@ export default function TryOnPage() {
       setIsLoading(true);
       setError(null);
 
+      let defaultAccessoryQuery = "gold sculptural hoop earrings";
+
       try {
-        const nextAnalysis = await glowupApi.analyze(sourceSelfie);
-        if (cancelled) return;
-        setAnalysis(nextAnalysis);
+        try {
+          const nextAnalysis = await glowupApi.analyze(sourceSelfie);
+          if (cancelled) return;
+          setAnalysis(nextAnalysis);
 
-        const nextPlan = await glowupApi.recommendFromAnalysis(
-          nextAnalysis.face_attributes,
-          nextAnalysis.skin_tone
-        );
-        if (cancelled) return;
-        setPlan(nextPlan);
+          const nextPlan = await glowupApi.recommendFromAnalysis(
+            nextAnalysis.face_attributes,
+            nextAnalysis.skin_tone
+          );
+          if (cancelled) return;
+          setPlan(nextPlan);
 
-        const defaultAccessoryQuery = nextPlan.accessory_queries.earrings;
-        setAccessorySearch(defaultAccessoryQuery);
+          defaultAccessoryQuery = nextPlan.accessory_queries.earrings;
+          setAccessorySearch(defaultAccessoryQuery);
+        } catch {
+          if (!cancelled) {
+            setError("Style recommendations are unavailable right now, but clothes try-on and product search still work.");
+          }
+        }
 
         const [clothesSearchResult, accessorySearchResult] = await Promise.all([
           productsApi.search("linen button-up shirt"),
@@ -177,6 +205,7 @@ export default function TryOnPage() {
     if (!selfieBlob) return;
 
     setIsApplying(true);
+    setIsResetToOriginal(false);
     setError(null);
     dispatch({ type: "SET_PROCESSING", payload: true });
     dispatch({ type: "SET_CURRENT_TOOL", payload: tool });
@@ -234,6 +263,7 @@ export default function TryOnPage() {
   function resetPreview() {
     setCurrentImage(null);
     setCurrentTitle("Original Selfie");
+    setIsResetToOriginal(true);
     dispatch({ type: "CLEAR_VTO" });
     dispatch({ type: "SET_CURRENT_TOOL", payload: null });
     dispatch({ type: "SET_PROCESSING", payload: false });
@@ -298,8 +328,16 @@ export default function TryOnPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${activeTab === tab.id ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-black/8 bg-white/65"}`}
             >
-              <h2 className="text-base font-semibold">{tab.title}</h2>
-              <p className="mt-2 text-sm leading-5" style={{ color: "var(--on-surface-variant)" }}>
+              <h2
+                className="text-base font-semibold"
+                style={{ color: activeTab === tab.id ? "var(--on-surface)" : "var(--on-card)" }}
+              >
+                {tab.title}
+              </h2>
+              <p
+                className="mt-2 text-sm leading-5"
+                style={{ color: activeTab === tab.id ? "var(--on-surface-variant)" : "var(--on-card-variant)" }}
+              >
                 {tab.subtitle}
               </p>
             </button>
@@ -334,6 +372,9 @@ export default function TryOnPage() {
                   className="mt-2 min-h-11 w-full rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
                 />
               </label>
+              <p className="text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
+                Use a direct image URL like `.jpg`, `.png`, or `.webp`. Product-page links from Amazon or other stores usually will not work here.
+              </p>
 
               <label className="block text-sm font-medium">
                 Category
@@ -352,7 +393,19 @@ export default function TryOnPage() {
                 type="button"
                 className="btn-primary"
                 disabled={!clothesUrl.trim() || isApplying}
-                onClick={() => void runTryOn(ToolName.TRY_ON_CLOTHES, "Custom garment", () => vtoApi.clothes(selfieBlob as Blob, clothesUrl, clothesCategory))}
+                onClick={() => {
+                  const trimmedUrl = clothesUrl.trim();
+                  if (!isLikelyDirectImageUrl(trimmedUrl)) {
+                    setError("Paste a direct garment image URL ending in .jpg, .png, or .webp. Product-page links like Amazon listings will not work.");
+                    return;
+                  }
+
+                  void runTryOn(
+                    ToolName.TRY_ON_CLOTHES,
+                    "Custom garment",
+                    () => vtoApi.clothes(selfieBlob as Blob, trimmedUrl, clothesCategory)
+                  );
+                }}
               >
                 Try Pasted URL
               </button>
@@ -383,7 +436,7 @@ export default function TryOnPage() {
                   <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" />
                 </div>
                 <h3 className="mt-3 line-clamp-2 text-sm font-semibold">{product.title}</h3>
-                <p className="mt-1 text-xs" style={{ color: "var(--on-surface-variant)" }}>
+                <p className="mt-1 text-xs" style={{ color: "var(--on-surface-muted)" }}>
                   {product.source} • {product.price}
                 </p>
                 <button
@@ -518,7 +571,7 @@ export default function TryOnPage() {
                   <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" />
                 </div>
                 <h3 className="mt-3 line-clamp-2 text-sm font-semibold">{product.title}</h3>
-                <p className="mt-1 text-xs" style={{ color: "var(--on-surface-variant)" }}>
+                <p className="mt-1 text-xs" style={{ color: "var(--on-surface-muted)" }}>
                   {product.source} • {product.price}
                 </p>
                 <button

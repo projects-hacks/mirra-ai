@@ -152,7 +152,7 @@ export default function CapturePage() {
         style={{ background: "rgba(var(--bg-rgb, 10,10,20),0.85)", backdropFilter: "blur(16px)" }}
       >
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push(user ? "/dashboard" : "/")}
           className="flex items-center gap-2 text-sm"
           style={{ color: "var(--on-surface-variant)" }}
         >

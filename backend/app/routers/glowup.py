@@ -2,17 +2,20 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from app.core.deps import read_image
 from app.data.makeup_presets import choose_makeup_presets
 from app.services.agent import agent_service
+from app.services.perfectcorp import PerfectCorpAPIError
 from app.tools import skin_tools
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 HAIRSTYLE_REFERENCES: list[dict[str, str]] = [
@@ -155,15 +158,31 @@ def _enrich_plan(face_attrs: dict[str, Any], skin_tone: dict[str, Any], plan: di
 
 @router.post("/analyze")
 async def analyze_glowup(selfie: UploadFile = File(...)) -> dict[str, Any]:
-    selfie_bytes = await read_image(selfie)
-    face_attrs, skin_tone = await asyncio.gather(
-        skin_tools.analyze_face(selfie_bytes),
-        skin_tools.analyze_skin_tone(selfie_bytes),
-    )
-    return {
-        "face_attributes": _normalize_face_attrs(face_attrs),
-        "skin_tone": _normalize_skin_tone(skin_tone),
-    }
+    try:
+        selfie_bytes = await read_image(selfie)
+        face_attrs, skin_tone = await asyncio.gather(
+            skin_tools.analyze_face(selfie_bytes),
+            skin_tools.analyze_skin_tone(selfie_bytes),
+        )
+        return {
+            "face_attributes": _normalize_face_attrs(face_attrs),
+            "skin_tone": _normalize_skin_tone(skin_tone),
+        }
+    except PerfectCorpAPIError as exc:
+        logger.info(
+            "Perfect Corp rejected glowup analysis: %s",
+            exc.error_code,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.get_user_message(),
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected glowup analyze failure")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to analyze glowup right now. Please try again.",
+        ) from exc
 
 
 @router.post("/recommend")
@@ -172,32 +191,50 @@ async def recommend_glowup(
     face_attributes_json: str | None = Form(default=None),
     skin_tone_json: str | None = Form(default=None),
 ) -> dict[str, Any]:
-    if selfie is not None:
-        selfie_bytes = await read_image(selfie)
-        face_attrs, skin_tone = await asyncio.gather(
-            skin_tools.analyze_face(selfie_bytes),
-            skin_tools.analyze_skin_tone(selfie_bytes),
-        )
-        face_attrs = _normalize_face_attrs(face_attrs)
-        skin_tone = _normalize_skin_tone(skin_tone)
-    else:
-        if not face_attributes_json or not skin_tone_json:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide either a selfie or both face_attributes_json and skin_tone_json.",
+    try:
+        if selfie is not None:
+            selfie_bytes = await read_image(selfie)
+            face_attrs, skin_tone = await asyncio.gather(
+                skin_tools.analyze_face(selfie_bytes),
+                skin_tools.analyze_skin_tone(selfie_bytes),
             )
-        try:
-            payload = GlowupRecommendRequest(
-                face_attributes=_load_json(face_attributes_json),
-                skin_tone=_load_json(skin_tone_json),
-            )
-            face_attrs = payload.face_attributes
-            skin_tone = payload.skin_tone
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            face_attrs = _normalize_face_attrs(face_attrs)
+            skin_tone = _normalize_skin_tone(skin_tone)
+        else:
+            if not face_attributes_json or not skin_tone_json:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Provide either a selfie or both face_attributes_json and skin_tone_json.",
+                )
+            try:
+                payload = GlowupRecommendRequest(
+                    face_attributes=_load_json(face_attributes_json),
+                    skin_tone=_load_json(skin_tone_json),
+                )
+                face_attrs = payload.face_attributes
+                skin_tone = payload.skin_tone
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    plan = await agent_service.generate_glowup_plan(face_attrs, skin_tone)
-    return _enrich_plan(face_attrs, skin_tone, plan)
+        plan = await agent_service.generate_glowup_plan(face_attrs, skin_tone)
+        return _enrich_plan(face_attrs, skin_tone, plan)
+    except PerfectCorpAPIError as exc:
+        logger.info(
+            "Perfect Corp rejected glowup recommend analysis: %s",
+            exc.error_code,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.get_user_message(),
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unexpected glowup recommend failure")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to build a glowup plan right now. Please try again.",
+        ) from exc
 
 
 def _load_json(raw: str) -> dict[str, Any]:

@@ -1,13 +1,16 @@
 """Redis cache — enterprise-grade caching for all services."""
 import json
 import hashlib
+import logging
 from typing import Any
 
 import redis.asyncio as redis
+from redis.exceptions import RedisError
 
 from app.core.config import settings
 
 _pool: redis.Redis | None = None
+logger = logging.getLogger(__name__)
 
 
 def get_pool() -> redis.Redis:
@@ -24,15 +27,22 @@ def get_pool() -> redis.Redis:
 
 async def get(key: str) -> Any | None:
     """Get a cached value. Returns None on miss."""
-    r = get_pool()
-    val = await r.get(key)
-    return json.loads(val) if val else None
+    try:
+        r = get_pool()
+        val = await r.get(key)
+        return json.loads(val) if val else None
+    except RedisError as exc:
+        logger.warning("Redis get failed for key %s: %s", key, exc)
+        return None
 
 
 async def cache_set(key: str, value: Any, ttl: int = 300) -> None:
     """Set a cached value with TTL in seconds."""
-    r = get_pool()
-    await r.set(key, json.dumps(value), ex=ttl)
+    try:
+        r = get_pool()
+        await r.set(key, json.dumps(value), ex=ttl)
+    except RedisError as exc:
+        logger.warning("Redis set failed for key %s: %s", key, exc)
 
 # Backward-compatible alias (shadows built-in `set`)
 set = cache_set
@@ -40,15 +50,21 @@ set = cache_set
 
 async def delete(key: str) -> None:
     """Delete a cached key."""
-    r = get_pool()
-    await r.delete(key)
+    try:
+        r = get_pool()
+        await r.delete(key)
+    except RedisError as exc:
+        logger.warning("Redis delete failed for key %s: %s", key, exc)
 
 
 async def invalidate_pattern(pattern: str) -> None:
     """Delete all keys matching a glob pattern."""
-    r = get_pool()
-    async for key in r.scan_iter(match=pattern):
-        await r.delete(key)
+    try:
+        r = get_pool()
+        async for key in r.scan_iter(match=pattern):
+            await r.delete(key)
+    except RedisError as exc:
+        logger.warning("Redis invalidate failed for pattern %s: %s", pattern, exc)
 
 
 def hash_bytes(data: bytes) -> str:
@@ -71,5 +87,8 @@ async def close() -> None:
     """Close the connection pool on shutdown."""
     global _pool
     if _pool:
-        await _pool.aclose()
+        try:
+            await _pool.aclose()
+        except RedisError as exc:
+            logger.warning("Redis close failed: %s", exc)
         _pool = None

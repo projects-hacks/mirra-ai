@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cake, Clock, Droplets, MapPin, Thermometer, Wind } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
+import { extractSkinScore } from "@/lib/skinScoring";
 
 // ── Types ────────────────────────────────────────────
 interface SkinScores {
+  [key: string]: number | undefined;
   overall: number;
   acne?: number;
   wrinkles?: number;
@@ -48,6 +50,28 @@ interface SkinScanRow extends Omit<SkinScan, "weather_at_scan"> {
 }
 
 // ── Helpers ──────────────────────────────────────────
+function getMetricScore(
+  scores: Record<string, unknown>,
+  metric: keyof SkinScores | string,
+  fallback = 75
+): number {
+  const score = extractSkinScore(scores[metric]);
+  if (score !== null) return score;
+
+  if (metric === "overall") {
+    const numericScores = Object.entries(scores)
+      .filter(([key]) => key !== "overall")
+      .map(([, value]) => extractSkinScore(value))
+      .filter((value): value is number => value !== null);
+
+    if (numericScores.length) {
+      return Math.round(numericScores.reduce((sum, value) => sum + value, 0) / numericScores.length);
+    }
+  }
+
+  return fallback;
+}
+
 function scoreColor(score: number): string {
   if (score >= 80) return "var(--success)";
   if (score >= 60) return "#f59e0b";
@@ -81,7 +105,7 @@ function formatTime(dateStr: string): string {
 function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: keyof SkinScores }>) {
   if (scans.length < 2) return null;
   
-  const points = scans.slice(0, 30).reverse().map((s) => s.scores[metric] ?? 75);
+  const points = scans.slice(0, 30).reverse().map((s) => getMetricScore(s.scores, metric, 75));
   const max = Math.max(...points, 100);
   const min = Math.min(...points, 0);
   const range = max - min || 1;
@@ -165,10 +189,15 @@ function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: key
 // Scan card with details
 function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boolean }>) {
   const [expanded, setExpanded] = useState(false);
+  const overallScore = getMetricScore(scan.scores, "overall", 75);
   
   const allMetrics = Object.entries(scan.scores)
     .filter(([k]) => k !== "overall")
-    .sort(([, a], [, b]) => (a as number) - (b as number));
+    .map(([key, value]) => ({
+      key,
+      score: getMetricScore({ [key]: value }, key, 75),
+    }))
+    .sort((a, b) => a.score - b.score);
   
   return (
     <div className="glass-card space-y-3">
@@ -192,8 +221,8 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
         </div>
         
         <div className="text-right">
-          <div className="text-2xl font-bold" style={{ color: scoreColor(scan.scores.overall) }}>
-            {scan.scores.overall}
+          <div className="text-2xl font-bold" style={{ color: scoreColor(overallScore) }}>
+            {overallScore}
           </div>
           <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>
             Overall
@@ -255,7 +284,7 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
       {/* Top 3 metrics preview */}
       {!expanded && (
         <div className="space-y-2">
-          {allMetrics.slice(0, 3).map(([key, value]) => (
+          {allMetrics.slice(0, 3).map(({ key, score }) => (
             <div key={key} className="flex items-center justify-between text-xs">
               <span style={{ color: "var(--on-surface-variant)" }}>
                 {key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -267,14 +296,14 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
                 >
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${value}%`, background: scoreColor(value as number) }}
+                    style={{ width: `${score}%`, background: scoreColor(score) }}
                   />
                 </div>
                 <span 
                   className="font-medium w-8 text-right"
-                  style={{ color: scoreColor(value as number) }}
+                  style={{ color: scoreColor(score) }}
                 >
-                  {value}
+                  {score}
                 </span>
               </div>
             </div>
@@ -285,7 +314,7 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
       {/* All metrics (expanded) */}
       {expanded && (
         <div className="space-y-2">
-          {allMetrics.map(([key, value]) => (
+          {allMetrics.map(({ key, score }) => (
             <div key={key} className="flex items-center justify-between text-xs">
               <span style={{ color: "var(--on-surface-variant)" }}>
                 {key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -297,14 +326,14 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
                 >
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${value}%`, background: scoreColor(value as number) }}
+                    style={{ width: `${score}%`, background: scoreColor(score) }}
                   />
                 </div>
                 <span 
                   className="font-medium w-8 text-right"
-                  style={{ color: scoreColor(value as number) }}
+                  style={{ color: scoreColor(score) }}
                 >
-                  {value}
+                  {score}
                 </span>
               </div>
             </div>
@@ -373,6 +402,14 @@ export default function SkinHistoryPage() {
     );
   }
 
+  const firstScore = scans.length >= 2
+    ? getMetricScore(scans[scans.length - 1].scores, selectedMetric, 75)
+    : 75;
+  const latestScore = scans.length >= 1
+    ? getMetricScore(scans[0].scores, selectedMetric, 75)
+    : 75;
+  const scoreDelta = latestScore - firstScore;
+
   const metricOptions: Array<{ key: keyof SkinScores; label: string }> = [
     { key: "overall", label: "Overall" },
     { key: "moisture", label: "Moisture" },
@@ -418,7 +455,7 @@ export default function SkinHistoryPage() {
         ) : (
           <>
             {/* Stats overview */}
-            <div className="glass-card space-y-3 lg:sticky lg:top-24">
+            <div className="glass-card space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Progress Overview</p>
                 <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>
@@ -453,14 +490,14 @@ export default function SkinHistoryPage() {
                 <div className="flex gap-3 text-xs">
                   <div className="flex-1 p-3 rounded-lg" style={{ background: "var(--surface-variant)" }}>
                     <p style={{ color: "var(--on-surface-variant)" }}>First scan</p>
-                    <p className="text-lg font-bold mt-1" style={{ color: scoreColor(scans[scans.length - 1].scores[selectedMetric] ?? 75) }}>
-                      {scans[scans.length - 1].scores[selectedMetric] ?? 75}
+                    <p className="text-lg font-bold mt-1" style={{ color: scoreColor(firstScore) }}>
+                      {firstScore}
                     </p>
                   </div>
                   <div className="flex-1 p-3 rounded-lg" style={{ background: "var(--surface-variant)" }}>
                     <p style={{ color: "var(--on-surface-variant)" }}>Latest scan</p>
-                    <p className="text-lg font-bold mt-1" style={{ color: scoreColor(scans[0].scores[selectedMetric] ?? 75) }}>
-                      {scans[0].scores[selectedMetric] ?? 75}
+                    <p className="text-lg font-bold mt-1" style={{ color: scoreColor(latestScore) }}>
+                      {latestScore}
                     </p>
                   </div>
                   <div className="flex-1 p-3 rounded-lg" style={{ background: "var(--surface-variant)" }}>
@@ -468,13 +505,13 @@ export default function SkinHistoryPage() {
                     <p 
                       className="text-lg font-bold mt-1"
                       style={{ 
-                        color: ((scans[0].scores[selectedMetric] ?? 75) - (scans[scans.length - 1].scores[selectedMetric] ?? 75)) >= 0 
+                        color: scoreDelta >= 0 
                           ? "var(--success)" 
                           : "var(--error)" 
                       }}
                     >
-                      {((scans[0].scores[selectedMetric] ?? 75) - (scans[scans.length - 1].scores[selectedMetric] ?? 75)) > 0 ? "+" : ""}
-                      {((scans[0].scores[selectedMetric] ?? 75) - (scans[scans.length - 1].scores[selectedMetric] ?? 75))}
+                      {scoreDelta > 0 ? "+" : ""}
+                      {scoreDelta}
                     </p>
                   </div>
                 </div>

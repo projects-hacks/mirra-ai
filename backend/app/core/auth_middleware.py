@@ -30,6 +30,7 @@ def _get_http_client() -> httpx.AsyncClient:
 
 # ── Routes that don't require authentication ──────────
 PUBLIC_PATHS: Set[str] = {
+    "/",
     "/health",
     "/ready",
     "/docs",
@@ -60,6 +61,10 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
+
+        # Let CORS preflight requests pass through untouched.
+        if request.method == "OPTIONS":
+            return await call_next(request)
 
         # ── Bypass: public paths & WebSocket ─────────
         if path in PUBLIC_PATHS or any(path.startswith(p) for p in PUBLIC_PREFIXES):

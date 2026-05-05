@@ -25,12 +25,17 @@ interface UseCameraReturn {
   isUsingCameraKit: boolean;
 }
 
+interface UseCameraOptions {
+  enabled?: boolean;
+}
+
 /**
  * Hook: manages camera stream.
  * Attempts to use Perfect Corp JS Camera Kit if loaded (provides face detection,
  * quality checks, guided capture). Falls back to native getUserMedia.
  */
-export function useCamera(): UseCameraReturn {
+export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
+  const { enabled = true } = options;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -42,6 +47,13 @@ export function useCamera(): UseCameraReturn {
   const isUsingCameraKit = false;
 
   useEffect(() => {
+    if (!enabled) {
+      debugFlow("native-camera", "init skipped", { enabled });
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      return;
+    }
+
     let cancelled = false;
 
     async function initCamera() {
@@ -111,7 +123,7 @@ export function useCamera(): UseCameraReturn {
       streamRef.current = null;
       setIsReady(false);
     };
-  }, []);
+  }, [enabled]);
 
   const streamAttachedRef = useRef(false);
 
@@ -178,7 +190,7 @@ export function useCamera(): UseCameraReturn {
     canvas.width = targetWidth;
     canvas.height = targetHeight;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
 
     // Mirror the capture (front camera is mirrored)

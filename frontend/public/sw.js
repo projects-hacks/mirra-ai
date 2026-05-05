@@ -64,19 +64,22 @@ globalThis.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // Skip non-cacheable requests
-  if (shouldBypassCache(url)) return;
+  if (shouldBypassCache(event.request, url)) return;
 
   event.respondWith(routeRequest(event.request, url));
 });
 
 /** Determine if a request should bypass the service worker entirely */
-function shouldBypassCache(url) {
+function shouldBypassCache(request, url) {
   return (
+    request.method !== "GET" ||
+    url.pathname.startsWith("/_next/") ||
     url.protocol === "chrome-extension:" ||
     url.pathname.includes("/auth/callback") ||
     url.pathname.includes("/auth/") ||
     url.protocol === "ws:" ||
-    url.protocol === "wss:"
+    url.protocol === "wss:" ||
+    (url.origin !== globalThis.location.origin && url.pathname.startsWith("/api/"))
   );
 }
 
@@ -110,7 +113,7 @@ async function networkFirstStrategy(request, cacheName) {
     const networkResponse = await fetch(request);
     
     // Only cache successful responses
-    if (networkResponse?.status === 200) {
+    if (request.method === "GET" && networkResponse?.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
@@ -159,7 +162,7 @@ async function cacheFirstStrategy(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
     
-    if (networkResponse?.status === 200) {
+    if (request.method === "GET" && networkResponse?.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }

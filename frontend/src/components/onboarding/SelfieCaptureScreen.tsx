@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Camera, TriangleAlert } from "lucide-react";
 import { useCameraKit } from "@/hooks/useCameraKit";
 import { useCamera } from "@/hooks/useCamera";
+import { ENABLE_CAMERA_KIT } from "@/lib/constants";
 
 interface SelfieCaptureScreenProps {
   onCapture: (selfie: string) => void;
@@ -14,7 +15,13 @@ export function SelfieCaptureScreen({
   onCapture,
 }: Readonly<SelfieCaptureScreenProps>) {
   const [preferNativeFallback, setPreferNativeFallback] = useState(false);
-  const { videoRef, capture, isReady, error: nativeCameraError } = useCamera();
+  const useNativeCamera = useMemo(
+    () => !ENABLE_CAMERA_KIT || preferNativeFallback,
+    [preferNativeFallback]
+  );
+  const { videoRef, capture, isReady, error: nativeCameraError } = useCamera({
+    enabled: useNativeCamera,
+  });
 
   const { loadSDK, openCamera, closeCamera, isSDKLoaded, isSDKLoading, error } = useCameraKit({
     onFaceDetectionCaptured: async (images) => {
@@ -33,19 +40,20 @@ export function SelfieCaptureScreen({
     }
   });
 
-  const useNativeCamera = useMemo(
-    () => preferNativeFallback || Boolean(error),
-    [error, preferNativeFallback]
-  );
-
   // Load SDK on mount
   useEffect(() => {
+    if (!ENABLE_CAMERA_KIT || preferNativeFallback) {
+      return;
+    }
     loadSDK();
-  }, [loadSDK]);
+  }, [loadSDK, preferNativeFallback]);
 
   const handleStartScan = () => {
-    if (!useNativeCamera && !isSDKLoaded) {
-      setPreferNativeFallback(true);
+    if (!ENABLE_CAMERA_KIT) {
+      const selfie = capture();
+      if (selfie) {
+        onCapture(selfie);
+      }
       return;
     }
 
@@ -56,6 +64,16 @@ export function SelfieCaptureScreen({
       }
       return;
     }
+
+    if (isSDKLoading) {
+      return;
+    }
+
+    if (!isSDKLoaded) {
+      loadSDK();
+      return;
+    }
+
     openCamera({ faceDetectionMode: 'skincare' });
   };
 
@@ -82,7 +100,7 @@ export function SelfieCaptureScreen({
           <h2 className="text-2xl font-bold text-white">Let&apos;s setup your profile</h2>
           <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
             {useNativeCamera
-              ? "Camera Kit is unavailable, so we switched to your device camera. Center your face and capture when you're ready."
+              ? "Center your face and capture when you're ready. Perfect Corp Camera Kit is paused while using the device camera fallback."
               : "We'll use the Perfect Corp Face SDK to perform a detailed scan of your skin health. Please ensure you are in a well-lit room."}
           </p>
         </div>
@@ -94,10 +112,10 @@ export function SelfieCaptureScreen({
         >
           {useNativeCamera
             ? (isReady ? "Capture Selfie" : "Preparing Camera...")
-            : (isSDKLoading ? "Loading Camera Kit..." : isSDKLoaded ? "Start Face Scan" : "Use Device Camera")}
+            : (isSDKLoading ? "Loading Camera Kit..." : isSDKLoaded ? "Start Face Scan" : "Retry Camera Kit")}
         </button>
 
-        {!useNativeCamera && (
+        {ENABLE_CAMERA_KIT && !useNativeCamera && (
           <button
             type="button"
             onClick={() => setPreferNativeFallback(true)}
@@ -105,6 +123,17 @@ export function SelfieCaptureScreen({
             style={{ color: "var(--on-surface-variant)" }}
           >
             Use device camera instead
+          </button>
+        )}
+
+        {ENABLE_CAMERA_KIT && useNativeCamera && (
+          <button
+            type="button"
+            onClick={() => setPreferNativeFallback(false)}
+            className="text-sm font-medium underline"
+            style={{ color: "var(--on-surface-variant)" }}
+          >
+            Try Perfect Corp Camera Kit again
           </button>
         )}
       </div>

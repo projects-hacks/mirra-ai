@@ -10,16 +10,20 @@ function isLocalHostname(hostname: string) {
 }
 
 export function getAuthRedirectUrl() {
+  if (typeof globalThis.window !== "undefined") {
+    const { origin, hostname } = globalThis.location;
+    if (isLocalHostname(hostname)) {
+      return `${normalizeOrigin(origin)}/auth/callback`;
+    }
+  }
+
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (configured) {
     return `${normalizeOrigin(configured)}/auth/callback`;
   }
 
   if (typeof globalThis.window !== "undefined") {
-    const { origin, hostname } = globalThis.location;
-    if (isLocalHostname(hostname)) {
-      return `${normalizeOrigin(origin)}/auth/callback`;
-    }
+    const { origin } = globalThis.location;
 
     console.warn(
       "NEXT_PUBLIC_SITE_URL is not configured. Falling back to the current origin for OAuth redirects."

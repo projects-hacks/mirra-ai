@@ -72,7 +72,7 @@ export default function SkinSimulatePage() {
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-black/12 bg-[#f8fafc] p-6 text-center">
               <WandSparkles size={34} className="text-[#64748b]" aria-hidden="true" />
               <h3 className="mt-4 text-xl font-semibold">Simulation not generated yet</h3>
-              <p className="mt-2 max-w-sm text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
+              <p className="mt-2 max-w-sm text-sm leading-6" style={{ color: "var(--on-card-variant)" }}>
                 Run simulation using the latest stored selfie and the intensity controls.
               </p>
               <button

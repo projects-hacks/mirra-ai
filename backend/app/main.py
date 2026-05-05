@@ -35,6 +35,10 @@ app.add_middleware(JWTAuthMiddleware)
 # CORS middleware should be added last in the middleware chain
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
     allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.ondigitalocean\.app|http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
@@ -57,6 +61,16 @@ app.include_router(outfit_history.router, prefix="/api/outfit-history", tags=["O
 app.include_router(style_profile.router, prefix="/api/style-profile", tags=["Style Profile"])
 app.include_router(calendar_auth.router, prefix="/api/calendar", tags=["Calendar"])
 app.add_api_websocket_route("/ws/voice", voice.voice_websocket)
+
+
+@app.get("/")
+async def root():
+    return {
+        "name": "Mirra API",
+        "status": "ok",
+        "health": "/health",
+        "docs": "/docs",
+    }
 
 
 @app.get("/health")

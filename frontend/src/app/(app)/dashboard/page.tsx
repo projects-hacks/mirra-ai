@@ -10,6 +10,12 @@ import SkinSummaryCard from "@/components/dashboard/SkinSummaryCard";
 import WeatherCard from "@/components/dashboard/WeatherCard";
 import { useDashboard } from "@/hooks/useDashboard";
 
+function formatTemperature(tempF: number) {
+  const fahrenheit = Math.round(tempF);
+  const celsius = Math.round(((tempF - 32) * 5) / 9);
+  return `${fahrenheit}°F / ${celsius}°C`;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { skinSummary, weather, insight, recentLooks, isLoading, error } = useDashboard();
@@ -64,7 +70,7 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <CloudSun size={16} className="text-white/65" aria-hidden="true" />
-              <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : weather ? `${Math.round(weather.temp)}F` : "--"}</p>
+              <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : weather ? formatTemperature(weather.temp) : "--"}</p>
               <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Local</p>
             </div>
           </div>

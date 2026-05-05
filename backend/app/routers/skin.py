@@ -2,17 +2,20 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile, status
 
 from app.core.deps import read_image, resolve_user_id
 from app.services.agent import agent_service
+from app.services.perfectcorp import PerfectCorpAPIError
 from app.services.supabase_client import supabase
 from app.services.weather import get_weather
 from app.tools import skin_tools
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/analyze")
@@ -21,15 +24,26 @@ async def analyze_skin(
     selfie: UploadFile = File(...),
     user_id: str | None = Form(default=None),
 ) -> dict[str, Any]:
-    selfie_bytes = await read_image(selfie)
-    resolved_user_id = resolve_user_id(request, user_id)
-    result = await skin_tools.analyze_skin(selfie_bytes, resolved_user_id)
-    scores = result.get("scores", {})
-    return {
-        "scores": scores,
-        "skin_age": scores.get("skin_age"),
-        "suggestions": [],
-    }
+    try:
+        selfie_bytes = await read_image(selfie)
+        resolved_user_id = resolve_user_id(request, user_id)
+        result = await skin_tools.analyze_skin(selfie_bytes, resolved_user_id)
+        scores = result.get("scores", {})
+        return {
+            "scores": scores,
+            "skin_age": scores.get("skin_age"),
+            "suggestions": [],
+        }
+    except PerfectCorpAPIError as exc:
+        logger.info(
+            "Perfect Corp rejected skin analysis for user %s: %s",
+            user_id,
+            exc.error_code,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.get_user_message(),
+        ) from exc
 
 
 @router.post("/simulate")

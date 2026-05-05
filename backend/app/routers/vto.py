@@ -2,6 +2,7 @@
 import base64
 import json
 from typing import Any
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -11,6 +12,7 @@ from app.core.deps import read_image
 from app.tools import fashion_tools, beauty_tools, accessory_tools, hair_tools
 
 router = APIRouter()
+DIRECT_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif")
 
 
 class SkinAnalysisRequest(BaseModel):
@@ -21,6 +23,22 @@ class TryOnRequest(BaseModel):
     selfie: str  # base64
     product_id: str
     vto_type: str  # clothes, earrings, etc.
+
+
+def _is_likely_direct_image_url(raw_url: str) -> bool:
+    try:
+        parsed = urlparse(raw_url.strip())
+    except ValueError:
+        return False
+
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return False
+
+    normalized_path = parsed.path.lower()
+    if normalized_path.endswith(DIRECT_IMAGE_EXTENSIONS):
+        return True
+
+    return any(token in parsed.netloc.lower() for token in ("image", "images", "media", "cdn", "cloudfront"))
 
 
 @router.post("/skin-analysis")
@@ -46,6 +64,12 @@ async def try_on_clothes(
     garment_url: str = Form(...),
     garment_category: str = Form(default="upper"),
 ) -> dict[str, Any]:
+    if not _is_likely_direct_image_url(garment_url):
+        raise HTTPException(
+            status_code=400,
+            detail="Paste a direct garment image URL (.jpg, .png, .webp). Product-page links like Amazon listings do not work here.",
+        )
+
     selfie_bytes = await read_image(selfie)
     return await fashion_tools.try_on_clothes(selfie_bytes, garment_url, garment_category)
 

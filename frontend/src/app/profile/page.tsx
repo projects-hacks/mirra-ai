@@ -29,6 +29,7 @@ interface SkinScores {
 
 interface SkinTone {
   skin_color?: string;
+  undertone?: string | null;
   eye_color?: string | null;
   eye_color_name?: string | null;
   lip_color?: string | null;
@@ -56,6 +57,84 @@ interface BodyModel {
   face_shape?: FaceShape;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function firstNumber(...values: unknown[]): number | null {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function normalizeSkinToneSnapshot(value: unknown) {
+  const tone = asRecord(value);
+  const results = asRecord(tone?.results);
+  const color = asRecord(results?.color) ?? asRecord(tone?.color);
+
+  return {
+    skinColor: firstString(
+      tone?.skin_color,
+      tone?.skin_tone_hex,
+      tone?.hex,
+      color?.skin_color,
+      color?.hex
+    ),
+    undertone: firstString(
+      tone?.undertone,
+      tone?.undertone_name,
+      tone?.skin_tone,
+      color?.undertone
+    ),
+    hairColorName: firstString(
+      tone?.hair_color_name,
+      tone?.hair_color,
+      color?.hair_color_name,
+      color?.hair_color
+    ),
+    eyeColorName: firstString(
+      tone?.eye_color_name,
+      tone?.eye_color,
+      color?.eye_color_name,
+      color?.eye_color
+    ),
+  };
+}
+
+function normalizeFaceSnapshot(value: unknown) {
+  const face = asRecord(value);
+  const results = asRecord(face?.results);
+  const agegender = asRecord(results?.agegender) ?? asRecord(face?.agegender);
+
+  return {
+    shape: firstString(
+      face?.shape,
+      face?.face_shape,
+      face?.faceshape,
+      results?.shape,
+      results?.face_shape,
+      results?.faceshape
+    ),
+    age: firstNumber(face?.age, results?.age, agegender?.age),
+    lipShape: firstString(face?.lip_shape, face?.lipshape, results?.lip_shape, results?.lipshape),
+    eyelidType: firstString(face?.eyelid_type, face?.eyelid, results?.eyelid_type, results?.eyelid),
+  };
+}
+
 interface SkinScan {
   id: string;
   created_at: string;
@@ -74,7 +153,13 @@ interface SkinScan {
 
 interface EditableProfile {
   displayName: string;
-  preferred_currency: string;
+  currency: string;
+  budget_min: string;
+  budget_max: string;
+}
+
+interface SavedPreferences {
+  currency: string;
   budget_min: string;
   budget_max: string;
 }
@@ -102,9 +187,14 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedPreferences, setSavedPreferences] = useState<SavedPreferences>({
+    currency: "USD",
+    budget_min: "",
+    budget_max: "",
+  });
   const [editForm, setEditForm] = useState<EditableProfile>({
     displayName: "",
-    preferred_currency: "USD",
+    currency: "USD",
     budget_min: "",
     budget_max: "",
   });
@@ -163,17 +253,25 @@ export default function ProfilePage() {
       
       if (prefRes.status === "fulfilled" && prefRes.value?.data) {
         const p = prefRes.value.data as Record<string, unknown>;
-        setCalendarConnected(
-          typeof p.calendar_connected === "boolean" ? p.calendar_connected : false
-        );
-        setEditForm((f) => ({
-          ...f,
-          preferred_currency:
-            typeof p.preferred_currency === "string" ? p.preferred_currency : "USD",
+        const nextPreferences = {
+          currency:
+            typeof p.currency === "string"
+              ? p.currency
+              : typeof p.preferred_currency === "string"
+                ? p.preferred_currency
+                : "USD",
           budget_min:
             typeof p.budget_min === "number" ? p.budget_min.toString() : "",
           budget_max:
             typeof p.budget_max === "number" ? p.budget_max.toString() : "",
+        };
+        setCalendarConnected(
+          typeof p.calendar_connected === "boolean" ? p.calendar_connected : false
+        );
+        setSavedPreferences(nextPreferences);
+        setEditForm((f) => ({
+          ...f,
+          ...nextPreferences,
         }));
       }
 
@@ -183,34 +281,97 @@ export default function ProfilePage() {
     load();
   }, [router]);
 
-  // ── Save profile ───────────────────────────────────
-  const handleSave = useCallback(async () => {
+  const persistPreferences = useCallback(async (targetUserId: string) => {
+    const supabase = getSupabase();
+    return supabase.from("user_preferences").upsert(
+      {
+        user_id: targetUserId,
+        currency: editForm.currency,
+        budget_min: editForm.budget_min ? Number.parseFloat(editForm.budget_min) : null,
+        budget_max: editForm.budget_max ? Number.parseFloat(editForm.budget_max) : null,
+      } as never,
+      { onConflict: "user_id" }
+    );
+  }, [editForm.budget_max, editForm.budget_min, editForm.currency]);
+
+  // ── Save profile name ──────────────────────────────
+  const handleSaveProfile = useCallback(async () => {
     if (!user) return;
     setIsSaving(true);
     setSaveError(null);
 
     const supabase = getSupabase();
-    const [r1, r2] = await Promise.all([
-      supabase.from("profiles").upsert({ id: user.id, display_name: editForm.displayName } as never),
-      supabase.from("user_preferences").upsert(
-        {
-          user_id: user.id,
-          preferred_currency: editForm.preferred_currency,
-          budget_min: editForm.budget_min ? Number.parseFloat(editForm.budget_min) : null,
-          budget_max: editForm.budget_max ? Number.parseFloat(editForm.budget_max) : null,
-        } as never,
-        { onConflict: "user_id" }
-      ),
-    ] as const);
+    const nextDisplayName = editForm.displayName.trim() || user.displayName;
 
-    if (r1.error || r2.error) {
-      setSaveError((r1.error ?? r2.error)?.message ?? "Save failed");
-    } else {
-      setUser((u) => u ? { ...u, displayName: editForm.displayName } : u);
-      setIsEditing(false);
+    const authResult = await supabase.auth.updateUser({
+      data: {
+        full_name: nextDisplayName,
+        name: nextDisplayName,
+        display_name: nextDisplayName,
+      },
+    });
+
+    if (authResult.error) {
+      setSaveError(authResult.error.message ?? "Save failed");
+      setIsSaving(false);
+      return;
     }
+
+    // Best-effort mirror to profiles when a row already exists.
+    // Avoid upsert here because insert is blocked by RLS in some environments.
+    const profileResult = await supabase
+      .from("profiles")
+      .update({ display_name: nextDisplayName } as never)
+      .eq("id", user.id);
+
+    if (profileResult.error) {
+      console.warn("Profile row update skipped:", profileResult.error.message);
+    }
+
+    setUser((current) => current ? { ...current, displayName: nextDisplayName } : current);
+    setEditForm((current) => ({
+      ...current,
+      displayName: nextDisplayName,
+    }));
+    setIsEditing(false);
     setIsSaving(false);
   }, [user, editForm]);
+
+  // ── Save preferences ───────────────────────────────
+  const handleSavePreferences = useCallback(async () => {
+    if (!user) return;
+    setIsSaving(true);
+    setSaveError(null);
+
+    const preferenceResult = await persistPreferences(user.id);
+
+    if (preferenceResult.error) {
+      setSaveError(preferenceResult.error.message ?? "Save failed");
+      setIsSaving(false);
+      return;
+    }
+
+    const nextPreferences = {
+      currency: editForm.currency,
+      budget_min: editForm.budget_min,
+      budget_max: editForm.budget_max,
+    };
+    setSavedPreferences(nextPreferences);
+    setEditForm((current) => ({
+      ...current,
+      ...nextPreferences,
+    }));
+    setIsSaving(false);
+  }, [user, editForm, persistPreferences]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditForm({
+      displayName: user?.displayName ?? "",
+      ...savedPreferences,
+    });
+    setSaveError(null);
+    setIsEditing(false);
+  }, [savedPreferences, user]);
 
   // ── Log out ──
   const handleLogOut = useCallback(async () => {
@@ -260,6 +421,18 @@ export default function ProfilePage() {
 
   const scores = bodyModel?.skin_scores ?? {} as SkinScores;
   const overallScore = scores.overall ?? 75;
+  const appearanceTone = normalizeSkinToneSnapshot(bodyModel?.skin_tone);
+  const appearanceFace = normalizeFaceSnapshot(bodyModel?.face_shape);
+  const hasAppearanceSnapshot = Boolean(
+    appearanceFace.shape ||
+    appearanceFace.age !== null ||
+    appearanceTone.skinColor ||
+    appearanceTone.undertone ||
+    appearanceTone.hairColorName ||
+    appearanceTone.eyeColorName ||
+    appearanceFace.lipShape ||
+    appearanceFace.eyelidType
+  );
 
   return (
     <div
@@ -316,8 +489,8 @@ export default function ProfilePage() {
           </div>
           {isEditing ? (
             <div className="flex gap-2 flex-shrink-0">
-              <button onClick={() => setIsEditing(false)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
-              <button onClick={handleSave} disabled={isSaving} className="btn-primary text-xs px-3 py-1.5">
+              <button onClick={handleCancelEdit} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+              <button onClick={handleSaveProfile} disabled={isSaving} className="btn-primary text-xs px-3 py-1.5">
                 {isSaving ? "…" : "Save"}
               </button>
             </div>
@@ -337,8 +510,8 @@ export default function ProfilePage() {
                 id="currency-select"
                 className="w-full rounded-lg px-3 py-2 text-sm"
                 style={{ background: "var(--surface-variant)", color: "var(--on-surface)", border: "1px solid var(--outline)" }}
-                value={editForm.preferred_currency}
-                onChange={(e) => setEditForm((f) => ({ ...f, preferred_currency: e.target.value }))}
+                value={editForm.currency}
+                onChange={(e) => setEditForm((f) => ({ ...f, currency: e.target.value }))}
               >
                 {["USD", "EUR", "GBP", "INR", "CAD", "AUD"].map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -368,6 +541,24 @@ export default function ProfilePage() {
                   onChange={(e) => setEditForm((f) => ({ ...f, budget_max: e.target.value }))}
                 />
               </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+                className="btn-secondary text-xs px-3 py-1.5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePreferences}
+                disabled={isSaving}
+                className="btn-primary text-xs px-3 py-1.5"
+              >
+                {isSaving ? "Saving..." : "Save Preferences"}
+              </button>
             </div>
           </div>
         )}
@@ -422,23 +613,43 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap text-xs">
-              {bodyModel.face_shape?.shape && (
-                <span className="context-pill">{bodyModel.face_shape.shape} face</span>
+              {appearanceFace.shape && (
+                <span className="context-pill">{appearanceFace.shape} face</span>
               )}
-              {bodyModel.face_shape?.age && (
-                <span className="context-pill">Age {bodyModel.face_shape.age}</span>
+              {appearanceFace.age !== null && (
+                <span className="context-pill">Age {appearanceFace.age}</span>
               )}
-              {bodyModel.skin_tone?.skin_color && (
+              {appearanceTone.undertone && (
+                <span className="context-pill capitalize">{appearanceTone.undertone} undertone</span>
+              )}
+              {appearanceTone.hairColorName && (
+                <span className="context-pill">{appearanceTone.hairColorName} hair</span>
+              )}
+              {appearanceTone.eyeColorName && (
+                <span className="context-pill">{appearanceTone.eyeColorName} eyes</span>
+              )}
+              {appearanceFace.lipShape && (
+                <span className="context-pill">{appearanceFace.lipShape} lips</span>
+              )}
+              {appearanceFace.eyelidType && (
+                <span className="context-pill">{appearanceFace.eyelidType} eyelids</span>
+              )}
+              {appearanceTone.skinColor && (
                 <span className="context-pill flex items-center gap-1.5">
                   <span 
                     className="w-3 h-3 rounded-full border"
                     style={{ 
-                      background: bodyModel.skin_tone.skin_color,
+                      background: appearanceTone.skinColor,
                       borderColor: "var(--outline)"
                     }}
                   />
                   Skin tone
                 </span>
+              )}
+              {!hasAppearanceSnapshot && (
+                <p className="text-xs" style={{ color: "var(--on-surface-muted)" }}>
+                  Run a skin scan to populate your face shape and tone snapshot.
+                </p>
               )}
             </div>
           </div>

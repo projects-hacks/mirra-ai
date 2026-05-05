@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -100,10 +101,15 @@ const PROOF_ITEMS = [
 ];
 
 export default function LandingPage() {
-  const { signIn, loading } = useAuth();
-  const ctaLabel = loading ? "Checking session..." : "Try Now";
+  const router = useRouter();
+  const { signIn, user, loading } = useAuth();
+  const ctaLabel = loading ? "Checking session..." : user ? "Open Dashboard" : "Try Now";
 
   const startSignIn = () => {
+    if (user) {
+      router.push("/dashboard");
+      return;
+    }
     void signIn();
   };
 
@@ -198,7 +204,7 @@ export default function LandingPage() {
           <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
             <div>
               <p className="eyebrow text-[0.72rem] text-[#7a3f35]">What Mirra Shows</p>
-              <h2 className="section-display mt-3 max-w-xl text-4xl text-[#18212b] sm:text-5xl">
+              <h2 className="section-display text-ink-strong mt-3 max-w-xl text-4xl sm:text-5xl">
                 A full appearance operating system, not another try-on catalog.
               </h2>
             </div>
@@ -213,7 +219,7 @@ export default function LandingPage() {
               return (
                 <article
                   key={feature.title}
-                  className="grid overflow-hidden rounded-lg border border-[#ded6ca] bg-white shadow-[0_18px_48px_rgba(24,33,43,0.07)] lg:grid-cols-[0.78fr_1.22fr]"
+                  className="surface-card grid overflow-hidden rounded-lg border border-[#ded6ca] bg-white shadow-[0_18px_48px_rgba(24,33,43,0.07)] lg:grid-cols-[0.78fr_1.22fr]"
                 >
                   <div className={`${index % 2 ? "lg:order-2" : ""} min-h-[260px] bg-[#dfe5ec]`}>
                     <img src={feature.image} alt={feature.title} className="h-full w-full object-cover" loading="lazy" />
@@ -223,11 +229,11 @@ export default function LandingPage() {
                       <Icon size={20} aria-hidden="true" />
                     </div>
                     <p className="eyebrow mt-6 text-[0.72rem] text-[#a15c45]">{feature.eyebrow}</p>
-                    <h3 className="section-display mt-3 text-3xl text-[#18212b]">{feature.title}</h3>
-                    <p className="body-copy mt-4 max-w-2xl text-base text-[#51606f]">{feature.description}</p>
+                    <h3 className="section-display text-card-strong mt-3 text-3xl">{feature.title}</h3>
+                    <p className="body-copy text-card-muted mt-4 max-w-2xl text-base">{feature.description}</p>
                     <div className="mt-6 flex flex-wrap gap-2">
                       {feature.stats.map((stat) => (
-                        <span key={stat} className="eyebrow rounded-full border border-[#ded6ca] bg-[#f8f4ed] px-3 py-1.5 text-[0.68rem] text-[#394554]">
+                        <span key={stat} className="eyebrow text-card-muted rounded-full border border-[#ded6ca] bg-[#f8f4ed] px-3 py-1.5 text-[0.68rem]">
                           {stat}
                         </span>
                       ))}
@@ -291,12 +297,12 @@ export default function LandingPage() {
 
       <section className="bg-[#fbfaf7] px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
+          <div className="surface-card rounded-lg border border-[#ded6ca] bg-white p-6 shadow-[0_18px_48px_rgba(24,33,43,0.07)] sm:p-8">
             <p className="eyebrow text-[0.72rem] text-[#7a3f35]">API Depth</p>
-            <h2 className="section-display mt-3 text-4xl text-[#18212b] sm:text-5xl">
+            <h2 className="section-display text-card-strong mt-3 text-4xl sm:text-5xl">
               Nine Perfect Corp APIs become one consumer journey.
             </h2>
-            <p className="body-copy mt-5 text-base text-[#51606f]">
+            <p className="body-copy text-card-muted mt-5 text-base">
               The demo can move from skin analysis into simulation, makeover, outfit try-on, accessories, hair, and purchase proof without changing products.
             </p>
             <button
@@ -312,12 +318,12 @@ export default function LandingPage() {
 
           <div className="grid gap-3 sm:grid-cols-3">
             {API_STACK.map((api, index) => (
-              <div key={api} className="rounded-lg border border-[#ded6ca] bg-white p-4 shadow-[0_12px_28px_rgba(24,33,43,0.05)]">
+              <div key={api} className="surface-subcard rounded-lg border border-[#ded6ca] bg-white p-4 shadow-[0_12px_28px_rgba(24,33,43,0.05)]">
                 <div className="mb-5 flex items-center justify-between">
                   <CheckCircle2 size={18} className="text-[#157347]" aria-hidden="true" />
-                  <span className="eyebrow text-[0.68rem] text-[#8b96a3]">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="eyebrow text-card-muted text-[0.68rem]">{String(index + 1).padStart(2, "0")}</span>
                 </div>
-                <p className="ui-title text-sm text-[#243140]">{api}</p>
+                <p className="ui-title text-card-strong text-sm">{api}</p>
               </div>
             ))}
           </div>
@@ -413,9 +419,6 @@ export default function LandingPage() {
           <div className="flex gap-5">
             <a href="/privacy" className="hover:text-white">Privacy</a>
             <a href="/terms" className="hover:text-white">Terms</a>
-            <button type="button" onClick={startSignIn} className="font-semibold text-white">
-              Try Now
-            </button>
           </div>
         </div>
       </footer>

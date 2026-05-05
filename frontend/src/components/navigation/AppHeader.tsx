@@ -13,10 +13,10 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
 
   return (
     <header
-      className="sticky top-0 z-[var(--z-nav)] px-4"
+      className="page-header-shell px-4"
       style={{ paddingTop: "calc(var(--safe-top) + 0.85rem)" }}
     >
-      <div className="page-shell flex items-center justify-between">
+      <div className="page-shell flex min-h-[72px] items-center justify-between gap-4 py-4">
         <div>
           <p className="eyebrow text-[0.7rem]" style={{ color: "var(--on-surface-variant)" }}>
             Mirra

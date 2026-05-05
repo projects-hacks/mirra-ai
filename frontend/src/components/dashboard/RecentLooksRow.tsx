@@ -9,7 +9,7 @@ interface RecentLooksRowProps {
 
 export default function RecentLooksRow({ looks }: Readonly<RecentLooksRowProps>) {
   return (
-    <section className="rounded-[1.25rem] border border-black/8 bg-white/78 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
+    <section className="surface-card rounded-[1.25rem] border border-black/8 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
       <div className="flex items-center justify-between">
         <div>
           <p className="label-caps">Try-On</p>
@@ -21,14 +21,14 @@ export default function RecentLooksRow({ looks }: Readonly<RecentLooksRowProps>)
       {looks.length ? (
         <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
           {looks.map((look) => (
-            <div key={`${look.imageUrl}-${look.timestamp}`} className="w-32 shrink-0 overflow-hidden rounded-2xl border border-black/6 bg-[#f8fafc]">
+            <div key={`${look.imageUrl}-${look.timestamp}`} className="surface-subcard w-32 shrink-0 overflow-hidden rounded-2xl border border-black/6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={look.imageUrl} alt={look.toolName} className="aspect-[3/4] w-full object-cover" />
             </div>
           ))}
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-black/6 bg-[#f8fafc] p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="surface-subcard mt-5 rounded-2xl border border-black/6 p-4 text-sm" style={{ color: "var(--on-card-variant)" }}>
           Try-on results will appear here after your first generated look.
         </p>
       )}

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle, Share2, Sparkles, WandSparkles } from "lucide-react";
 import { glowupApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
 import { ToolName } from "@/lib/constants";
+import { getSupabase } from "@/lib/supabase";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
 import { useImageTransition } from "@/hooks/useImageTransition";
 import type {
@@ -181,6 +182,8 @@ export default function GlowupPage() {
   const [analysis, setAnalysis] = useState<GlowupAnalysis | null>(null);
   const [plan, setPlan] = useState<GlowupPlan | null>(null);
   const [accessories, setAccessories] = useState<AccessoryCatalog>({ earrings: [], necklace: [] });
+  const [earliestSelfieUrl, setEarliestSelfieUrl] = useState<string | null>(null);
+  const [latestSavedSelfieUrl, setLatestSavedSelfieUrl] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [currentTitle, setCurrentTitle] = useState("Original Selfie");
   const [isLoading, setIsLoading] = useState(false);
@@ -205,6 +208,47 @@ export default function GlowupPage() {
       cancelled = true;
     };
   }, [selfie]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadComparisonImages() {
+      const supabase = getSupabase();
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+
+      if (!userId) return;
+
+      const [earliestResult, latestResult] = await Promise.all([
+        supabase
+          .from("skin_scans")
+          .select("selfie_url")
+          .eq("user_id", userId)
+          .not("selfie_url", "is", null)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("skin_scans")
+          .select("selfie_url")
+          .eq("user_id", userId)
+          .not("selfie_url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      if (cancelled) return;
+
+      setEarliestSelfieUrl(earliestResult.data?.selfie_url ?? null);
+      setLatestSavedSelfieUrl(latestResult.data?.selfie_url ?? null);
+    }
+
+    void loadComparisonImages();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!selfieBlob || plan) return;
@@ -253,7 +297,8 @@ export default function GlowupPage() {
   }, [plan, selfieBlob]);
 
   const formatted = useMemo(() => formatFaceAnalysis(analysis), [analysis]);
-  const previewImage = currentImage ?? vtoResult?.imageUrl ?? selfie ?? null;
+  const beforeImage = earliestSelfieUrl ?? selfie ?? null;
+  const previewImage = currentImage ?? vtoResult?.imageUrl ?? latestSavedSelfieUrl ?? selfie ?? null;
   const makeupRecommendations = useMemo(
     () => getRecommendationByCategory(plan?.recommendations, "makeup"),
     [plan?.recommendations]
@@ -350,16 +395,26 @@ export default function GlowupPage() {
   const handleShare = useCallback(async () => {
     if (!previewImage) return;
 
+    const shareData: ShareData = {
+      title: "Mirra GlowUp",
+      text: "Preview from my Mirra GlowUp flow.",
+    };
+
+    try {
+      const parsedUrl = new URL(previewImage);
+      if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
+        shareData.url = parsedUrl.toString();
+      }
+    } catch {
+      // Data URLs and temporary blob strings are not valid Web Share `url` values.
+    }
+
     if (navigator.share) {
-      await navigator.share({
-        title: "Mirra GlowUp",
-        text: "Preview from my Mirra GlowUp flow.",
-        url: previewImage,
-      });
+      await navigator.share(shareData);
       return;
     }
 
-    await navigator.clipboard.writeText(previewImage);
+    await navigator.clipboard.writeText(shareData.url ?? previewImage);
   }, [previewImage]);
 
   if (isHydrated && !selfie) {
@@ -413,9 +468,9 @@ export default function GlowupPage() {
         </div>
       )}
 
-      {selfie && previewImage && (
+      {beforeImage && previewImage && (
         <PreviewShell
-          originalImage={selfie}
+          originalImage={beforeImage}
           currentImage={previewImage}
           title={currentTitle}
           subtitle={plan?.insight ?? "Your latest preview updates here as you apply makeup, hair, or accessory choices."}

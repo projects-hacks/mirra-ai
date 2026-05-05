@@ -8,11 +8,12 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white shadow-sm rounded-lg p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Terms of Service</h1>
+    <div className="legal-page">
+      <div className="legal-surface surface-card">
+        <p className="eyebrow">Mirra</p>
+        <h1>Terms of Service</h1>
         
-        <p className="text-sm text-gray-600 mb-8">
+        <p className="legal-meta">
           Last updated: {new Date().toLocaleDateString()}
         </p>
 
@@ -302,8 +303,8 @@ export default function TermsPage() {
           </ul>
         </section>
 
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <p className="text-sm text-gray-600 text-center">
+        <div className="mt-12 border-t border-slate-200/80 pt-8">
+          <p className="text-center text-sm" style={{ color: "var(--on-card-muted)" }}>
             © {new Date().getFullYear()} Mirra AI. All rights reserved.
           </p>
         </div>

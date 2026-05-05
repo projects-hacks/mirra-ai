@@ -19,7 +19,7 @@ export default function IntensitySliders({ intensities, onChange }: Readonly<Int
           <label key={key} className="block">
             <div className="mb-2 flex items-center justify-between gap-3 text-sm">
               <span className="font-medium">{labelFor(key)}</span>
-              <span style={{ color: "var(--on-surface-variant)" }}>{value.toFixed(2)}</span>
+              <span style={{ color: "var(--on-card-variant)" }}>{value.toFixed(2)}</span>
             </div>
             <input
               type="range"

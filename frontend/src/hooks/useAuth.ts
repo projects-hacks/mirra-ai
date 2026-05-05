@@ -111,14 +111,25 @@ export function useAuth() {
     }
 
     // Get initial session
-    getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const mapped = mapUser(session.user);
-        dispatch({ type: "SET_USER", payload: mapped });
-        scheduleTokenRefresh(session.expires_at);   // Task 17.1
+    void (async () => {
+      try {
+        const { data: { session } } = await getSession();
+        const resolvedSession =
+          session?.user
+            ? session
+            : (await refreshSession()).data.session;
+
+        if (resolvedSession?.user) {
+          const mapped = mapUser(resolvedSession.user);
+          dispatch({ type: "SET_USER", payload: mapped });
+          scheduleTokenRefresh(resolvedSession.expires_at);   // Task 17.1
+        }
+      } catch (error) {
+        console.warn("Initial session restore failed", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    })();
 
     // Subscribe to auth state changes (handles OAuth callback, signOut, refresh)
     const { data: { subscription } } = onAuthStateChange(

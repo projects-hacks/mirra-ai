@@ -255,7 +255,7 @@ function normalizeWeather(data: BackendWeatherResponse): WeatherInfo {
   const humidity = Number(data.humidity ?? 0);
   const temp = Number(data.temp_f ?? data.temp ?? 0);
   const uvIndex = data.uvIndex ?? data.uv_index;
-  const condition = data.condition ?? (typeof data.code === "number" ? `Code ${data.code}` : "Current conditions");
+  const condition = data.condition ?? "Current conditions";
   const aiTip = uvIndex && uvIndex >= 6
     ? "High UV today. Prioritize SPF before styling."
     : humidity < 40
