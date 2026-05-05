@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+// @deprecated: voice-mode only. VTO result display will be rebuilt per page.
 /**
  * VTO Display Component
  * Handles display of selfie, VTO results, and loading states

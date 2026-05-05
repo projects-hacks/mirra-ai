@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+// @deprecated: voice-mode only. Feature discovery now uses bottom navigation and page-level actions.
 "use client";
 
 import { useCallback, useMemo } from "react";

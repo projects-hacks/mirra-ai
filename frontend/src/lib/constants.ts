@@ -2,42 +2,27 @@
 
 // ── API Configuration ──────────────────────────────
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 export const ENABLE_CAMERA_KIT = process.env.NEXT_PUBLIC_ENABLE_CAMERA_KIT !== "false";
 
 // ── API Endpoints ──────────────────────────────────
-export const Endpoint = {
-  HEALTH: "/health",
-  VTO_UPLOAD: "/api/vto/upload",
-  VTO_TASK: "/api/vto/task",
-  VTO_RESULT: "/api/vto/result",
-  CONTEXT: "/api/context",
-  CLOSET: "/api/closet",
-  WS_VOICE: "/ws/voice",
+export const ApiRoutes = {
+  SKIN_ANALYZE: "/api/skin/analyze",
+  SKIN_SIMULATE: "/api/skin/simulate",
+  SKIN_HISTORY: "/api/skin/history",
+  VTO_CLOTHES: "/api/vto/clothes",
+  VTO_MAKEUP: "/api/vto/makeup",
+  VTO_EARRINGS: "/api/vto/earrings",
+  VTO_NECKLACE: "/api/vto/necklace",
+  VTO_HAIR: "/api/vto/hair",
+  GLOWUP_ANALYZE: "/api/glowup/analyze",
+  GLOWUP_RECOMMEND: "/api/glowup/recommend",
+  OUTFIT_MATCH: "/api/outfit/match",
+  OUTFIT_PROOF_CARD: "/api/outfit/proof-card",
+  PRODUCTS_SEARCH: "/api/products/search",
+  WEATHER: "/api/context/weather",
 } as const;
-
-// ── WebSocket Message Types (Client → Server) ──────
-export enum WSClientMsg {
-  SELFIE = "selfie",
-  READY = "ready",
-  STOP = "stop",
-}
-
-// ── WebSocket Message Types (Server → Client) ──────
-export enum WSServerMsg {
-  GREETING = "greeting",
-  AGENT_TEXT = "agent_text",
-  USER_TEXT = "user_text",
-  VTO_RESULT = "vto_result",
-  SKIN_RESULT = "skin_result",
-  PRODUCT_RESULT = "product_result",
-  PROOF_CARD = "proof_card",
-  TOOL_START = "tool_start",
-  ERROR = "error",
-  SESSION_READY = "session_ready",
-}
 
 // ── Tool Names (mirrors backend ToolName enum) ──────
 export enum ToolName {
@@ -81,11 +66,4 @@ export const CAMERA = {
   MIN_WIDTH: 480,
   JPEG_QUALITY: 0.85,
   ASPECT_RATIO: 16 / 9,
-} as const;
-
-// ── WebSocket Config ────────────────────────────────
-export const WS_CONFIG = {
-  RECONNECT_DELAYS: [1000, 2000, 4000, 8000, 16000, 30000],
-  MAX_RETRIES: 5,
-  HEARTBEAT_INTERVAL: 30000,
 } as const;

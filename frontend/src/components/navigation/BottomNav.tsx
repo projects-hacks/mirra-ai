@@ -1,14 +1,15 @@
 "use client";
 
-import { Camera, ScanFace, Shirt, Sparkles, WandSparkles } from "lucide-react";
+import { Home, ScanFace, Shirt, Sparkles, WandSparkles } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import BottomNavItem from "./BottomNavItem";
 
 const NAV_ITEMS = [
-  { path: "/dashboard", label: "Home", icon: Camera },
-  { path: "/skin-history", label: "Skin", icon: Sparkles },
-  { path: "/glowup", label: "GlowUp", icon: WandSparkles },
-  { path: "/closet", label: "Closet", icon: Shirt },
-  { path: "/try-on", label: "Try-On", icon: ScanFace },
+  { path: "/dashboard", label: "Home", icon: Home, color: "var(--primary)" },
+  { path: "/skin", label: "Skin", icon: Sparkles, color: "#10b981" },
+  { path: "/glowup", label: "GlowUp", icon: WandSparkles, color: "#f59e0b" },
+  { path: "/closet", label: "Closet", icon: Shirt, color: "#8b5cf6" },
+  { path: "/try-on", label: "Try-On", icon: ScanFace, color: "#ec4899" },
 ];
 
 export default function BottomNav() {
@@ -22,32 +23,16 @@ export default function BottomNav() {
     >
       <div className="page-shell">
         <div className="glass-panel mx-auto flex h-[var(--nav-height)] max-w-2xl items-center justify-around rounded-[1.5rem] px-2 shadow-[0_16px_40px_rgba(26,28,30,0.14)]">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.path;
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.path}
-                type="button"
-                onClick={() => router.push(item.path)}
-                className="flex min-h-[44px] min-w-[64px] flex-1 items-center justify-center"
-                aria-current={isActive ? "page" : undefined}
-              >
-                <span
-                  className="flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition-all duration-200"
-                  style={{
-                    background: isActive ? "var(--primary)" : "transparent",
-                    color: isActive ? "var(--on-primary)" : "var(--on-surface-variant)",
-                    boxShadow: isActive ? "0 10px 24px rgba(26, 28, 30, 0.18)" : "none",
-                  }}
-                >
-                  <Icon size={16} />
-                  <span className="hidden sm:inline">{item.label}</span>
-                </span>
-              </button>
-            );
-          })}
+          {NAV_ITEMS.map((item) => (
+            <BottomNavItem
+              key={item.path}
+              label={item.label}
+              icon={item.icon}
+              color={item.color}
+              isActive={pathname === item.path || pathname.startsWith(`${item.path}/`)}
+              onClick={() => router.push(item.path)}
+            />
+          ))}
         </div>
       </div>
     </nav>

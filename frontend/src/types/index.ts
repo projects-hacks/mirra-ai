@@ -99,6 +99,43 @@ export interface Product {
   rating?: number;
 }
 
+// ── Agent Reasoning ────────────────────────────────
+export interface AgentStep {
+  emoji: string;
+  text: string;
+  status: "pending" | "running" | "done" | "error" | "complete";
+}
+
+export interface AgentInsight {
+  steps: AgentStep[];
+  insight: string;
+  recommendations: Array<{
+    title: string;
+    description: string;
+    action?: string;
+    product?: Product;
+  }>;
+  toolsUsed: string[];
+}
+
+// ── Dashboard ──────────────────────────────────────
+export interface SkinSummary {
+  overallScore: number;
+  skinAge: number | null;
+  lastScanDate: string | null;
+  trend: "improving" | "declining" | "stable" | "no_data";
+  topConcerns: Array<{ name: string; score: number }>;
+}
+
+export interface WeatherInfo {
+  temp: number;
+  humidity: number;
+  condition: string;
+  location: string;
+  uvIndex?: number;
+  aiTip?: string;
+}
+
 // ── Closet ──────────────────────────────────────────
 export interface ClosetItem {
   id: string;
@@ -134,26 +171,16 @@ export interface ProofCardItem {
   color?: string;
 }
 
-// ── Menu State ──────────────────────────────────────
-export interface MenuState {
-  isVisible: boolean;
-  activeFeature: ToolName | null;
-  showParameterModal: boolean;
-}
-
 // ── App State ───────────────────────────────────────
 export interface AppState {
   selfie: string | null;
-  isListening: boolean;
   isProcessing: boolean;
-  isConnected: boolean;
   isHydrated: boolean;          // true once localStorage restore is done
   messages: Message[];
   vtoResult: VTOResult | null;
   currentTool: ToolName | null;
   user: User | null;
   closetItems: ClosetItem[];
-  menu: MenuState;
 }
 
 // ── State Actions ───────────────────────────────────
@@ -163,24 +190,17 @@ export type AppAction =
   | { type: "ADD_MESSAGE"; payload: Message }
   | { type: "REMOVE_LOADING"; payload: ToolName }
   | { type: "SET_VTO_RESULT"; payload: VTOResult }
-  | { type: "SET_LISTENING"; payload: boolean }
   | { type: "SET_PROCESSING"; payload: boolean }
-  | { type: "SET_CONNECTED"; payload: boolean }
   | { type: "SET_CURRENT_TOOL"; payload: ToolName | null }
   | { type: "SET_USER"; payload: User | null }
   | { type: "SET_CLOSET"; payload: ClosetItem[] }
   | { type: "CLEAR_VTO" }
   | { type: "RESET" }
-  | { type: "TOGGLE_MENU" }
-  | { type: "SET_MENU_VISIBLE"; payload: boolean }
-  | { type: "SET_ACTIVE_FEATURE"; payload: ToolName | null }
-  | { type: "SHOW_PARAMETER_MODAL"; payload: boolean }
   | {
       type: "HYDRATE";
       payload: {
         messages: Message[];
         selfie: string | null;
         vtoResult: VTOResult | null;
-        menuVisible?: boolean;
       };
     };

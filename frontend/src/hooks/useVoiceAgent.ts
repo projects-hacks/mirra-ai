@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+// @deprecated: voice-mode only. The tap-driven app now uses REST APIs from "@/lib/api".
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";

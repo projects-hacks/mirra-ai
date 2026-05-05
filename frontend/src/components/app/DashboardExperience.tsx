@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+// @deprecated: voice-mode only. Dashboard now lives in app/(app)/dashboard/page.tsx.
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";

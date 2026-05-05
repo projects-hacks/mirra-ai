@@ -1,3 +1,4 @@
+// @deprecated: voice-mode only. Retained temporarily during the tap-driven migration.
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";

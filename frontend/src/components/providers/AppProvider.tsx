@@ -19,7 +19,6 @@ const STORAGE_KEYS = {
   MESSAGES: "mirra:messages",
   SELFIE: "mirra:selfie",
   VTO_RESULT: "mirra:vto_result",
-  MENU_VISIBLE: "mirra:menu_visible",
 } as const;
 
 const MAX_MESSAGES = 50;
@@ -51,20 +50,13 @@ function clearStorage(): void {
 // ── Initial State ────────────────────────────────────
 const initialState: AppState = {
   selfie: null,
-  isListening: false,
   isProcessing: false,
-  isConnected: false,
   isHydrated: false,
   messages: [],
   vtoResult: null,
   currentTool: null,
   user: null,
   closetItems: [],
-  menu: {
-    isVisible: true,
-    activeFeature: null,
-    showParameterModal: false,
-  },
 };
 
 // ── Reducer ──────────────────────────────────────────
@@ -78,7 +70,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         messages: action.payload.messages,
         selfie: action.payload.selfie,
         vtoResult: action.payload.vtoResult,
-        menu: { ...state.menu, isVisible: action.payload.menuVisible ?? true },
         isHydrated: true,
       };
 
@@ -108,14 +99,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case "SET_VTO_RESULT":
       return { ...state, vtoResult: action.payload, isProcessing: false };
 
-    case "SET_LISTENING":
-      return { ...state, isListening: action.payload };
-
     case "SET_PROCESSING":
       return { ...state, isProcessing: action.payload };
-
-    case "SET_CONNECTED":
-      return { ...state, isConnected: action.payload };
 
     case "SET_CURRENT_TOOL":
       return { ...state, currentTool: action.payload };
@@ -132,18 +117,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case "RESET":
       clearStorage();
       return { ...initialState, user: state.user, isHydrated: true };
-
-    case "TOGGLE_MENU":
-      return { ...state, menu: { ...state.menu, isVisible: !state.menu.isVisible } };
-
-    case "SET_MENU_VISIBLE":
-      return { ...state, menu: { ...state.menu, isVisible: action.payload } };
-
-    case "SET_ACTIVE_FEATURE":
-      return { ...state, menu: { ...state.menu, activeFeature: action.payload } };
-
-    case "SHOW_PARAMETER_MODAL":
-      return { ...state, menu: { ...state.menu, showParameterModal: action.payload } };
 
     default:
       return state;
@@ -165,7 +138,6 @@ export function AppProvider({ children }: Readonly<{ children: ReactNode }>) {
       const messages = loadFromStorage<Message[]>(STORAGE_KEYS.MESSAGES) ?? [];
       const selfie = loadFromStorage<string>(STORAGE_KEYS.SELFIE);
       const vtoResult = loadFromStorage<VTOResult>(STORAGE_KEYS.VTO_RESULT);
-      const menuVisible = loadFromStorage<boolean>(STORAGE_KEYS.MENU_VISIBLE);
 
       // Only restore non-loading messages (loading states are transient)
       const restoredMessages = messages
@@ -178,14 +150,13 @@ export function AppProvider({ children }: Readonly<{ children: ReactNode }>) {
           messages: restoredMessages,
           selfie: selfie ?? null,
           vtoResult: vtoResult ?? null,
-          menuVisible: menuVisible ?? true,
         },
       });
     } catch {
       // Hydration failed (e.g. cleared browser data) — mark done without restoring
       dispatch({
         type: "HYDRATE",
-        payload: { messages: [], selfie: null, vtoResult: null, menuVisible: true },
+        payload: { messages: [], selfie: null, vtoResult: null },
       });
     }
   }, []);
@@ -225,12 +196,6 @@ export function AppProvider({ children }: Readonly<{ children: ReactNode }>) {
       try { localStorage.removeItem(STORAGE_KEYS.VTO_RESULT); } catch { /* ignore */ }
     }
   }, [state.vtoResult, state.isHydrated]);
-
-  // ── Persist menu visibility on change ─────────────
-  useEffect(() => {
-    if (!state.isHydrated) return;
-    saveToStorage(STORAGE_KEYS.MENU_VISIBLE, state.menu.isVisible);
-  }, [state.menu.isVisible, state.isHydrated]);
 
   return (
     <ErrorBoundary>

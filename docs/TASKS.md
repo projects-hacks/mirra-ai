@@ -251,7 +251,7 @@ The landing page is the first thing judges see. It must feel premium.
 
 ### 3.1 Create Dashboard Page (`/dashboard`)
 
-- [ ] Create `frontend/src/app/(app)/dashboard/page.tsx`
+- [x] Create `frontend/src/app/(app)/dashboard/page.tsx`
   - **Skin Summary Card** (top):
     - Overall score (large number with color)
     - Skin age vs real age
@@ -271,7 +271,7 @@ The landing page is the first thing judges see. It must feel premium.
 
 ### 3.2 Dashboard data fetching
 
-- [ ] Create `frontend/src/lib/api.ts` — API client utility
+- [x] Create `frontend/src/lib/api.ts` — API client utility
   - Centralized fetch wrapper with auth headers
   - `api.post('/api/skin/analyze', formData)`, `api.get('/api/skin/history')`, etc.
   - Error handling, loading states
