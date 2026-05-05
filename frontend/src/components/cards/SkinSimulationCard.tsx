@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 
 interface SkinSimulationCardProps {
@@ -45,7 +45,7 @@ const SkinSimulationCard = ({
 
   // Get top 3 concerns that were improved
   const topConcerns = Object.entries(intensities)
-    .filter(([_, value]) => value > 0)
+    .filter(([, value]) => value > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([key]) => key.replace("_", " "));

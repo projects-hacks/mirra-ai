@@ -1,13 +1,14 @@
 "use client";
 
-import { Camera, Shirt, Sparkles, User as UserIcon } from "lucide-react";
+import { Camera, ScanFace, Shirt, Sparkles, WandSparkles } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  { path: "/", label: "Home", icon: Camera },
-  { path: "/closet", label: "Closet", icon: Shirt },
+  { path: "/dashboard", label: "Home", icon: Camera },
   { path: "/skin-history", label: "Skin", icon: Sparkles },
-  { path: "/profile", label: "Profile", icon: UserIcon },
+  { path: "/glowup", label: "GlowUp", icon: WandSparkles },
+  { path: "/closet", label: "Closet", icon: Shirt },
+  { path: "/try-on", label: "Try-On", icon: ScanFace },
 ];
 
 export default function BottomNav() {
@@ -20,7 +21,7 @@ export default function BottomNav() {
       aria-label="Primary navigation"
     >
       <div className="page-shell">
-        <div className="glass-panel mx-auto flex h-[var(--nav-height)] max-w-xl items-center justify-around rounded-[1.5rem] px-2 shadow-[0_16px_40px_rgba(26,28,30,0.14)]">
+        <div className="glass-panel mx-auto flex h-[var(--nav-height)] max-w-2xl items-center justify-around rounded-[1.5rem] px-2 shadow-[0_16px_40px_rgba(26,28,30,0.14)]">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.path;
             const Icon = item.icon;

@@ -7,7 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core import cache
 from app.core.auth_middleware import JWTAuthMiddleware
-from app.routers import voice, vto, context, closet, onboarding, profile, calendar_auth, closet_analytics, proof_cards, outfit_history, style_profile, closet_recommendations
+from app.routers import (
+    voice, vto, context, closet, onboarding, profile, calendar_auth,
+    closet_analytics, proof_cards, outfit_history, style_profile,
+    closet_recommendations, skin, outfit, products, glowup,
+)
 
 
 @asynccontextmanager
@@ -39,7 +43,11 @@ app.add_middleware(
 
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
+app.include_router(skin.router, prefix="/api/skin", tags=["Skin"])
 app.include_router(vto.router, prefix="/api/vto", tags=["VTO"])
+app.include_router(outfit.router, prefix="/api/outfit", tags=["Outfit"])
+app.include_router(products.router, prefix="/api/products", tags=["Products"])
+app.include_router(glowup.router, prefix="/api/glowup", tags=["GlowUp"])
 app.include_router(context.router, prefix="/api/context", tags=["Context"])
 app.include_router(closet.router, prefix="/api/closet", tags=["Closet"])
 app.include_router(closet_analytics.router)  # Already has prefix="/api/closet"

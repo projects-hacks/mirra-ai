@@ -22,12 +22,12 @@ export default function SkinAnalysisCard({
         <div>
           <h2 className="text-xl font-bold text-white mb-1 tracking-tight">Skin Profile</h2>
           <div className="flex items-center gap-2 text-sm text-[var(--on-surface-variant)]">
-            <span>Skin Age: <strong className="text-white">{scores.skin_age || '--'}</strong></span>
+            <span>Skin Age: <strong className="text-white">{scores.skinAge ?? '--'}</strong></span>
           </div>
         </div>
         <div className="flex flex-col items-end">
           <span className="text-xs uppercase tracking-wider text-[var(--on-surface-variant)]">Health Score</span>
-          <span className="text-2xl font-bold text-[var(--primary)]">{scores.health_score ?? '--'}</span>
+          <span className="text-2xl font-bold text-[var(--primary)]">{scores.overallScore ?? '--'}</span>
         </div>
       </div>
 
@@ -37,15 +37,15 @@ export default function SkinAnalysisCard({
         </h3>
         <div className="grid grid-cols-3 gap-2">
           {topConcerns.map((concern) => (
-            <div key={concern.id} className="flex flex-col items-center p-2 rounded-xl bg-white/5 border border-white/10 text-center">
+            <div key={concern.key} className="flex flex-col items-center p-2 rounded-xl bg-white/5 border border-white/10 text-center">
               <RadialProgress 
-                progress={concern.value} 
+                value={concern.score} 
                 size={48} 
                 strokeWidth={4} 
                 color={concern.color} 
               />
               <span className="text-xs font-medium text-white mt-2 mb-1 leading-tight">{concern.label}</span>
-              <span className="text-[10px] text-[var(--on-surface-variant)] leading-tight line-clamp-2">{concern.strategy}</span>
+              <span className="text-[10px] text-[var(--on-surface-variant)] leading-tight line-clamp-2">{concern.recommendation || "Skin support looks steady."}</span>
             </div>
           ))}
         </div>
@@ -57,10 +57,10 @@ export default function SkinAnalysisCard({
         </h3>
         <div className="flex flex-wrap gap-2">
           {concerns.slice(3).map((concern) => (
-            <div key={concern.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10">
+            <div key={concern.key} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10">
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: concern.color }} />
               <span className="text-xs text-white">{concern.label}</span>
-              <span className="text-xs font-medium" style={{ color: concern.color }}>{concern.value}</span>
+              <span className="text-xs font-medium" style={{ color: concern.color }}>{concern.score}</span>
             </div>
           ))}
         </div>

@@ -39,6 +39,15 @@ PUBLIC_PATHS: Set[str] = {
     "/api/onboarding/analyze",      # called during onboarding before api.ts is wired
     "/api/onboarding/seed-closet",  # called from CompletionScreen inline
     "/api/onboarding/complete",     # called from CompletionScreen inline
+    "/api/skin/analyze",
+    "/api/skin/simulate",
+    "/api/vto/clothes",
+    "/api/vto/makeup",
+    "/api/vto/earrings",
+    "/api/vto/necklace",
+    "/api/vto/hair",
+    "/api/products/search",
+    "/api/glowup/recommend",
 }
 
 # Prefixes that bypass auth entirely (WebSocket handled separately)

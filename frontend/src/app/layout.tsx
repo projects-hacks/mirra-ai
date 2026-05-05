@@ -34,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="h-full overflow-hidden">
+      <body className="h-full overflow-x-hidden">
         <AppProvider>{children}</AppProvider>
 
         {/* Perfect Corp JS Camera Kit is dynamically injected by useCameraKit to ensure ymkAsyncInit is ready */}

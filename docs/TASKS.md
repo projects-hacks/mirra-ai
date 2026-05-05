@@ -25,6 +25,10 @@
 | Tool executor (routes all tools) | `backend/app/services/tool_executor.py` | ✅ |
 | Supabase client + schema | `backend/app/services/supabase_client.py` | ✅ |
 | Camera Kit hook | `frontend/src/hooks/useCameraKit.ts` | ✅ |
+| Landing page experience | `frontend/src/app/page.tsx` | ✅ |
+| Selfie capture flow | `frontend/src/app/capture/page.tsx` + `frontend/src/components/onboarding/SelfieCaptureScreen.tsx` | ✅ |
+| Shared authenticated app shell | `frontend/src/app/(app)/layout.tsx` + `frontend/src/components/navigation/BottomNav.tsx` | ✅ |
+| Dashboard experience wrapper | `frontend/src/components/app/DashboardExperience.tsx` + `frontend/src/app/(app)/dashboard/page.tsx` | ✅ |
 | Skin History page (trends, charts) | `frontend/src/app/skin-history/page.tsx` | ✅ |
 | Closet page (grid + upload) | `frontend/src/app/closet/page.tsx` | ✅ |
 | SkinAnalysisCard component | `frontend/src/components/cards/SkinAnalysisCard.tsx` | ✅ |
@@ -128,8 +132,8 @@ Create `backend/app/routers/skin.py`:
 # - Returns: array of past scans with scores + timestamps
 ```
 
-- [ ] Create `backend/app/routers/skin.py` with the 3 endpoints above
-- [ ] Register router in `backend/app/main.py`: `app.include_router(skin.router, prefix="/api/skin")`
+- [x] Create `backend/app/routers/skin.py` with the 3 endpoints above
+- [x] Register router in `backend/app/main.py`: `app.include_router(skin.router, prefix="/api/skin")`
 - [ ] Test: `curl -X POST http://localhost:8000/api/skin/analyze -F "selfie=@test.jpg"`
 
 ### 1.2 Create `/api/vto` endpoints
@@ -160,8 +164,8 @@ Create `backend/app/routers/vto.py`:
 # - Returns: { image_url: str }
 ```
 
-- [ ] Create `backend/app/routers/vto.py` with 5 endpoints
-- [ ] Register in `main.py`
+- [x] Create `backend/app/routers/vto.py` with 5 endpoints
+- [x] Register in `main.py`
 
 ### 1.3 Create `/api/outfit` endpoints
 
@@ -179,8 +183,8 @@ Create `backend/app/routers/outfit.py`:
 # - Returns: { card: {...} }
 ```
 
-- [ ] Create `backend/app/routers/outfit.py`
-- [ ] Register in `main.py`
+- [x] Create `backend/app/routers/outfit.py`
+- [x] Register in `main.py`
 
 ### 1.4 Create `/api/products` endpoints
 
@@ -196,14 +200,14 @@ Create `backend/app/routers/outfit.py`:
 # - This is the "agentic" endpoint — AI decides what looks good
 ```
 
-- [ ] Create `backend/app/routers/products.py`
-- [ ] Create `backend/app/routers/glowup.py` (orchestrator endpoint)
-- [ ] Register both in `main.py`
+- [x] Create `backend/app/routers/products.py`
+- [x] Create `backend/app/routers/glowup.py` (orchestrator endpoint)
+- [x] Register both in `main.py`
 
 ### 1.5 Add CORS for frontend
 
-- [ ] Verify CORS middleware in `main.py` allows `http://localhost:3000` and production URL
-- [ ] Add `allow_methods=["*"]` and `allow_headers=["*"]`
+- [x] Verify CORS middleware in `main.py` allows `http://localhost:3000` and production URL
+- [x] Add `allow_methods=["*"]` and `allow_headers=["*"]`
 
 ---
 
@@ -213,17 +217,18 @@ Create `backend/app/routers/outfit.py`:
 
 The landing page is the first thing judges see. It must feel premium.
 
-- [ ] Create `frontend/src/app/page.tsx` (overwrite existing voice-first page)
+- [x] Create `frontend/src/app/page.tsx` (overwrite existing voice-first page)
   - Hero section: "Mirra — Your AI Appearance Operator"
-  - Animated gradient background (dark theme, purple/blue gradients)
-  - "Get Started" CTA button → navigates to selfie capture
+  - Premium gradient background
+  - "Get Started" CTA button → signs in or continues to selfie capture
   - Feature cards: Skin Health, GlowUp, Smart Closet, Try-On Studio
   - If user is already authenticated → redirect to `/dashboard`
 
 ### 2.2 Selfie Capture Flow
 
-- [ ] Create `frontend/src/app/capture/page.tsx`
-  - Full-screen camera view using `useCameraKit` hook
+- [x] Create `frontend/src/app/capture/page.tsx`
+  - Full-screen capture flow using `SelfieCaptureScreen`
+  - Uses `useCameraKit` when available
   - Camera Kit opens in `skincare` mode (quality-gated)
   - On successful capture:
     1. Show brief "Analyzing..." animation
@@ -234,10 +239,9 @@ The landing page is the first thing judges see. It must feel premium.
 
 ### 2.3 Create shared layout for authenticated pages
 
-- [ ] Create `frontend/src/app/(app)/layout.tsx`
+- [x] Create `frontend/src/app/(app)/layout.tsx`
   - Bottom navigation bar: Home, Skin, GlowUp, Closet, Try-On
   - 5 tabs with icons and labels
-  - Active tab indicator with micro-animation
   - Safe area padding for mobile (notch, home indicator)
   - User avatar in top-right corner
 

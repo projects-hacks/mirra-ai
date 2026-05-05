@@ -15,16 +15,6 @@ interface ClosetRow {
   purchase_price: number | null;
 }
 
-interface NewClosetRow {
-  user_id: string;
-  name: string;
-  category: string;
-  color: string;
-  image_url: string;
-  brand?: string;
-  purchase_price?: number;
-}
-
 /** Hook: fetches and manages closet items from Supabase. */
 export function useCloset() {
   const dispatch = useAppDispatch();
