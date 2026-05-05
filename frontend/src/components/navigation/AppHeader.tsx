@@ -18,10 +18,10 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
     >
       <div className="page-shell flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em]" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="eyebrow text-[0.7rem]" style={{ color: "var(--on-surface-variant)" }}>
             Mirra
           </p>
-          <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-serif)" }}>
+          <h1 className="section-display text-[1.35rem] sm:text-[1.5rem]">
             {title}
           </h1>
         </div>
@@ -40,7 +40,7 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full rounded-full object-cover" />
           ) : (
-            <span className="text-sm font-semibold">
+            <span className="ui-title text-sm">
               {user?.displayName?.[0]?.toUpperCase() ?? "M"}
             </span>
           )}

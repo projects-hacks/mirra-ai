@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.core.deps import resolve_user_id
-from app.services.tool_executor import _generate_proof_card, _match_closet
+from app.services.outfit_service import generate_proof_card, match_closet
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ async def match_outfit(request: Request, body: OutfitMatchRequest) -> dict[str, 
     resolved_user_id = resolve_user_id(request, body.user_id)
     if not resolved_user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
-    return await _match_closet(
+    return await match_closet(
         user_id=resolved_user_id,
         occasion=body.occasion,
         location=body.location,
@@ -46,7 +46,7 @@ async def generate_outfit_proof_card(request: Request, body: ProofCardRequest) -
     if not resolved_user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
 
-    result = _generate_proof_card(
+    result = generate_proof_card(
         user_id=resolved_user_id,
         args={
             "look_name": body.look_name,

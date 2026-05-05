@@ -51,8 +51,8 @@ export default function QuickActionsGrid() {
             >
               <Icon size={18} />
             </span>
-            <h3 className="mt-4 text-base font-semibold tracking-tight">{action.title}</h3>
-            <p className="mt-1 text-sm leading-5" style={{ color: "var(--on-surface-variant)" }}>
+            <h3 className="section-display mt-4 text-[1.05rem]">{action.title}</h3>
+            <p className="body-copy mt-1 text-sm" style={{ color: "var(--on-surface-variant)" }}>
               {action.description}
             </p>
           </Link>

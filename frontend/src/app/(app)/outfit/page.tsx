@@ -9,7 +9,7 @@ import { useAppDispatch, useAppState } from "@/components/providers/AppProvider"
 import { outfitApi, productsApi, vtoApi, weatherApi, type VtoImageResponse } from "@/lib/api";
 import { Occasion } from "@/lib/closet-constants";
 import { ToolName } from "@/lib/constants";
-import { getSupabase } from "@/lib/supabase";
+import { resolveUserLocation } from "@/lib/userContext";
 import { useAuth } from "@/hooks/useAuth";
 import type { Product, WeatherInfo } from "@/types";
 
@@ -88,18 +88,6 @@ function productToSelectedItem(product: Product) {
     owned: false,
     category: "new",
   };
-}
-
-async function resolveUserLocation(userId: string): Promise<string> {
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from("profiles")
-    .select("location")
-    .eq("id", userId)
-    .single();
-
-  const location = (data as { location?: string } | null)?.location?.trim();
-  return location || "San Francisco";
 }
 
 function MatchGroup({

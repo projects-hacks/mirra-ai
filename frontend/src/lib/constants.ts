@@ -21,6 +21,7 @@ export const ApiRoutes = {
   GLOWUP_RECOMMEND: "/api/glowup/recommend",
   OUTFIT_MATCH: "/api/outfit/match",
   OUTFIT_PROOF_CARD: "/api/outfit/proof-card",
+  PROOF_CARDS: "/api/proof-cards",
   PRODUCTS_SEARCH: "/api/products/search",
   WEATHER: "/api/context/weather",
 } as const;

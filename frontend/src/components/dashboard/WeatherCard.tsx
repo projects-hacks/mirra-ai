@@ -14,7 +14,7 @@ export default function WeatherCard({ weather, isLoading = false }: Readonly<Wea
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="label-caps">Context</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Weather</h2>
+          <h2 className="section-display mt-2 text-xl sm:text-2xl">Weather</h2>
         </div>
         <CloudSun size={24} style={{ color: "var(--accent)" }} />
       </div>
@@ -26,16 +26,16 @@ export default function WeatherCard({ weather, isLoading = false }: Readonly<Wea
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4">
               <ThermometerSun size={18} />
-              <p className="mt-2 text-2xl font-semibold">{Math.round(weather.temp)}F</p>
-              <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>{weather.condition}</p>
+              <p className="metric-display mt-2 text-2xl">{Math.round(weather.temp)}F</p>
+              <p className="body-copy text-sm" style={{ color: "var(--on-surface-variant)" }}>{weather.condition}</p>
             </div>
             <div className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4">
               <Droplets size={18} />
-              <p className="mt-2 text-2xl font-semibold">{Math.round(weather.humidity)}%</p>
-              <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>Humidity</p>
+              <p className="metric-display mt-2 text-2xl">{Math.round(weather.humidity)}%</p>
+              <p className="body-copy text-sm" style={{ color: "var(--on-surface-variant)" }}>Humidity</p>
             </div>
           </div>
-          <p className="mt-4 rounded-2xl border border-[#d8c8b7] bg-[var(--secondary-container)] p-4 text-sm leading-6 text-[var(--on-secondary-container)]">
+          <p className="body-copy mt-4 rounded-2xl border border-[#d8c8b7] bg-[var(--secondary-container)] p-4 text-sm text-[var(--on-secondary-container)]">
             {weather.aiTip ?? `Local context from ${weather.location}.`}
           </p>
         </>

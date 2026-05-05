@@ -32,10 +32,10 @@ export default function SkinSummaryCard({ summary, isLoading = false }: Readonly
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="label-caps">Skin Summary</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Today&apos;s baseline</h2>
+          <h2 className="section-display mt-2 text-xl sm:text-2xl">Today&apos;s baseline</h2>
           <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-black/8 bg-white px-3 py-1.5 text-sm">
             <TrendIcon size={16} style={{ color: meta.color }} />
-            <span style={{ color: meta.color }}>{meta.label}</span>
+            <span className="ui-title" style={{ color: meta.color }}>{meta.label}</span>
           </div>
         </div>
         <RadialProgress
@@ -51,13 +51,13 @@ export default function SkinSummaryCard({ summary, isLoading = false }: Readonly
           <p className="text-xs font-medium uppercase tracking-[0.12em]" style={{ color: "var(--on-surface-muted)" }}>
             Skin Age
           </p>
-          <p className="mt-2 text-2xl font-semibold">{summary?.skinAge ?? "--"}</p>
+          <p className="metric-display mt-2 text-2xl">{summary?.skinAge ?? "--"}</p>
         </div>
         <div className="rounded-2xl border border-black/6 bg-[#f8fafc] p-4">
           <p className="text-xs font-medium uppercase tracking-[0.12em]" style={{ color: "var(--on-surface-muted)" }}>
             Last Scan
           </p>
-          <p className="mt-2 flex items-center gap-2 text-sm font-medium">
+          <p className="ui-title mt-2 flex items-center gap-2 text-sm">
             <CalendarDays size={16} />
             {formatScanDate(summary?.lastScanDate ?? null)}
           </p>
@@ -65,12 +65,12 @@ export default function SkinSummaryCard({ summary, isLoading = false }: Readonly
       </div>
 
       <div className="mt-5 space-y-3">
-        <p className="text-sm font-medium">Top focus areas</p>
+        <p className="ui-title text-sm">Top focus areas</p>
         {summary?.topConcerns.length ? (
           summary.topConcerns.map((concern) => (
             <div key={concern.name} className="grid grid-cols-[1fr_auto] items-center gap-3 text-sm">
-              <span>{concern.name}</span>
-              <span className="font-semibold">{concern.score}</span>
+              <span className="ui-title">{concern.name}</span>
+              <span className="ui-title">{concern.score}</span>
               <div className="col-span-2 h-2 overflow-hidden rounded-full bg-black/8">
                 <div
                   className="h-full rounded-full bg-[#111827] transition-all duration-500"

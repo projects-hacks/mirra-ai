@@ -26,11 +26,11 @@ export default function DashboardPage() {
       <section className="overflow-hidden rounded-[1.5rem] border border-black/8 bg-[linear-gradient(135deg,#111827_0%,#1f2937_48%,#3f342d_100%)] p-5 text-white shadow-[0_18px_50px_rgba(17,24,39,0.18)] sm:p-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.55fr)] lg:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/55">Dashboard</p>
-            <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            <p className="eyebrow text-[0.72rem] text-white/55">Dashboard</p>
+            <h2 className="section-display mt-3 max-w-2xl text-3xl text-white sm:text-4xl">
               Your appearance command center
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/68 sm:text-base">
+            <p className="body-copy mt-3 max-w-2xl text-sm text-white/68 sm:text-base">
               Skin signal, local context, and styling actions in one place. Start with a fresh scan, then move into the next best flow.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
@@ -54,18 +54,18 @@ export default function DashboardPage() {
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <Sparkles size={16} className="text-white/65" aria-hidden="true" />
-              <p className="mt-3 text-2xl font-semibold">{isLoading ? "--" : skinSummary?.overallScore ?? "--"}</p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-white/48">Skin</p>
+              <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : skinSummary?.overallScore ?? "--"}</p>
+              <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Skin</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <ScanFace size={16} className="text-white/65" aria-hidden="true" />
-              <p className="mt-3 text-2xl font-semibold">{isLoading ? "--" : focusCount}</p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-white/48">Focus</p>
+              <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : focusCount}</p>
+              <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Focus</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <CloudSun size={16} className="text-white/65" aria-hidden="true" />
-              <p className="mt-3 text-2xl font-semibold">{isLoading ? "--" : weather ? `${Math.round(weather.temp)}F` : "--"}</p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-white/48">Local</p>
+              <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : weather ? `${Math.round(weather.temp)}F` : "--"}</p>
+              <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Local</p>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { proofCardsApi } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
 import ClosetNav from '@/components/navigation/ClosetNav';
 import { SkeletonLookDiary } from '@/components/common/SkeletonLoader';
@@ -82,21 +83,8 @@ export default function LookDiaryPage() {
           return;
         }
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/proof-cards?user_id=${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch proof cards');
-        }
-
-        const data = await response.json();
-        setProofCards(data.proof_cards || []);
+        const cards = await proofCardsApi.list(userId);
+        setProofCards(cards as ProofCard[]);
       } catch (err) {
         console.error('Error fetching proof cards:', err);
         setError(err instanceof Error ? err.message : 'Failed to load look diary');

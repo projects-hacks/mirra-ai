@@ -23,12 +23,16 @@
 | Color analyzer | `backend/app/services/color_analyzer.py` | ✅ |
 | Weather service | `backend/app/services/weather.py` | ✅ |
 | Tool executor (routes all tools) | `backend/app/services/tool_executor.py` | ✅ |
+| Outfit orchestration service | `backend/app/services/outfit_service.py` | ✅ Cleanup pass complete |
 | Supabase client + schema | `backend/app/services/supabase_client.py` | ✅ |
 | Camera Kit hook | `frontend/src/hooks/useCameraKit.ts` | ✅ |
 | Landing page experience | `frontend/src/app/page.tsx` | ✅ Phase 2 done; production marketing overhaul complete |
 | Selfie capture flow | `frontend/src/app/capture/page.tsx` + `frontend/src/components/onboarding/SelfieCaptureScreen.tsx` | ✅ |
 | Shared authenticated app shell | `frontend/src/app/(app)/layout.tsx` + `frontend/src/components/navigation/BottomNav.tsx` | ✅ |
 | Dashboard experience wrapper | `frontend/src/components/app/DashboardExperience.tsx` + `frontend/src/app/(app)/dashboard/page.tsx` | ✅ |
+| Shared skin summary domain logic | `frontend/src/lib/skinSummary.ts` | ✅ Cleanup pass complete |
+| Shared user context / location resolver | `frontend/src/lib/userContext.ts` | ✅ Cleanup pass complete |
+| Proof cards frontend API client | `frontend/src/lib/api.ts` (`proofCardsApi`) | ✅ Cleanup pass complete |
 | GlowUp studio page | `frontend/src/app/(app)/glowup/page.tsx` | ✅ |
 | GlowUp orchestrator endpoints | `backend/app/routers/glowup.py` | ✅ |
 | GlowUp makeup presets | `backend/app/data/makeup_presets.py` | ✅ |
@@ -41,6 +45,63 @@
 | ProofCard component | `frontend/src/components/cards/ProofCard.tsx` | ✅ |
 | ItemCardRow (product cards) | `frontend/src/components/cards/ItemCardRow.tsx` | ✅ |
 | Constants + enums | `frontend/src/lib/constants.ts` + `backend/app/core/constants.py` | ✅ |
+
+---
+
+## Implementation Log (Completed So Far)
+
+This section documents what was completed across the previous implementation passes so the task file reflects the real codebase, not just the original plan.
+
+### Completed delivery phases
+
+- Phase 1 completed:
+  - Added backend REST routers for skin, VTO, outfit, products, and glowup.
+  - Registered routers in `backend/app/main.py`.
+  - Added multipart handling support in backend requirements for file uploads.
+- Phase 2 completed:
+  - Replaced the old voice-first landing flow with a guided landing page.
+  - Added selfie capture at `/capture` with Camera Kit fallback behavior.
+  - Added the shared authenticated shell and routed the dashboard into it.
+- Phase 3 completed:
+  - Built the dashboard page and centralized API client layer in `frontend/src/lib/api.ts`.
+  - Dashboard now renders skin summary, quick actions, weather, and recent looks.
+- Phase 4 completed:
+  - Added the authenticated skin analysis page and skin simulation page.
+  - Reused the existing skin history route inside the app shell.
+  - Added product recommendation rendering for top skin concerns.
+- Phase 5 completed:
+  - Built the GlowUp studio flow.
+  - Added backend glowup orchestration endpoints and preset makeup catalog support.
+- Phase 6 completed:
+  - Built the outfit builder flow with occasion selection, weather-aware matching, gap handling, and proof-card generation.
+- Phase 7 completed:
+  - Built the standalone try-on studio for clothes, makeup, hair, and accessories.
+- Phase 8.1 completed:
+  - Added the dark theme, shared loading skeletons, smoother route transitions, touch-target sizing, and safe-area polish.
+
+### Product and architecture cleanup completed after the phase work
+
+- Frontend DRY cleanup completed:
+  - Extracted shared skin summary and dashboard insight logic into `frontend/src/lib/skinSummary.ts`.
+  - Removed duplicated summary/trend code from `useDashboard` and `useSkinAnalysis`.
+- User context consistency completed:
+  - Extracted shared profile-location lookup into `frontend/src/lib/userContext.ts`.
+  - Dashboard, skin analysis, and outfit flows now resolve weather context from the saved user location instead of relying on the default San Francisco fallback.
+- Dashboard product gap closed:
+  - Wired recent looks to real proof-card history via `proofCardsApi` in `frontend/src/lib/api.ts`.
+  - Reused the same proof-card client in the look diary page.
+- Backend SOLID cleanup completed:
+  - Extracted closet matching and proof-card generation orchestration from `backend/app/services/tool_executor.py` into `backend/app/services/outfit_service.py`.
+  - Updated `backend/app/routers/outfit.py` to depend on the public outfit service instead of private executor helpers.
+
+### Validation completed on the current cleanup pass
+
+- `npm run lint` passes in `frontend`
+- `npm run build` passes in `frontend`
+- Backend syntax check passes for:
+  - `backend/app/services/outfit_service.py`
+  - `backend/app/services/tool_executor.py`
+  - `backend/app/routers/outfit.py`
 
 ---
 

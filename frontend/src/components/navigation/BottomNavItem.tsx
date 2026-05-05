@@ -25,11 +25,14 @@ export default function BottomNavItem({
       aria-current={isActive ? "page" : undefined}
     >
       <span
-        className="flex min-h-10 items-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition-all duration-200"
+        className="flex min-h-10 items-center gap-2 rounded-full px-3 py-2 text-xs transition-all duration-200"
         style={{
           background: isActive ? color : "transparent",
           color: isActive ? "white" : "var(--on-surface-variant)",
           boxShadow: isActive ? "0 10px 24px rgba(26, 28, 30, 0.16)" : "none",
+          fontFamily: "var(--font-label)",
+          fontWeight: 700,
+          letterSpacing: "0.12em",
         }}
       >
         <Icon size={16} strokeWidth={2.2} />

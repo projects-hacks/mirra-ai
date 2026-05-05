@@ -1,6 +1,7 @@
 import { API_URL, ApiRoutes } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
-import type { AgentInsight, GlowupAnalysis, GlowupPlan, Product, SkinSummary, WeatherInfo } from "@/types";
+import { ToolName } from "@/lib/constants";
+import type { AgentInsight, GlowupAnalysis, GlowupPlan, Product, SkinSummary, VTOResult, WeatherInfo } from "@/types";
 
 export interface RetryOptions {
   maxRetries?: number;
@@ -70,6 +71,13 @@ export interface OutfitMatchResponse {
 export interface ProofCardResponse {
   card?: unknown;
   [key: string]: unknown;
+}
+
+export interface ProofCardRecord {
+  id: string;
+  look_name?: string;
+  result_image_url?: string | null;
+  created_at?: string;
 }
 
 interface BackendWeatherResponse {
@@ -378,6 +386,32 @@ export const outfitApi = {
     weather?: string;
     season?: string;
   }) => apiPost<ProofCardResponse>(ApiRoutes.OUTFIT_PROOF_CARD, body),
+};
+
+export const proofCardsApi = {
+  list: async (userId: string, approved?: boolean) => {
+    const params = new URLSearchParams({ user_id: userId });
+    if (typeof approved === "boolean") {
+      params.set("approved", String(approved));
+    }
+
+    const response = await fetchApi<{ proof_cards: ProofCardRecord[] }>(
+      `${ApiRoutes.PROOF_CARDS}?${params.toString()}`
+    );
+    return response.proof_cards ?? [];
+  },
+
+  recentLooks: async (userId: string): Promise<VTOResult[]> => {
+    const cards = await proofCardsApi.list(userId);
+    return cards
+      .filter((card) => typeof card.result_image_url === "string" && card.result_image_url.length > 0)
+      .slice(0, 8)
+      .map((card) => ({
+        imageUrl: card.result_image_url as string,
+        toolName: ToolName.GENERATE_PROOF_CARD,
+        timestamp: card.created_at ? new Date(card.created_at).getTime() : Date.now(),
+      }));
+  },
 };
 
 export const glowupApi = {

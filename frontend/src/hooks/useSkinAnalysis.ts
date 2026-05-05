@@ -8,7 +8,9 @@ import {
   deriveSimulationIntensities,
   normalizeSkinConcerns,
 } from "@/lib/skinScoring";
-import type { AgentInsight, Product, SkinConcern, SkinSummary, SkinToneData, WeatherInfo } from "@/types";
+import { summarizeSkinHistory } from "@/lib/skinSummary";
+import { resolveUserLocation } from "@/lib/userContext";
+import type { AgentInsight, Product, SkinConcern, SkinToneData, WeatherInfo } from "@/types";
 
 interface BodyModelRow {
   skin_tone?: SkinToneData | string | null;
@@ -33,30 +35,6 @@ function parseMaybeJson<T>(value: T | string | null | undefined): T | null {
   } catch {
     return null;
   }
-}
-
-function summarize(history: SkinHistoryRow[], concerns: SkinConcern[]): SkinSummary {
-  const latest = history[0];
-  const overallScore = concerns.length
-    ? Math.round(concerns.reduce((sum, concern) => sum + concern.score, 0) / concerns.length)
-    : 0;
-
-  const previousConcerns = normalizeSkinConcerns(history[1]?.scores);
-  let trend: SkinSummary["trend"] = history.length ? "stable" : "no_data";
-  if (previousConcerns.length) {
-    const previousOverall = Math.round(previousConcerns.reduce((sum, concern) => sum + concern.score, 0) / previousConcerns.length);
-    const delta = overallScore - previousOverall;
-    if (delta > 3) trend = "improving";
-    else if (delta < -3) trend = "declining";
-  }
-
-  return {
-    overallScore,
-    skinAge: latest?.skin_age ?? null,
-    lastScanDate: latest?.created_at ?? null,
-    trend,
-    topConcerns: concerns.slice(0, 3).map((concern) => ({ name: concern.label, score: concern.score })),
-  };
 }
 
 function normalizeInsight(result: unknown): AgentInsight | null {
@@ -96,6 +74,8 @@ export function useSkinAnalysis() {
         return;
       }
 
+      const userLocation = await resolveUserLocation(session.user.id);
+
       const bodyRequest = supabase
         .from("body_model")
         .select("skin_tone, face_shape")
@@ -104,7 +84,7 @@ export function useSkinAnalysis() {
 
       const [historyResult, weatherResult, bodyResult, insightResult] = await Promise.allSettled([
         skinApi.history(),
-        weatherApi.current(),
+        weatherApi.current(userLocation),
         bodyRequest,
         skinApi.insights(),
       ]);
@@ -149,7 +129,7 @@ export function useSkinAnalysis() {
   }, []);
 
   const concerns = useMemo(() => normalizeSkinConcerns(history[0]?.scores), [history]);
-  const summary = useMemo(() => summarize(history, concerns), [history, concerns]);
+  const summary = useMemo(() => summarizeSkinHistory(history, concerns), [history, concerns]);
   const intensities = useMemo(() => deriveSimulationIntensities(history[0]?.scores), [history]);
 
   return {

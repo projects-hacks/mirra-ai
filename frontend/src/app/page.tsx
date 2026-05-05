@@ -124,7 +124,7 @@ export default function LandingPage() {
               <Sparkles size={18} aria-hidden="true" />
             </span>
             <span>
-              <span className="block text-sm font-semibold tracking-[0.22em]">MIRRA</span>
+              <span className="eyebrow block text-sm text-white">MIRRA</span>
               <span className="block text-xs text-white/58">AI Appearance Operator</span>
             </span>
           </a>
@@ -151,13 +151,13 @@ export default function LandingPage() {
               <Star size={14} aria-hidden="true" />
               Built for the Perfect Corp AI hackathon
             </div>
-            <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-normal text-white sm:text-6xl lg:text-7xl">
+            <h1 className="hero-display mt-6 max-w-3xl text-5xl text-white sm:text-6xl lg:text-7xl">
               Mirra
             </h1>
-            <p className="mt-5 max-w-2xl text-xl font-medium leading-8 text-white/88 sm:text-2xl">
+            <p className="section-display mt-5 max-w-2xl text-xl text-white/88 sm:text-2xl">
               The AI that manages skin, style, closet, and try-on decisions from one guided selfie flow.
             </p>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
+            <p className="body-copy mt-5 max-w-2xl text-base text-white/68 sm:text-lg">
               Mirra reads appearance signals, explains what changed, previews outcomes, and helps users buy with confidence instead of guessing.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -184,8 +184,8 @@ export default function LandingPage() {
                 ["90s", "Demo flow"],
               ].map(([value, label]) => (
                 <div key={label} className="border-l border-white/20 pl-4">
-                  <dt className="text-3xl font-semibold text-white">{value}</dt>
-                  <dd className="mt-1 text-xs uppercase tracking-[0.16em] text-white/54">{label}</dd>
+                  <dt className="metric-display text-3xl text-white">{value}</dt>
+                  <dd className="eyebrow mt-1 text-[0.68rem] text-white/54">{label}</dd>
                 </div>
               ))}
             </dl>
@@ -197,12 +197,12 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a3f35]">What Mirra Shows</p>
-              <h2 className="mt-3 max-w-xl text-4xl font-semibold tracking-normal text-[#18212b] sm:text-5xl">
+              <p className="eyebrow text-[0.72rem] text-[#7a3f35]">What Mirra Shows</p>
+              <h2 className="section-display mt-3 max-w-xl text-4xl text-[#18212b] sm:text-5xl">
                 A full appearance operating system, not another try-on catalog.
               </h2>
             </div>
-            <p className="max-w-2xl text-base leading-8 text-[#51606f] lg:justify-self-end">
+            <p className="body-copy max-w-2xl text-base text-[#51606f] lg:justify-self-end">
               Users do not want disconnected scores, random products, and isolated filters. Mirra turns raw API results into decisions: what changed, what to try, what to buy, and why it fits.
             </p>
           </div>
@@ -222,12 +222,12 @@ export default function LandingPage() {
                     <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111827] text-white">
                       <Icon size={20} aria-hidden="true" />
                     </div>
-                    <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-[#a15c45]">{feature.eyebrow}</p>
-                    <h3 className="mt-3 text-3xl font-semibold tracking-normal text-[#18212b]">{feature.title}</h3>
-                    <p className="mt-4 max-w-2xl text-base leading-7 text-[#51606f]">{feature.description}</p>
+                    <p className="eyebrow mt-6 text-[0.72rem] text-[#a15c45]">{feature.eyebrow}</p>
+                    <h3 className="section-display mt-3 text-3xl text-[#18212b]">{feature.title}</h3>
+                    <p className="body-copy mt-4 max-w-2xl text-base text-[#51606f]">{feature.description}</p>
                     <div className="mt-6 flex flex-wrap gap-2">
                       {feature.stats.map((stat) => (
-                        <span key={stat} className="rounded-full border border-[#ded6ca] bg-[#f8f4ed] px-3 py-1.5 text-xs font-semibold text-[#394554]">
+                        <span key={stat} className="eyebrow rounded-full border border-[#ded6ca] bg-[#f8f4ed] px-3 py-1.5 text-[0.68rem] text-[#394554]">
                           {stat}
                         </span>
                       ))}
@@ -244,11 +244,11 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b9d991]">Guided Agent Flow</p>
-              <h2 className="mt-3 text-4xl font-semibold tracking-normal text-white sm:text-5xl">
+              <p className="eyebrow text-[0.72rem] text-[#b9d991]">Guided Agent Flow</p>
+              <h2 className="section-display mt-3 text-4xl text-white sm:text-5xl">
                 The user watches Mirra reason, then acts.
               </h2>
-              <p className="mt-5 text-base leading-8 text-white/64">
+              <p className="body-copy mt-5 text-base text-white/64">
                 The product story is intentionally simple: capture, analyze, reason, preview, decide.
               </p>
             </div>
@@ -262,10 +262,10 @@ export default function LandingPage() {
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#17202b]">
                         <Icon size={18} aria-hidden="true" />
                       </span>
-                      <span className="text-sm font-semibold text-white/40">0{index + 1}</span>
+                      <span className="metric-display text-sm text-white/40">0{index + 1}</span>
                     </div>
-                    <h3 className="mt-5 text-xl font-semibold text-white">{step.title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-white/62">{step.description}</p>
+                    <h3 className="section-display mt-5 text-xl text-white">{step.title}</h3>
+                    <p className="body-copy mt-3 text-sm text-white/62">{step.description}</p>
                   </article>
                 );
               })}
@@ -280,8 +280,8 @@ export default function LandingPage() {
                 ["Action", "Simulate hydration improvement and compare HA serum options."],
               ].map(([label, text]) => (
                 <div key={label} className="rounded-lg bg-white/6 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#b9d991]">{label}</p>
-                  <p className="mt-3 text-sm leading-6 text-white/76">{text}</p>
+                  <p className="eyebrow text-[0.68rem] text-[#b9d991]">{label}</p>
+                  <p className="body-copy mt-3 text-sm text-white/76">{text}</p>
                 </div>
               ))}
             </div>
@@ -292,11 +292,11 @@ export default function LandingPage() {
       <section className="bg-[#fbfaf7] px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a3f35]">API Depth</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-normal text-[#18212b] sm:text-5xl">
+            <p className="eyebrow text-[0.72rem] text-[#7a3f35]">API Depth</p>
+            <h2 className="section-display mt-3 text-4xl text-[#18212b] sm:text-5xl">
               Nine Perfect Corp APIs become one consumer journey.
             </h2>
-            <p className="mt-5 text-base leading-8 text-[#51606f]">
+            <p className="body-copy mt-5 text-base text-[#51606f]">
               The demo can move from skin analysis into simulation, makeover, outfit try-on, accessories, hair, and purchase proof without changing products.
             </p>
             <button
@@ -315,9 +315,9 @@ export default function LandingPage() {
               <div key={api} className="rounded-lg border border-[#ded6ca] bg-white p-4 shadow-[0_12px_28px_rgba(24,33,43,0.05)]">
                 <div className="mb-5 flex items-center justify-between">
                   <CheckCircle2 size={18} className="text-[#157347]" aria-hidden="true" />
-                  <span className="text-xs font-semibold text-[#8b96a3]">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="eyebrow text-[0.68rem] text-[#8b96a3]">{String(index + 1).padStart(2, "0")}</span>
                 </div>
-                <p className="text-sm font-semibold text-[#243140]">{api}</p>
+                <p className="ui-title text-sm text-[#243140]">{api}</p>
               </div>
             ))}
           </div>
@@ -336,26 +336,26 @@ export default function LandingPage() {
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,rgba(17,24,39,0.82))]" />
               <div className="absolute bottom-5 left-5 right-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/62">Proof Card</p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">Buy after the look makes sense.</h3>
+                <p className="eyebrow text-[0.72rem] text-white/62">Proof Card</p>
+                <h3 className="section-display mt-2 text-2xl text-white">Buy after the look makes sense.</h3>
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               {PROOF_ITEMS.map(([label, value]) => (
                 <div key={label} className="rounded-lg border border-[#ded6ca] bg-white p-4">
-                  <p className="text-xs text-[#6b7280]">{label}</p>
-                  <p className="mt-1 text-xl font-semibold text-[#18212b]">{value}</p>
+                  <p className="eyebrow text-[0.64rem] text-[#6b7280]">{label}</p>
+                  <p className="metric-display mt-1 text-xl text-[#18212b]">{value}</p>
                 </div>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a3f35]">Retail Value</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-normal text-[#18212b] sm:text-5xl">
+            <p className="eyebrow text-[0.72rem] text-[#7a3f35]">Retail Value</p>
+            <h2 className="section-display mt-3 text-4xl text-[#18212b] sm:text-5xl">
               Confidence before checkout.
             </h2>
-            <p className="mt-5 text-base leading-8 text-[#51606f]">
+            <p className="body-copy mt-5 text-base text-[#51606f]">
               Mirra explains tone match, style fit, closet coverage, skin conflicts, and new spend before a user buys. That makes AI try-on feel accountable.
             </p>
             <div className="mt-7 grid gap-3">
@@ -368,7 +368,7 @@ export default function LandingPage() {
                 return (
                   <div key={text as string} className="flex gap-3 rounded-lg bg-white/70 p-4">
                     <TypedIcon size={20} className="mt-0.5 text-[#7a3f35]" aria-hidden="true" />
-                    <p className="text-sm leading-6 text-[#394554]">{text as string}</p>
+                    <p className="body-copy text-sm text-[#394554]">{text as string}</p>
                   </div>
                 );
               })}
@@ -380,11 +380,11 @@ export default function LandingPage() {
       <section id="trust" className="bg-[#101820] px-5 py-14 text-white sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b9d991]">Privacy and Control</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-4xl">
+            <p className="eyebrow text-[0.72rem] text-[#b9d991]">Privacy and Control</p>
+            <h2 className="section-display mt-3 text-3xl text-white sm:text-4xl">
               Built around consent, session auth, and clear data use.
             </h2>
-            <p className="mt-4 text-sm leading-7 text-white/62">
+            <p className="body-copy mt-4 text-sm text-white/62">
               Google sign-in starts the flow, selfies are used to create the user profile, and product recommendations are generated from the user&apos;s own scan signals.
             </p>
           </div>
@@ -399,7 +399,7 @@ export default function LandingPage() {
               return (
                 <div key={label as string} className="rounded-lg border border-white/10 bg-white/7 p-4">
                   <TypedIcon size={19} className="text-[#b9d991]" aria-hidden="true" />
-                  <p className="mt-3 text-sm font-semibold text-white">{label as string}</p>
+                  <p className="ui-title mt-3 text-sm text-white">{label as string}</p>
                 </div>
               );
             })}
@@ -409,7 +409,7 @@ export default function LandingPage() {
 
       <footer className="bg-[#101820] px-5 pb-8 text-white sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-white/10 pt-6 text-sm text-white/54 sm:flex-row sm:items-center sm:justify-between">
-          <p>Mirra. AI Appearance Operator.</p>
+          <p className="ui-title">Mirra. AI Appearance Operator.</p>
           <div className="flex gap-5">
             <a href="/privacy" className="hover:text-white">Privacy</a>
             <a href="/terms" className="hover:text-white">Terms</a>
