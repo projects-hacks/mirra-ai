@@ -2,6 +2,7 @@
 
 import { useMemo, memo } from "react";
 import Image from "next/image";
+import { CheckCircle2, TriangleAlert } from "lucide-react";
 import MatchScore from "@/components/ui/MatchScore";
 import { useToast } from "@/components/ui/Toast";
 import { retryWithBackoff } from "@/lib/api";
@@ -121,7 +122,10 @@ const ProofCard = memo(function ProofCard({
         >
           <span className="material-symbols-outlined text-[24px]">close</span>
         </button>
-        <h2 className="text-base sm:text-lg font-bold tracking-tight">✓ PROOF CARD</h2>
+        <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold tracking-tight">
+          <CheckCircle2 size={18} aria-hidden="true" />
+          PROOF CARD
+        </h2>
         <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/20 transition-colors min-w-[44px] min-h-[44px]">
           <span className="material-symbols-outlined text-[24px]">
             more_horiz
@@ -178,8 +182,13 @@ const ProofCard = memo(function ProofCard({
             </p>
           </div>
           <div className="shrink-0">
-            <p className="text-base font-normal leading-normal">
-              {card.skin_safe ? "✓ No conflicts" : "⚠ Check ingredients"}
+            <p className="flex items-center gap-2 text-base font-normal leading-normal">
+              {card.skin_safe ? (
+                <CheckCircle2 size={18} className="text-[var(--success)]" aria-hidden="true" />
+              ) : (
+                <TriangleAlert size={18} className="text-[var(--error)]" aria-hidden="true" />
+              )}
+              {card.skin_safe ? "No conflicts" : "Check ingredients"}
             </p>
           </div>
         </div>

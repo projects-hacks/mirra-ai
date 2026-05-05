@@ -100,7 +100,7 @@ export interface Product {
 
 // ── Agent Reasoning ────────────────────────────────
 export interface AgentStep {
-  emoji: string;
+  icon: "scan" | "weather" | "history" | "palette" | "face" | "sparkle" | "closet" | "gap" | "check";
   text: string;
   status: "pending" | "running" | "done" | "error" | "complete";
 }

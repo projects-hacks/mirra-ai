@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import * as React from "react";
+import { TriangleAlert } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { getSupabase } from "@/lib/supabase";
 import { AuthScreen } from "./AuthScreen";
@@ -95,7 +96,7 @@ function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="glass-card text-center max-w-md">
-          <div className="text-4xl mb-4">⚠️</div>
+          <TriangleAlert size={40} className="mx-auto mb-4 text-[var(--error)]" aria-hidden="true" />
           <h2 className="text-xl font-semibold mb-2" style={{ color: "var(--error)" }}>
             Completion Failed
           </h2>

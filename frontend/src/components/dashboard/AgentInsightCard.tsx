@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Loader2, Route, Sparkles, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  CloudSun,
+  History,
+  Loader2,
+  Palette,
+  Puzzle,
+  Route,
+  ScanFace,
+  Search,
+  Shirt,
+  Sparkles,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 import type { AgentInsight, AgentStep } from "@/types";
 
 interface AgentInsightCardProps {
@@ -10,6 +25,18 @@ interface AgentInsightCardProps {
   onRecommendationTap?: (action: string) => void;
 }
 
+const STEP_ICONS: Record<AgentStep["icon"], LucideIcon> = {
+  scan: Search,
+  weather: CloudSun,
+  history: History,
+  palette: Palette,
+  face: ScanFace,
+  sparkle: Sparkles,
+  closet: Shirt,
+  gap: Puzzle,
+  check: CheckCircle2,
+};
+
 function StepIcon({ step, visible }: Readonly<{ step: AgentStep; visible: boolean }>) {
   if (!visible || step.status === "running" || step.status === "pending") {
     return <Loader2 size={16} className="animate-spin" />;
@@ -17,7 +44,8 @@ function StepIcon({ step, visible }: Readonly<{ step: AgentStep; visible: boolea
   if (step.status === "error") {
     return <TriangleAlert size={16} className="text-amber-300" />;
   }
-  return <Check size={16} className="text-emerald-300" />;
+  const Icon = STEP_ICONS[step.icon] ?? Check;
+  return <Icon size={16} className="text-emerald-300" />;
 }
 
 export default function AgentInsightCard({

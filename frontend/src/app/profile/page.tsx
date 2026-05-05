@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types";
@@ -126,7 +127,7 @@ function TrendIndicator({ scans }: Readonly<{ scans: SkinScan[] }>) {
   if (Math.abs(diff) < 2) {
     return (
       <span className="text-xs flex items-center gap-1" style={{ color: "var(--on-surface-variant)" }}>
-        <span>→</span> Stable
+        <ArrowRight size={14} aria-hidden="true" /> Stable
       </span>
     );
   }
@@ -136,7 +137,7 @@ function TrendIndicator({ scans }: Readonly<{ scans: SkinScan[] }>) {
       className="text-xs flex items-center gap-1 font-medium"
       style={{ color: diff > 0 ? "var(--success)" : "var(--error)" }}
     >
-      <span>{diff > 0 ? "↑" : "↓"}</span>
+      {diff > 0 ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />}
       {Math.abs(diff)} pts
     </span>
   );
@@ -702,7 +703,8 @@ export default function ProfilePage() {
               onClick={() => router.push("/skin-history")}
               className="btn-secondary w-full text-sm"
             >
-              View Detailed History →
+              View Detailed History
+              <ArrowRight size={16} aria-hidden="true" />
             </button>
             
             {reanalyzeError && (
@@ -722,7 +724,8 @@ export default function ProfilePage() {
             </p>
           </div>
           <button onClick={() => router.push("/closet")} className="btn-secondary text-sm">
-            View Closet →
+            View Closet
+            <ArrowRight size={16} aria-hidden="true" />
           </button>
         </div>
 

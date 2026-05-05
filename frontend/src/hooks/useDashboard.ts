@@ -84,9 +84,9 @@ function buildInsight(summary: SkinSummary, weather: WeatherInfo | null): AgentI
 
   return {
     steps: [
-      { emoji: "✓", text: "Loaded your latest skin scan.", status: "done" },
-      { emoji: "✓", text: weatherStep, status: weather ? "done" : "error" },
-      { emoji: "✓", text: concernText, status: "done" },
+      { icon: "scan", text: "Loaded your latest skin scan.", status: "done" },
+      { icon: "weather", text: weatherStep, status: weather ? "done" : "error" },
+      { icon: "history", text: concernText, status: "done" },
     ],
     insight: lowestConcern
       ? `Your next best move is to focus on ${lowestConcern.name.toLowerCase()} while keeping the rest of your routine stable.`

@@ -88,9 +88,9 @@ class SkinScoreStrategy {
     if (absChange < 2) {
       text = 'Stable';
     } else if (isImprovement) {
-      text = `↑ ${absChange.toFixed(0)}% better`;
+      text = `${absChange.toFixed(0)}% better`;
     } else {
-      text = `↓ ${absChange.toFixed(0)}% lower`;
+      text = `${absChange.toFixed(0)}% lower`;
     }
 
     return { change, isImprovement, text };

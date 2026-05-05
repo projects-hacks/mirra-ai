@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TriangleAlert } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 
 function CallbackHandler() {
@@ -45,7 +46,7 @@ function CallbackHandler() {
               onConflict: "user_id"
             });
             
-            console.log("✓ Calendar token stored successfully");
+            console.log("Calendar token stored successfully");
           } catch (tokenError) {
             console.warn("Failed to store calendar token:", tokenError);
             // Don't fail the auth flow if calendar token storage fails
@@ -69,7 +70,7 @@ function CallbackHandler() {
   if (error) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 px-8">
-        <div className="text-4xl">⚠️</div>
+        <TriangleAlert size={40} className="text-[var(--error)]" aria-hidden="true" />
         <h3 className="text-lg font-semibold">Sign-in failed</h3>
         <p className="text-sm text-center max-w-md" style={{ color: "var(--on-surface-variant)" }}>
           {error}

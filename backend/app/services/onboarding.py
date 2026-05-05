@@ -99,19 +99,19 @@ async def _retry_with_backoff(
         try:
             result = await fn()
             if attempt > 0:
-                logger.info(f"✓ {task_name} succeeded after {attempt} retry(ies)")
+                logger.info(f"{task_name} succeeded after {attempt} retry(ies)")
             return result
         except Exception as e:
             last_exception = e
             if attempt < max_retries:
                 delay = base_delay * (2**attempt)
                 logger.warning(
-                    f"✗ {task_name} failed (attempt {attempt + 1}/{max_retries + 1}), "
+                    f"{task_name} failed (attempt {attempt + 1}/{max_retries + 1}), "
                     f"retrying in {delay}s..."
                 )
                 await asyncio.sleep(delay)
             else:
-                logger.error(f"✗ {task_name} failed after {max_retries + 1} attempt(s): {str(e)}")
+                logger.error(f"{task_name} failed after {max_retries + 1} attempt(s): {str(e)}")
 
     raise last_exception  # type: ignore
 
@@ -307,7 +307,7 @@ class OnboardingService:
                 # Continue with analysis even if storage fails
 
             # Step 2: Execute parallel API calls with circuit breaker and retry
-            logger.info(f"→ Starting analysis for user {user_id}")
+            logger.info(f"Starting analysis for user {user_id}")
 
             skin_analysis_task = _call_api_with_circuit_breaker(
                 "skin-analysis",
@@ -342,18 +342,18 @@ class OnboardingService:
 
             # Handle individual failures - re-raise exceptions instead of using mocks
             if isinstance(skin_analysis, Exception):
-                logger.error(f"✗ Skin analysis failed: {str(skin_analysis)}")
+                logger.error(f"Skin analysis failed: {str(skin_analysis)}")
                 raise skin_analysis
 
             if isinstance(skin_tone, Exception):
-                logger.error(f"✗ Skin tone analysis failed: {str(skin_tone)}")
+                logger.error(f"Skin tone analysis failed: {str(skin_tone)}")
                 raise skin_tone
 
             if isinstance(face_attributes, Exception):
-                logger.error(f"✗ Face attributes analysis failed: {str(face_attributes)}")
+                logger.error(f"Face attributes analysis failed: {str(face_attributes)}")
                 raise face_attributes
             
-            logger.info(f"✓ All analyses completed successfully for user {user_id}")
+            logger.info(f"All analyses completed successfully for user {user_id}")
 
             # Step 3: Extract comprehensive results from API responses
             # The API returns data in "results" key with "output" array for skin analysis
@@ -569,7 +569,7 @@ class OnboardingService:
             # Generate greeting based on overall score
             greeting = self._generate_greeting_from_scores(skin_scores)
 
-            logger.info(f"✓ Analysis complete for user {user_id} (overall score: {overall_score})")
+            logger.info(f"Analysis complete for user {user_id} (overall score: {overall_score})")
 
             return {
                 "success": True,
@@ -584,7 +584,7 @@ class OnboardingService:
             }
 
         except Exception as e:
-            logger.error(f"✗ Analysis failed for user {user_id}: {str(e)}")
+            logger.error(f"Analysis failed for user {user_id}: {str(e)}")
             raise
 
     def _generate_greeting_from_scores(self, skin_scores: dict[str, Any]) -> str:
@@ -639,22 +639,22 @@ class OnboardingService:
             # Cache closet items
             await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
 
-            logger.info(f"✓ Seeded {len(items_to_insert)} closet items for user {user_id}")
+            logger.info(f"Seeded {len(items_to_insert)} closet items for user {user_id}")
 
             return {"success": True, "item_count": len(items_to_insert)}
 
         except Exception as e:
-            logger.error(f"✗ Closet seeding failed for user {user_id}: {str(e)}")
+            logger.error(f"Closet seeding failed for user {user_id}: {str(e)}")
             # Retry once
             try:
                 logger.info(f"Retrying closet seeding for user {user_id}")
                 items_to_insert = [{"user_id": user_id, **item} for item in DEMO_CLOSET_ITEMS]
                 supabase.from_("closet_items").insert(items_to_insert).execute()
                 await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
-                logger.info(f"✓ Closet seeding succeeded on retry")
+                logger.info(f"Closet seeding succeeded on retry")
                 return {"success": True, "item_count": len(items_to_insert)}
             except Exception as retry_error:
-                logger.error(f"✗ Closet seeding retry failed: {str(retry_error)}")
+                logger.error(f"Closet seeding retry failed: {str(retry_error)}")
                 raise
 
     async def complete(self, user_id: str, calendar_connected: bool = False) -> dict[str, Any]:
@@ -668,7 +668,7 @@ class OnboardingService:
             Dict with success status and updated profile
         """
         try:
-            logger.info(f"→ Completing onboarding for user {user_id}")
+            logger.info(f"Completing onboarding for user {user_id}")
             
             # Update profiles.onboarded = true
             profile_response = (
@@ -688,10 +688,10 @@ class OnboardingService:
                     "user_id", user_id
                 ).execute()
 
-            logger.info(f"✓ Onboarding completed for user {user_id}")
+            logger.info(f"Onboarding completed for user {user_id}")
 
             return {"success": True, "profile": profile_response.data[0] if profile_response.data else None}
 
         except Exception as e:
-            logger.error(f"✗ Onboarding completion failed for user {user_id}: {str(e)}", exc_info=True)
+            logger.error(f"Onboarding completion failed for user {user_id}: {str(e)}", exc_info=True)
             raise

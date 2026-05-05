@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 
 // ── Types ────────────────────────────────────────────
@@ -141,10 +142,11 @@ export default function ClosetStatistics() {
                   e.stopPropagation();
                   router.push("/closet/analytics");
                 }}
-                className="text-xs"
+                className="inline-flex items-center gap-1 text-xs"
                 style={{ color: "var(--primary)" }}
               >
-                View All →
+                View All
+                <ArrowRight size={14} aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-2">

@@ -32,7 +32,7 @@ async def disconnect_calendar(user_id: str):
             on_conflict="user_id"
         ).execute()
         
-        logger.info(f"✓ Calendar disconnected for user {user_id}")
+        logger.info(f"Calendar disconnected for user {user_id}")
         
         return {"success": True, "message": "Calendar disconnected successfully"}
         

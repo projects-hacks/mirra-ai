@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { useCameraKit } from "@/hooks/useCameraKit";
 import { useCamera } from "@/hooks/useCamera";
 
@@ -110,7 +111,7 @@ export function SelfieCaptureScreen({
               className="flex h-16 w-16 items-center justify-center rounded-full"
               style={{ background: "var(--error)", color: "white" }}
             >
-              <span className="text-3xl">⚠️</span>
+              <TriangleAlert size={28} aria-hidden="true" />
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white">Camera Kit Error</h3>

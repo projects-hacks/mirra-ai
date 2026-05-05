@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TriangleAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@/components/providers/AppProvider";
 import { getSupabase } from "@/lib/supabase";
@@ -61,7 +62,7 @@ function ErrorScreen({ error, onRetry }: Readonly<{ error: string; onRetry: () =
           className="w-16 h-16 mx-auto rounded-full flex items-center justify-center"
           style={{ background: "var(--error)", color: "white" }}
         >
-          <span className="text-3xl">⚠️</span>
+          <TriangleAlert size={28} aria-hidden="true" />
         </div>
         <div>
           <h2 className="text-xl font-semibold mb-2" style={{ color: "var(--on-surface)" }}>

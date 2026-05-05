@@ -72,7 +72,7 @@ SKIN TONE:
 Return this exact JSON schema:
 {{
   "steps": [
-    {{"emoji": "string", "text": "string", "status": "complete"}}
+    {{"icon": "face|palette|sparkle", "text": "string", "status": "complete"}}
   ],
   "insight": "string",
   "recommendations": [
@@ -149,7 +149,7 @@ HISTORY:
 Return this exact JSON schema:
 {{
   "steps": [
-    {{"emoji": "string", "text": "string", "status": "complete"}}
+    {{"icon": "scan|weather|history", "text": "string", "status": "complete"}}
   ],
   "insight": "string",
   "recommendations": [
@@ -223,7 +223,7 @@ CONTEXT:
 Return this exact JSON schema:
 {{
   "steps": [
-    {{"emoji": "string", "text": "string", "status": "complete"}}
+    {{"icon": "closet|gap|check", "text": "string", "status": "complete"}}
   ],
   "insight": "string",
   "recommendations": [
@@ -310,9 +310,9 @@ Requirements:
 
         return {
             "steps": [
-                {"emoji": "📐", "text": f"Read your face shape as {face_shape}.", "status": "complete"},
-                {"emoji": "🎨", "text": f"Mapped your coloring to a {undertone} palette.", "status": "complete"},
-                {"emoji": "✨", "text": "Built a glowup plan across makeup, hair, and accessories.", "status": "complete"},
+                {"icon": "face", "text": f"Read your face shape as {face_shape}.", "status": "complete"},
+                {"icon": "palette", "text": f"Mapped your coloring to a {undertone} palette.", "status": "complete"},
+                {"icon": "sparkle", "text": "Built a glowup plan across makeup, hair, and accessories.", "status": "complete"},
             ],
             "insight": (
                 f"Your strongest lane is balanced enhancement: use {makeup_tone} tones, "
@@ -357,14 +357,14 @@ Requirements:
 
         return {
             "steps": [
-                {"emoji": "🔍", "text": "Skin scores were loaded and ranked.", "status": "complete"},
+                {"icon": "scan", "text": "Skin scores were loaded and ranked.", "status": "complete"},
                 {
-                    "emoji": "🌤",
+                    "icon": "weather",
                     "text": f"Weather context included {humidity}% humidity." if humidity is not None else "Weather context was unavailable.",
                     "status": "complete",
                 },
                 {
-                    "emoji": "📊",
+                    "icon": "history",
                     "text": "Compared against previous scan history." if has_history else "No previous scan history found yet.",
                     "status": "complete",
                 },
@@ -401,9 +401,9 @@ Requirements:
 
         return {
             "steps": [
-                {"emoji": "👗", "text": f"Ranked {match_count} closet items for {occasion}.", "status": "complete"},
-                {"emoji": "🧩", "text": f"Found {gap_count} wardrobe gaps.", "status": "complete"},
-                {"emoji": "✅", "text": "Built the outfit reasoning summary.", "status": "complete"},
+                {"icon": "closet", "text": f"Ranked {match_count} closet items for {occasion}.", "status": "complete"},
+                {"icon": "gap", "text": f"Found {gap_count} wardrobe gaps.", "status": "complete"},
+                {"icon": "check", "text": "Built the outfit reasoning summary.", "status": "complete"},
             ],
             "insight": (
                 f"Your closet has a workable base for {occasion}. "
