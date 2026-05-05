@@ -1,125 +1,424 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useMemo } from "react";
-import { useRouter } from "next/navigation";
+import {
+  Activity,
+  ArrowRight,
+  BadgeCheck,
+  Camera,
+  CheckCircle2,
+  CloudSun,
+  Eye,
+  Layers3,
+  LockKeyhole,
+  ScanFace,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  WandSparkles,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-const FEATURE_CARDS = [
+const HERO_IMAGE =
+  "https://plugins-media.makeupar.com/smb/blog/post/2025-04-17/4edad54f-ef6b-4842-b104-d114889318b1.jpg";
+
+const FEATURE_ROWS = [
   {
     title: "Skin Health",
-    description: "Track scan trends, spot changes, and simulate improvement.",
+    eyebrow: "Analyze, track, simulate",
+    description:
+      "Mirra turns one quality-gated selfie into fourteen skin scores, skin age, tone context, trends, treatment simulation, and product direction.",
+    image:
+      "https://d3ss46vukfdtpo.cloudfront.net/static/media/img_demostore_skincarelive_topbanner.0cffe3a7.jpg",
+    stats: ["14 concerns", "Skin age", "Before and after"],
+    icon: Activity,
   },
   {
-    title: "GlowUp",
-    description: "Turn your face shape and tone data into styling direction.",
+    title: "GlowUp Studio",
+    eyebrow: "Face-aware styling",
+    description:
+      "Face shape, undertone, hair, lip, eye, and brow colors become coordinated makeup, hair, earring, and necklace choices.",
+    image:
+      "https://bcw-media.s3.ap-northeast-1.amazonaws.com/shade_finder_s5_poster_2_8a8f9307d2.png",
+    stats: ["Tone-aware", "Face shape", "VTO results"],
+    icon: WandSparkles,
   },
   {
-    title: "Smart Closet",
-    description: "Keep a visual wardrobe and pull context-aware outfit ideas fast.",
-  },
-  {
-    title: "Try-On Studio",
-    description: "Preview makeup, accessories, and styling changes in one flow.",
+    title: "Closet and Try-On",
+    eyebrow: "From wardrobe to proof",
+    description:
+      "Mirra ranks what you own, finds what you are missing, lets you try products on, and produces a proof card before purchase.",
+    image:
+      "https://plugins-media.makeupar.com/smb/blog/post/2025-01-15/10a4b980-f571-4d08-8f5d-e3ed48db77aa.jpg",
+    stats: ["Closet match", "Gap search", "Proof card"],
+    icon: ShoppingBag,
   },
 ];
 
-export default function LandingPage() {
-  const router = useRouter();
-  const { signIn, loading } = useAuth();
+const API_STACK = [
+  "Skin analysis",
+  "Skin tone",
+  "Face attributes",
+  "Skin simulation",
+  "Clothes VTO",
+  "Makeup VTO",
+  "Hair transfer",
+  "Earrings VTO",
+  "Necklace VTO",
+];
 
-  const ctaLabel = useMemo(() => {
-    if (loading) return "Checking session...";
-    return "Try Now";
-  }, [loading]);
+const WORKFLOW = [
+  {
+    title: "Capture once",
+    description: "Camera Kit quality gates the selfie so downstream analysis has the right face size, lighting, and pose.",
+    icon: Camera,
+  },
+  {
+    title: "Read the signal",
+    description: "Perfect Corp APIs return skin, tone, face, and try-on data. Mirra normalizes it into a single appearance profile.",
+    icon: ScanFace,
+  },
+  {
+    title: "Let the agent connect context",
+    description: "Gemini combines scan results, weather, history, closet, and product search into a visible reasoning trace.",
+    icon: Layers3,
+  },
+  {
+    title: "Act with proof",
+    description: "Simulate improvements, preview products, try outfits, and review spend before committing.",
+    icon: BadgeCheck,
+  },
+];
+
+const PROOF_ITEMS = [
+  ["Tone match", "97%"],
+  ["Style fit", "94%"],
+  ["Skin-safe", "Clear"],
+  ["New spend", "$127"],
+];
+
+export default function LandingPage() {
+  const { signIn, loading } = useAuth();
+  const ctaLabel = loading ? "Checking session..." : "Try Now";
+
+  const startSignIn = () => {
+    void signIn();
+  };
 
   return (
-    <main className="min-h-[100dvh] overflow-x-hidden bg-[linear-gradient(180deg,#f6f1ec_0%,#efe4d6_22%,#dbe5ef_100%)] text-[var(--ink-900,#18212b)]">
-      <div className="relative isolate">
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute left-[-12rem] top-[-8rem] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,rgba(236,162,112,0.42),transparent_62%)] blur-3xl" />
-          <div className="absolute right-[-10rem] top-[10rem] h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle,rgba(100,139,184,0.35),transparent_64%)] blur-3xl" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.55))]" />
-        </div>
+    <main className="min-h-[100dvh] overflow-x-hidden bg-[#f7f2ea] text-[#16202a]">
+      <section className="relative isolate min-h-[88svh] overflow-hidden bg-[#111827] text-white">
+        <img
+          src={HERO_IMAGE}
+          alt="AI skin simulation preview"
+          className="absolute inset-0 -z-20 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(10,15,24,0.88)_0%,rgba(10,15,24,0.72)_44%,rgba(10,15,24,0.26)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 -z-10 h-44 bg-[linear-gradient(180deg,transparent,#f7f2ea)]" />
 
-        <section className="mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-6 pb-12 pt-10 sm:px-10 lg:px-12">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-[#7a5b41]">Mirra</p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl" style={{ fontFamily: "var(--font-serif)" }}>
-                Your AI Appearance Operator
-              </h1>
+        <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+          <a href="#top" className="inline-flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-white/12 backdrop-blur">
+              <Sparkles size={18} aria-hidden="true" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold tracking-[0.22em]">MIRRA</span>
+              <span className="block text-xs text-white/58">AI Appearance Operator</span>
+            </span>
+          </a>
+          <nav className="hidden items-center gap-6 text-sm text-white/72 md:flex">
+            <a href="#features" className="transition-colors hover:text-white">Features</a>
+            <a href="#workflow" className="transition-colors hover:text-white">Workflow</a>
+            <a href="#proof" className="transition-colors hover:text-white">Proof</a>
+            <a href="#trust" className="transition-colors hover:text-white">Trust</a>
+          </nav>
+          <button
+            type="button"
+            onClick={startSignIn}
+            disabled={loading}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#111827] shadow-[0_16px_36px_rgba(0,0,0,0.22)] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+          >
+            {ctaLabel}
+            <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div id="top" className="mx-auto flex min-h-[calc(88svh-84px)] w-full max-w-7xl items-center px-5 pb-20 pt-12 sm:px-8 lg:px-10">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-3 py-2 text-xs font-medium text-white/80 backdrop-blur">
+              <Star size={14} aria-hidden="true" />
+              Built for the Perfect Corp AI hackathon
             </div>
-            <div className="hidden rounded-full border border-white/60 bg-white/55 px-4 py-2 text-sm text-[#5e6670] shadow-[0_12px_30px_rgba(24,33,43,0.08)] backdrop-blur md:block">
-              Skin, style, context, one guided flow
+            <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-normal text-white sm:text-6xl lg:text-7xl">
+              Mirra
+            </h1>
+            <p className="mt-5 max-w-2xl text-xl font-medium leading-8 text-white/88 sm:text-2xl">
+              The AI that manages skin, style, closet, and try-on decisions from one guided selfie flow.
+            </p>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
+              Mirra reads appearance signals, explains what changed, previews outcomes, and helps users buy with confidence instead of guessing.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={startSignIn}
+                disabled={loading}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#d9f99d] px-6 py-3 text-sm font-semibold text-[#17210f] shadow-[0_18px_40px_rgba(217,249,157,0.22)] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+              >
+                {ctaLabel}
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
+              <a
+                href="#workflow"
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/22 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/16"
+              >
+                See the flow
+              </a>
             </div>
-          </div>
-
-          <div className="mt-14 grid flex-1 gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-            <div>
-              <p className="max-w-xl text-lg leading-8 text-[#4b5563] sm:text-xl">
-                Capture one selfie, understand what matters, and move from scan to recommendation without hunting through tools.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void signIn();
-                  }}
-                  disabled={loading}
-                  className="rounded-full bg-[#1e293b] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_32px_rgba(24,33,43,0.18)] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-                >
-                  {ctaLabel}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/privacy")}
-                  className="rounded-full border border-white/70 bg-white/45 px-6 py-3 text-sm font-medium text-[#334155] backdrop-blur"
-                >
-                  See How We Handle Data
-                </button>
-              </div>
-
-              <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                {FEATURE_CARDS.map((card) => (
-                  <article
-                    key={card.title}
-                    className="rounded-[1.75rem] border border-white/55 bg-white/50 p-5 shadow-[0_18px_40px_rgba(24,33,43,0.08)] backdrop-blur"
-                  >
-                    <h2 className="text-lg font-semibold">{card.title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-[#5e6670]">{card.description}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="overflow-hidden rounded-[2rem] border border-white/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(255,255,255,0.42))] p-5 shadow-[0_24px_60px_rgba(24,33,43,0.12)] backdrop-blur">
-                <div className="rounded-[1.6rem] bg-[#122033] p-5 text-white shadow-inner">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs uppercase tracking-[0.28em] text-white/60">90 Second Demo</p>
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs">Guided Flow</span>
-                  </div>
-                  <div className="mt-5 space-y-4">
-                    <div className="rounded-2xl bg-white/8 p-4">
-                      <p className="text-sm text-white/70">1. Capture one selfie</p>
-                      <p className="mt-1 text-base font-medium">Quality-gated Camera Kit scan</p>
-                    </div>
-                    <div className="rounded-2xl bg-white/8 p-4">
-                      <p className="text-sm text-white/70">2. Read the signal</p>
-                      <p className="mt-1 text-base font-medium">Skin, tone, face shape, and context in one pass</p>
-                    </div>
-                    <div className="rounded-2xl bg-white/8 p-4">
-                      <p className="text-sm text-white/70">3. Take action</p>
-                      <p className="mt-1 text-base font-medium">Move into glowup, closet, and try-on decisions fast</p>
-                    </div>
-                  </div>
+            <dl className="mt-10 grid max-w-xl grid-cols-3 gap-3">
+              {[
+                ["9", "AI APIs"],
+                ["1", "Selfie"],
+                ["90s", "Demo flow"],
+              ].map(([value, label]) => (
+                <div key={label} className="border-l border-white/20 pl-4">
+                  <dt className="text-3xl font-semibold text-white">{value}</dt>
+                  <dd className="mt-1 text-xs uppercase tracking-[0.16em] text-white/54">{label}</dd>
                 </div>
-              </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="bg-[#f7f2ea] px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a3f35]">What Mirra Shows</p>
+              <h2 className="mt-3 max-w-xl text-4xl font-semibold tracking-normal text-[#18212b] sm:text-5xl">
+                A full appearance operating system, not another try-on catalog.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-base leading-8 text-[#51606f] lg:justify-self-end">
+              Users do not want disconnected scores, random products, and isolated filters. Mirra turns raw API results into decisions: what changed, what to try, what to buy, and why it fits.
+            </p>
+          </div>
+
+          <div className="mt-12 space-y-5">
+            {FEATURE_ROWS.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <article
+                  key={feature.title}
+                  className="grid overflow-hidden rounded-lg border border-[#ded6ca] bg-white shadow-[0_18px_48px_rgba(24,33,43,0.07)] lg:grid-cols-[0.78fr_1.22fr]"
+                >
+                  <div className={`${index % 2 ? "lg:order-2" : ""} min-h-[260px] bg-[#dfe5ec]`}>
+                    <img src={feature.image} alt={feature.title} className="h-full w-full object-cover" loading="lazy" />
+                  </div>
+                  <div className="p-6 sm:p-8 lg:p-10">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111827] text-white">
+                      <Icon size={20} aria-hidden="true" />
+                    </div>
+                    <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-[#a15c45]">{feature.eyebrow}</p>
+                    <h3 className="mt-3 text-3xl font-semibold tracking-normal text-[#18212b]">{feature.title}</h3>
+                    <p className="mt-4 max-w-2xl text-base leading-7 text-[#51606f]">{feature.description}</p>
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {feature.stats.map((stat) => (
+                        <span key={stat} className="rounded-full border border-[#ded6ca] bg-[#f8f4ed] px-3 py-1.5 text-xs font-semibold text-[#394554]">
+                          {stat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" className="bg-[#17202b] px-5 py-16 text-white sm:px-8 lg:px-10 lg:py-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b9d991]">Guided Agent Flow</p>
+              <h2 className="mt-3 text-4xl font-semibold tracking-normal text-white sm:text-5xl">
+                The user watches Mirra reason, then acts.
+              </h2>
+              <p className="mt-5 text-base leading-8 text-white/64">
+                The product story is intentionally simple: capture, analyze, reason, preview, decide.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {WORKFLOW.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <article key={step.title} className="rounded-lg border border-white/10 bg-white/7 p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#17202b]">
+                        <Icon size={18} aria-hidden="true" />
+                      </span>
+                      <span className="text-sm font-semibold text-white/40">0{index + 1}</span>
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold text-white">{step.title}</h3>
+                    <p className="mt-3 text-sm leading-6 text-white/62">{step.description}</p>
+                  </article>
+                );
+              })}
             </div>
           </div>
-        </section>
-      </div>
+
+          <div className="mt-12 rounded-lg border border-white/10 bg-[#0f1722] p-5 sm:p-6">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                ["Skin signal", "Moisture dropped while oiliness stayed stable."],
+                ["Context", "Low humidity increases dehydration risk today."],
+                ["Action", "Simulate hydration improvement and compare HA serum options."],
+              ].map(([label, text]) => (
+                <div key={label} className="rounded-lg bg-white/6 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#b9d991]">{label}</p>
+                  <p className="mt-3 text-sm leading-6 text-white/76">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#fbfaf7] px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a3f35]">API Depth</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-normal text-[#18212b] sm:text-5xl">
+              Nine Perfect Corp APIs become one consumer journey.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-[#51606f]">
+              The demo can move from skin analysis into simulation, makeover, outfit try-on, accessories, hair, and purchase proof without changing products.
+            </p>
+            <button
+              type="button"
+              onClick={startSignIn}
+              disabled={loading}
+              className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#111827] px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              Start with a selfie
+              <ArrowRight size={17} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {API_STACK.map((api, index) => (
+              <div key={api} className="rounded-lg border border-[#ded6ca] bg-white p-4 shadow-[0_12px_28px_rgba(24,33,43,0.05)]">
+                <div className="mb-5 flex items-center justify-between">
+                  <CheckCircle2 size={18} className="text-[#157347]" aria-hidden="true" />
+                  <span className="text-xs font-semibold text-[#8b96a3]">{String(index + 1).padStart(2, "0")}</span>
+                </div>
+                <p className="text-sm font-semibold text-[#243140]">{api}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="proof" className="bg-[#ebe1d6] px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div className="rounded-lg border border-[#d4c4b2] bg-[#fbfaf7] p-5 shadow-[0_18px_50px_rgba(24,33,43,0.08)] sm:p-6">
+            <div className="relative overflow-hidden rounded-lg bg-[#111827]">
+              <img
+                src="https://bcw-media.s3.ap-northeast-1.amazonaws.com/skin_analysis_s5_poster_3_dt_85efe14952.png"
+                alt="Beauty technology result preview"
+                className="h-[320px] w-full object-cover opacity-82"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,rgba(17,24,39,0.82))]" />
+              <div className="absolute bottom-5 left-5 right-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/62">Proof Card</p>
+                <h3 className="mt-2 text-2xl font-semibold text-white">Buy after the look makes sense.</h3>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {PROOF_ITEMS.map(([label, value]) => (
+                <div key={label} className="rounded-lg border border-[#ded6ca] bg-white p-4">
+                  <p className="text-xs text-[#6b7280]">{label}</p>
+                  <p className="mt-1 text-xl font-semibold text-[#18212b]">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a3f35]">Retail Value</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-normal text-[#18212b] sm:text-5xl">
+              Confidence before checkout.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-[#51606f]">
+              Mirra explains tone match, style fit, closet coverage, skin conflicts, and new spend before a user buys. That makes AI try-on feel accountable.
+            </p>
+            <div className="mt-7 grid gap-3">
+              {[
+                [Eye, "Preview products on the user, not on a model."],
+                [Search, "Search real products when the closet has a gap."],
+                [ShieldCheck, "Show why a recommendation fits before asking for payment."],
+              ].map(([Icon, text]) => {
+                const TypedIcon = Icon as typeof Eye;
+                return (
+                  <div key={text as string} className="flex gap-3 rounded-lg bg-white/70 p-4">
+                    <TypedIcon size={20} className="mt-0.5 text-[#7a3f35]" aria-hidden="true" />
+                    <p className="text-sm leading-6 text-[#394554]">{text as string}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="trust" className="bg-[#101820] px-5 py-14 text-white sm:px-8 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b9d991]">Privacy and Control</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-4xl">
+              Built around consent, session auth, and clear data use.
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-white/62">
+              Google sign-in starts the flow, selfies are used to create the user profile, and product recommendations are generated from the user&apos;s own scan signals.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
+            {[
+              [LockKeyhole, "Auth-gated app"],
+              [CloudSun, "Context-aware tips"],
+              [ShieldCheck, "Transparent reasoning"],
+              [Sparkles, "User-first previews"],
+            ].map(([Icon, label]) => {
+              const TypedIcon = Icon as typeof LockKeyhole;
+              return (
+                <div key={label as string} className="rounded-lg border border-white/10 bg-white/7 p-4">
+                  <TypedIcon size={19} className="text-[#b9d991]" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-semibold text-white">{label as string}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-[#101820] px-5 pb-8 text-white sm:px-8 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-white/10 pt-6 text-sm text-white/54 sm:flex-row sm:items-center sm:justify-between">
+          <p>Mirra. AI Appearance Operator.</p>
+          <div className="flex gap-5">
+            <a href="/privacy" className="hover:text-white">Privacy</a>
+            <a href="/terms" className="hover:text-white">Terms</a>
+            <button type="button" onClick={startSignIn} className="font-semibold text-white">
+              Try Now
+            </button>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

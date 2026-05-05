@@ -25,7 +25,7 @@
 | Tool executor (routes all tools) | `backend/app/services/tool_executor.py` | ✅ |
 | Supabase client + schema | `backend/app/services/supabase_client.py` | ✅ |
 | Camera Kit hook | `frontend/src/hooks/useCameraKit.ts` | ✅ |
-| Landing page experience | `frontend/src/app/page.tsx` | ✅ |
+| Landing page experience | `frontend/src/app/page.tsx` | ✅ Phase 2 done; production marketing overhaul complete |
 | Selfie capture flow | `frontend/src/app/capture/page.tsx` + `frontend/src/components/onboarding/SelfieCaptureScreen.tsx` | ✅ |
 | Shared authenticated app shell | `frontend/src/app/(app)/layout.tsx` + `frontend/src/components/navigation/BottomNav.tsx` | ✅ |
 | Dashboard experience wrapper | `frontend/src/components/app/DashboardExperience.tsx` + `frontend/src/app/(app)/dashboard/page.tsx` | ✅ |
@@ -286,9 +286,11 @@ The landing page is the first thing judges see. It must feel premium.
 
 ## Phase 4: Skin Health Pages (3 hours)
 
+**Status:** Complete as of commit `921a02c`; follow-up route alias `/skin/history` remains optional because `/skin-history` is already inside the app shell and linked from Skin/Profile.
+
 ### 4.1 Skin Analysis Page (`/skin`)
 
-- [ ] Create `frontend/src/app/(app)/skin/page.tsx`
+- [x] Create `frontend/src/app/(app)/skin/page.tsx`
   - **Overall Score** — large circular gauge (animated on load)
   - **Concern Grid** — 14 scores in a 2-column grid
     - Each: name, score bar, color (green/amber/red), icon
@@ -300,7 +302,7 @@ The landing page is the first thing judges see. It must feel premium.
 
 ### 4.2 Skin Simulation Page (`/skin/simulate`)
 
-- [ ] Create `frontend/src/app/(app)/skin/simulate/page.tsx`
+- [x] Create `frontend/src/app/(app)/skin/simulate/page.tsx`
   - Reuse `SkinSimulationCard` component (before/after slider)
   - On load: calls `POST /api/skin/simulate` with latest selfie
   - Intensity sliders for each concern (optional override)
@@ -310,7 +312,7 @@ The landing page is the first thing judges see. It must feel premium.
 
 ### 4.3 Skin Product Recommendations
 
-- [ ] In the skin page, for each low-score concern, show a product suggestion
+- [x] In the skin page, for each low-score concern, show a product suggestion
   - Score-to-query mapping:
     - `moisture < 50` → search "hyaluronic acid serum"
     - `acne > 70` → search "salicylic acid cleanser"
@@ -321,9 +323,9 @@ The landing page is the first thing judges see. It must feel premium.
 
 ### 4.4 Skin History (reuse existing)
 
-- [ ] The existing `/skin-history/page.tsx` (480 lines) already works
-- [ ] Move or alias it to `/skin/history` in the new route group
-- [ ] Add navigation from skin page: "View History →"
+- [x] The existing `/skin-history/page.tsx` works and is rendered inside the authenticated app shell
+- [x] Keep `/skin-history` as the current route and add layout/header support for it
+- [x] Add navigation from skin page: "History"
 
 ---
 
