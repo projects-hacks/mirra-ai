@@ -6,6 +6,63 @@ from app.core import cache
 from app.core.constants import VTOTaskType, CachePrefix, ALL_SKIN_CONCERNS
 
 
+_OUTPUT_TYPE_ALIASES = {
+    "dark_circle": "dark_circle_v2",
+}
+
+
+def _normalize_skin_scores(result: dict) -> dict:
+    """Normalize Perfect Corp skin-analysis responses into one score map.
+
+    Supported upstream shapes:
+    - Mock/current wrapper: {"result": {"wrinkle": {"ui_score": 83}, ...}}
+    - Perfect Corp task result: {"results": {"output": [{"type": "wrinkle", ...}]}}
+    - Already flattened score map.
+    """
+    direct_result = result.get("result")
+    if isinstance(direct_result, dict):
+        return {
+            _OUTPUT_TYPE_ALIASES.get(key, key): value
+            for key, value in direct_result.items()
+        }
+
+    output = result.get("results", {}).get("output") if isinstance(result.get("results"), dict) else None
+    if isinstance(output, list):
+        scores: dict = {}
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+
+            item_type = item.get("type")
+            if not item_type:
+                continue
+
+            key = _OUTPUT_TYPE_ALIASES.get(str(item_type), str(item_type))
+            if key == "skin_age":
+                skin_age = item.get("score") or item.get("ui_score") or item.get("raw_score")
+                if skin_age is not None:
+                    scores["skin_age"] = int(float(skin_age))
+                continue
+
+            metric: dict = {}
+            if item.get("raw_score") is not None:
+                metric["raw_score"] = item["raw_score"]
+            if item.get("ui_score") is not None:
+                metric["ui_score"] = item["ui_score"]
+            if item.get("score") is not None and not metric:
+                metric["ui_score"] = item["score"]
+
+            if metric:
+                scores[key] = metric
+
+        return scores
+
+    return {
+        _OUTPUT_TYPE_ALIASES.get(key, key): value
+        for key, value in result.items()
+    }
+
+
 async def analyze_skin(selfie_bytes: bytes, user_id: str | None = None) -> dict:
     """
     Run full skin analysis and persist results.
@@ -18,7 +75,7 @@ async def analyze_skin(selfie_bytes: bytes, user_id: str | None = None) -> dict:
         "format": "json",
     })
 
-    scores = result.get("result", result)
+    scores = _normalize_skin_scores(result)
 
     if user_id and supabase:
         supabase.table("skin_scans").insert({
@@ -204,4 +261,3 @@ async def simulate_skin(
         "simulation_url": simulation_url,
         "intensities_used": intensities,
     }
-
