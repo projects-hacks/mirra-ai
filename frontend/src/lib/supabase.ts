@@ -8,7 +8,7 @@ export function getSupabase() {
   if (!client) {
     client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
-        flowType: "pkce",
+        flowType: "implicit",
         autoRefreshToken: true,
         detectSessionInUrl: true,
         persistSession: true,

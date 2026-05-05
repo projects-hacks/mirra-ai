@@ -15,19 +15,18 @@ function CallbackHandler() {
         const supabase = getSupabase();
 
         const url = new URL(globalThis.location.href);
-        const callbackError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
+        const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+        const callbackError =
+          url.searchParams.get("error_description") ??
+          hashParams.get("error_description") ??
+          url.searchParams.get("error") ??
+          hashParams.get("error");
         if (callbackError) {
           throw new Error(callbackError);
         }
 
-        const code = url.searchParams.get("code");
-        if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) {
-            throw exchangeError;
-          }
-        }
-
+        // The browser client uses Supabase's implicit flow, so detectSessionInUrl
+        // parses the OAuth hash and stores the session without a PKCE verifier.
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
