@@ -18,7 +18,6 @@ export interface UserProfile {
   budgetMin?: number;
   budgetMax?: number;
   preferredCurrency: string;
-  voiceEnabled: boolean;
   createdAt: string;
 }
 

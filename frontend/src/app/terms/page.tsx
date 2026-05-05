@@ -35,7 +35,7 @@ export default function TermsPage() {
             <li>Skin analysis and beauty recommendations</li>
             <li>Digital closet management</li>
             <li>Outfit planning and tracking</li>
-            <li>Voice-based AI assistant</li>
+            <li>Agent-guided appearance recommendations</li>
           </ul>
         </section>
 

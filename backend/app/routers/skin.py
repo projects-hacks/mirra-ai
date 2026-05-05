@@ -6,26 +6,11 @@ from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile, status
 
-from app.core.validation import ValidationError, validate
+from app.core.deps import read_image, resolve_user_id
 from app.services.supabase_client import supabase
 from app.tools import skin_tools
 
 router = APIRouter()
-
-
-async def _read_image(upload: UploadFile) -> bytes:
-    image_bytes = await upload.read()
-    if not image_bytes:
-        raise HTTPException(status_code=400, detail="Selfie image is required")
-    try:
-        validate(image_bytes)
-    except ValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return image_bytes
-
-
-def _resolve_user_id(request: Request, user_id: str | None) -> str | None:
-    return user_id or getattr(request.state, "user_id", None)
 
 
 @router.post("/analyze")
@@ -34,8 +19,8 @@ async def analyze_skin(
     selfie: UploadFile = File(...),
     user_id: str | None = Form(default=None),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
-    resolved_user_id = _resolve_user_id(request, user_id)
+    selfie_bytes = await read_image(selfie)
+    resolved_user_id = resolve_user_id(request, user_id)
     result = await skin_tools.analyze_skin(selfie_bytes, resolved_user_id)
     scores = result.get("scores", {})
     return {
@@ -52,8 +37,8 @@ async def simulate_skin(
     intensities: str | None = Form(default=None),
     user_id: str | None = Form(default=None),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
-    resolved_user_id = _resolve_user_id(request, user_id)
+    selfie_bytes = await read_image(selfie)
+    resolved_user_id = resolve_user_id(request, user_id)
 
     parsed_intensities: dict[str, Any] | None = None
     if intensities:
@@ -80,7 +65,7 @@ async def get_skin_history(
             detail="Supabase is not configured",
         )
 
-    resolved_user_id = _resolve_user_id(request, user_id)
+    resolved_user_id = resolve_user_id(request, user_id)
     if not resolved_user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
 

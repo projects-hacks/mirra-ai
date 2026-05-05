@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation";
 import type { User } from "@/types";
 
 interface StatusBarProps {
-  isConnected: boolean;
   user: User | null;
+  statusLabel?: string;
+  statusColor?: string;
   onSignIn: () => void;
   onSignOut: () => void;
 }
 
-/** Top status bar — "Mirra" title + Live indicator + auth. */
+/** Top status bar — "Mirra" title + app status + auth. */
 export default function StatusBar({
-  isConnected,
   user,
+  statusLabel = "Style operator",
+  statusColor = "var(--success)",
   onSignIn,
 }: Readonly<StatusBarProps>) {
   const router = useRouter();
@@ -25,7 +27,7 @@ export default function StatusBar({
         <div className="flex min-w-0 items-center gap-3">
           <div
             className="h-2.5 w-2.5 rounded-full"
-            style={{ background: isConnected ? "var(--success)" : "var(--outline)" }}
+            style={{ background: statusColor }}
           />
           <div className="min-w-0">
             <h1
@@ -39,7 +41,7 @@ export default function StatusBar({
               Mirra
             </h1>
             <p className="text-[11px] sm:text-xs" style={{ color: "var(--on-surface-variant)" }}>
-              {isConnected ? "Live session ready" : "Style operator"}
+              {statusLabel}
             </p>
           </div>
         </div>
@@ -55,7 +57,7 @@ export default function StatusBar({
                 src={user.avatarUrl}
                 alt={user.displayName}
                 className="h-9 w-9 rounded-full object-cover"
-                style={{ outline: `2px solid ${isConnected ? "var(--success)" : "var(--outline)"}`, outlineOffset: "1px" }}
+                style={{ outline: `2px solid ${statusColor}`, outlineOffset: "1px" }}
               />
             ) : (
               <div

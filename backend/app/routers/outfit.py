@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from app.core.deps import resolve_user_id
 from app.services.tool_executor import _generate_proof_card, _match_closet
 
 router = APIRouter()
@@ -27,13 +28,9 @@ class ProofCardRequest(BaseModel):
     season: str | None = None
 
 
-def _resolve_user_id(request: Request, user_id: str | None) -> str | None:
-    return user_id or getattr(request.state, "user_id", None)
-
-
 @router.post("/match")
 async def match_outfit(request: Request, body: OutfitMatchRequest) -> dict[str, Any]:
-    resolved_user_id = _resolve_user_id(request, body.user_id)
+    resolved_user_id = resolve_user_id(request, body.user_id)
     if not resolved_user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
     return await _match_closet(
@@ -45,7 +42,7 @@ async def match_outfit(request: Request, body: OutfitMatchRequest) -> dict[str, 
 
 @router.post("/proof-card")
 async def generate_outfit_proof_card(request: Request, body: ProofCardRequest) -> dict[str, Any]:
-    resolved_user_id = _resolve_user_id(request, body.user_id)
+    resolved_user_id = resolve_user_id(request, body.user_id)
     if not resolved_user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
 

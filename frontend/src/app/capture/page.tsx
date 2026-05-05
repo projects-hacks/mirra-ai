@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@/components/providers/AppProvider";
 import { getSupabase } from "@/lib/supabase";
-import { API_URL } from "@/lib/constants";
+import { apiPost, skinApi } from "@/lib/api";
 import { SelfieCaptureScreen } from "@/components/onboarding/SelfieCaptureScreen";
 
 type CaptureStep = "capture" | "analyzing" | "error";
@@ -102,19 +102,7 @@ export default function CapturePage() {
       dispatch({ type: "SET_SELFIE", payload: selfie });
 
       const selfieFile = await imageStringToFile(selfie);
-      const formData = new FormData();
-      formData.append("selfie", selfieFile);
-      formData.append("user_id", user.id);
-
-      const analyzeResponse = await fetch(`${API_URL}/api/skin/analyze`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!analyzeResponse.ok) {
-        const errorData = await analyzeResponse.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to analyze skin");
-      }
+      await skinApi.analyze(selfieFile, user.id);
 
       const supabase = getSupabase();
       const { data: profileData } = await supabase
@@ -124,13 +112,9 @@ export default function CapturePage() {
         .single();
 
       if (!(profileData as { onboarded?: boolean } | null)?.onboarded) {
-        await fetch(`${API_URL}/api/onboarding/complete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        await apiPost("/api/onboarding/complete", {
             user_id: user.id,
             calendar_connected: false,
-          }),
         });
       }
 

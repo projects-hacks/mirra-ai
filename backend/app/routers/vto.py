@@ -7,7 +7,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.services import perfectcorp
-from app.core.validation import ValidationError, validate
+from app.core.deps import read_image
 from app.tools import fashion_tools, beauty_tools, accessory_tools, hair_tools
 
 router = APIRouter()
@@ -21,17 +21,6 @@ class TryOnRequest(BaseModel):
     selfie: str  # base64
     product_id: str
     vto_type: str  # clothes, earrings, etc.
-
-
-async def _read_image(upload: UploadFile) -> bytes:
-    image_bytes = await upload.read()
-    if not image_bytes:
-        raise HTTPException(status_code=400, detail="Selfie image is required")
-    try:
-        validate(image_bytes)
-    except ValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return image_bytes
 
 
 @router.post("/skin-analysis")
@@ -57,7 +46,7 @@ async def try_on_clothes(
     garment_url: str = Form(...),
     garment_category: str = Form(default="upper"),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
+    selfie_bytes = await read_image(selfie)
     return await fashion_tools.try_on_clothes(selfie_bytes, garment_url, garment_category)
 
 
@@ -66,7 +55,7 @@ async def try_on_makeup(
     selfie: UploadFile = File(...),
     effects: str = Form(...),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
+    selfie_bytes = await read_image(selfie)
     try:
         parsed_effects = json.loads(effects)
     except json.JSONDecodeError as exc:
@@ -81,7 +70,7 @@ async def try_on_earrings(
     selfie: UploadFile = File(...),
     earring_url: str = Form(...),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
+    selfie_bytes = await read_image(selfie)
     return await accessory_tools.try_on_earrings(selfie_bytes, earring_url)
 
 
@@ -90,7 +79,7 @@ async def try_on_necklace(
     selfie: UploadFile = File(...),
     necklace_url: str = Form(...),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
+    selfie_bytes = await read_image(selfie)
     return await accessory_tools.try_on_necklace(selfie_bytes, necklace_url)
 
 
@@ -99,5 +88,5 @@ async def try_on_hair(
     selfie: UploadFile = File(...),
     ref_hair_url: str = Form(...),
 ) -> dict[str, Any]:
-    selfie_bytes = await _read_image(selfie)
+    selfie_bytes = await read_image(selfie)
     return await hair_tools.change_hairstyle(selfie_bytes, ref_hair_url)

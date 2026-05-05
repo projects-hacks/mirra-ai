@@ -119,6 +119,157 @@ Requirements:
             logger.warning("Gemini glowup generation failed, using fallback: %s", exc)
             return self._fallback_glowup_plan(face_attrs, skin_tone)
 
+    async def generate_skin_insights(
+        self,
+        scores: dict[str, Any],
+        skin_tone: dict[str, Any] | None = None,
+        weather: dict[str, Any] | None = None,
+        history: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Connect skin scores, weather, and history into actionable guidance."""
+        if not self.api_key:
+            return self._fallback_skin_insights(scores, skin_tone, weather, history)
+
+        prompt = f"""
+You are Mirra, an AI appearance operator.
+Analyze this skin context and return ONLY valid JSON.
+
+SKIN SCORES:
+{json.dumps(scores, indent=2)}
+
+SKIN TONE:
+{json.dumps(skin_tone or {{}}, indent=2)}
+
+WEATHER:
+{json.dumps(weather or {{}}, indent=2)}
+
+HISTORY:
+{json.dumps(history or [], indent=2)}
+
+Return this exact JSON schema:
+{{
+  "steps": [
+    {{"emoji": "string", "text": "string", "status": "complete"}}
+  ],
+  "insight": "string",
+  "recommendations": [
+    {{
+      "title": "string",
+      "description": "string",
+      "action": "string"
+    }}
+  ],
+  "tool_calls_made": ["skin-analysis", "weather", "history"]
+}}
+
+Requirements:
+- Keep it concise and practical.
+- Connect worst skin scores to weather/history when possible.
+- Include 2 to 4 recommendations.
+- Use actions such as "/skin", "/skin/simulate", or "/try-on".
+- Do not include markdown.
+"""
+
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.35,
+                "topP": 0.95,
+                "topK": 40,
+                "maxOutputTokens": 1024,
+                "responseMimeType": "application/json",
+            },
+        }
+
+        url = f"{GEMINI_API_BASE_URL}/models/{GEMINI_MODEL_NAME}:generateContent"
+        try:
+            async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
+                response = await client.post(
+                    url,
+                    params={"key": self.api_key},
+                    headers={"Content-Type": "application/json"},
+                    json=payload,
+                )
+                response.raise_for_status()
+                content = _extract_text(response.json())
+                return _safe_json_loads(content)
+        except Exception as exc:
+            logger.warning("Gemini skin insight generation failed, using fallback: %s", exc)
+            return self._fallback_skin_insights(scores, skin_tone, weather, history)
+
+    async def generate_outfit_reasoning(
+        self,
+        matches: dict[str, Any],
+        gaps: list[Any] | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Explain closet matches and missing pieces for an outfit decision."""
+        if not self.api_key:
+            return self._fallback_outfit_reasoning(matches, gaps, context)
+
+        prompt = f"""
+You are Mirra, an AI appearance operator.
+Explain these closet matches and gaps. Return ONLY valid JSON.
+
+MATCHES:
+{json.dumps(matches, indent=2)}
+
+GAPS:
+{json.dumps(gaps or [], indent=2)}
+
+CONTEXT:
+{json.dumps(context or {{}}, indent=2)}
+
+Return this exact JSON schema:
+{{
+  "steps": [
+    {{"emoji": "string", "text": "string", "status": "complete"}}
+  ],
+  "insight": "string",
+  "recommendations": [
+    {{
+      "title": "string",
+      "description": "string",
+      "action": "string"
+    }}
+  ],
+  "tool_calls_made": ["closet-match", "weather", "products"]
+}}
+
+Requirements:
+- Explain why the selected closet items work.
+- Call out missing pieces plainly when gaps exist.
+- Include 2 to 4 recommendations.
+- Do not include markdown.
+"""
+
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.35,
+                "topP": 0.95,
+                "topK": 40,
+                "maxOutputTokens": 1024,
+                "responseMimeType": "application/json",
+            },
+        }
+
+        url = f"{GEMINI_API_BASE_URL}/models/{GEMINI_MODEL_NAME}:generateContent"
+        try:
+            async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
+                response = await client.post(
+                    url,
+                    params={"key": self.api_key},
+                    headers={"Content-Type": "application/json"},
+                    json=payload,
+                )
+                response.raise_for_status()
+                content = _extract_text(response.json())
+                return _safe_json_loads(content)
+        except Exception as exc:
+            logger.warning("Gemini outfit reasoning generation failed, using fallback: %s", exc)
+            return self._fallback_outfit_reasoning(matches, gaps, context)
+
     def _fallback_glowup_plan(
         self,
         face_attrs: dict[str, Any],
@@ -175,6 +326,102 @@ Requirements:
                 {"category": "accessories", "title": "Choose refined, face-framing jewelry", "why": "Keeps attention near the eyes and cheekbones."},
             ],
             "tool_calls_made": ["analyze_face", "analyze_skin_tone"],
+        }
+
+    def _fallback_skin_insights(
+        self,
+        scores: dict[str, Any],
+        skin_tone: dict[str, Any] | None,
+        weather: dict[str, Any] | None,
+        history: list[dict[str, Any]] | None,
+    ) -> dict[str, Any]:
+        """Heuristic skin guidance when Gemini is unavailable."""
+        def extract_score(value: Any) -> float | None:
+            if isinstance(value, int | float):
+                return float(value)
+            if isinstance(value, dict):
+                candidate = value.get("ui_score") or value.get("raw_score") or value.get("score")
+                if isinstance(candidate, int | float):
+                    return float(candidate)
+            return None
+
+        scored = [
+            (key, score)
+            for key, value in scores.items()
+            if (score := extract_score(value)) is not None
+        ]
+        scored.sort(key=lambda item: item[1])
+        top_concern = scored[0][0].replace("_", " ") if scored else "skin baseline"
+        humidity = weather.get("humidity") if weather else None
+        has_history = bool(history)
+
+        return {
+            "steps": [
+                {"emoji": "🔍", "text": "Skin scores were loaded and ranked.", "status": "complete"},
+                {
+                    "emoji": "🌤",
+                    "text": f"Weather context included {humidity}% humidity." if humidity is not None else "Weather context was unavailable.",
+                    "status": "complete",
+                },
+                {
+                    "emoji": "📊",
+                    "text": "Compared against previous scan history." if has_history else "No previous scan history found yet.",
+                    "status": "complete",
+                },
+            ],
+            "insight": (
+                f"Your highest priority is {top_concern}. Keep the routine stable and use the next scan "
+                "to confirm whether this score is moving."
+            ),
+            "recommendations": [
+                {
+                    "title": "Review Skin Health",
+                    "description": f"Open the skin page to inspect {top_concern} and adjacent scores.",
+                    "action": "/skin",
+                },
+                {
+                    "title": "Simulate Improvement",
+                    "description": "Preview what targeted treatment could change before you shop.",
+                    "action": "/skin/simulate",
+                },
+            ],
+            "tool_calls_made": ["skin-analysis", *(["weather"] if weather else []), *(["history"] if has_history else [])],
+        }
+
+    def _fallback_outfit_reasoning(
+        self,
+        matches: dict[str, Any],
+        gaps: list[Any] | None,
+        context: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Heuristic outfit reasoning when Gemini is unavailable."""
+        match_count = sum(len(items) for items in matches.values() if isinstance(items, list))
+        occasion = (context or {}).get("occasion") or "your occasion"
+        gap_count = len(gaps or [])
+
+        return {
+            "steps": [
+                {"emoji": "👗", "text": f"Ranked {match_count} closet items for {occasion}.", "status": "complete"},
+                {"emoji": "🧩", "text": f"Found {gap_count} wardrobe gaps.", "status": "complete"},
+                {"emoji": "✅", "text": "Built the outfit reasoning summary.", "status": "complete"},
+            ],
+            "insight": (
+                f"Your closet has a workable base for {occasion}. "
+                "Use the strongest matches first, then fill only the gaps that improve the full look."
+            ),
+            "recommendations": [
+                {
+                    "title": "Try This Look",
+                    "description": "Preview the matched outfit before committing.",
+                    "action": "/try-on",
+                },
+                {
+                    "title": "Fill Wardrobe Gaps",
+                    "description": "Shop only the missing pieces that complete the occasion.",
+                    "action": "/outfit",
+                },
+            ],
+            "tool_calls_made": ["closet-match", *(["products"] if gaps else [])],
         }
 
 

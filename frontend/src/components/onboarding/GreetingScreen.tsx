@@ -20,8 +20,6 @@ export function GreetingScreen({ greeting, onContinue }: Readonly<GreetingScreen
     return () => clearTimeout(timer);
   }, [onContinue]);
 
-  // Text-to-speech will plug in once the onboarding voice flow is wired up.
-
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div

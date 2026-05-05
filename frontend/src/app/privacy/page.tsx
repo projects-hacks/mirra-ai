@@ -91,8 +91,7 @@ export default function PrivacyPage() {
             <li><strong>Supabase:</strong> Database and authentication</li>
             <li><strong>Perfect Corp:</strong> Virtual try-on and skin analysis</li>
             <li><strong>Google Calendar:</strong> Calendar integration (optional)</li>
-            <li><strong>Deepgram:</strong> Voice processing</li>
-            <li><strong>OpenAI/Anthropic:</strong> AI conversation and recommendations</li>
+            <li><strong>Google AI:</strong> Agent reasoning and recommendations</li>
           </ul>
 
           <h3 className="text-xl font-semibold text-gray-800 mb-3">4.2 We Do Not Sell Your Data</h3>
@@ -140,8 +139,7 @@ export default function PrivacyPage() {
           <ul className="list-disc list-inside text-gray-700 mb-4 space-y-2">
             <li>Account data: Until you delete your account</li>
             <li>Selfies: 365 days by default (configurable in settings)</li>
-            <li>Voice recordings: Not stored (processed in real-time only)</li>
-            <li>Conversation history: Until you delete your account</li>
+            <li>Scan and recommendation history: Until you delete your account</li>
           </ul>
         </section>
 
