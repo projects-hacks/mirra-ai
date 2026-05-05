@@ -1,18 +1,14 @@
-"""
-Serper Google Shopping API Integration
-With fallback to curated catalog
-"""
+"""Serper Google Shopping API integration."""
 
 import httpx
 import re
-from typing import List, Dict
+from typing import Dict
 from app.core.config import settings
 
 
 async def search(query: str, max_price: float | None = None) -> Dict:
     """
     Search Google Shopping via Serper API
-    Falls back to curated catalog on failure
     
     Args:
         query: Search query (e.g., "black midi dress")
@@ -24,8 +20,13 @@ async def search(query: str, max_price: float | None = None) -> Dict:
     try:
         return await _search_serper(query, max_price)
     except Exception as e:
-        print(f"Serper API failed: {e}. Falling back to curated catalog.")
-        return _search_curated_catalog(query, max_price)
+        return {
+            "products": [],
+            "query": query,
+            "source": "serper",
+            "count": 0,
+            "error": str(e),
+        }
 
 
 async def _search_serper(query: str, max_price: float | None = None) -> Dict:
@@ -78,36 +79,6 @@ async def _search_serper(query: str, max_price: float | None = None) -> Dict:
             "source": "serper",
             "count": len(products),
         }
-
-
-def _search_curated_catalog(query: str, max_price: float | None = None) -> Dict:
-    """
-    Fallback: search curated catalog
-    Uses keyword matching on product titles
-    """
-    from app.data.curated_catalog import CURATED_CATALOG
-    
-    query_keywords = set(query.lower().split())
-    
-    # Filter by keywords
-    filtered = [
-        p for p in CURATED_CATALOG
-        if any(kw in p['title'].lower() for kw in query_keywords)
-    ]
-    
-    # Filter by price
-    if max_price:
-        filtered = [
-            p for p in filtered
-            if _parse_price(p.get('price', '')) <= max_price
-        ]
-    
-    return {
-        "products": filtered[:5],
-        "query": query,
-        "source": "catalog",
-        "count": len(filtered[:5]),
-    }
 
 
 def _parse_price(price_str: str) -> float:

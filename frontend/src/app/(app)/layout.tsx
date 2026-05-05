@@ -9,6 +9,8 @@ import AppHeader from "@/components/navigation/AppHeader";
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/skin": "Skin Health",
+  "/skin/simulate": "Skin Simulation",
+  "/skin-history": "Skin History",
   "/glowup": "GlowUp",
   "/closet": "Closet",
   "/try-on": "Try-On Studio",

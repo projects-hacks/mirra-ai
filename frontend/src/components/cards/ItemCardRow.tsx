@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { Shirt } from "lucide-react";
+
 interface RowItem {
   id?: string;
   source?: string;
@@ -51,10 +53,10 @@ export default function ItemCardRow({ data }: Readonly<{ data: unknown }>) {
               />
             ) : (
               <div
-                className="w-full h-[160px] flex items-center justify-center text-3xl"
-                style={{ background: "var(--surface-container)" }}
+                className="w-full h-[160px] flex items-center justify-center"
+                style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
               >
-                👔
+                <Shirt size={34} aria-hidden="true" />
               </div>
             )}
             <div className="item-info">

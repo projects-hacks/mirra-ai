@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { Camera, TriangleAlert } from "lucide-react";
 import { useCameraKit } from "@/hooks/useCameraKit";
 import { useCamera } from "@/hooks/useCamera";
 
@@ -69,7 +69,7 @@ export function SelfieCaptureScreen({
           </div>
         ) : (
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-[var(--primary)]/20">
-            <span className="text-5xl">📷</span>
+            <Camera size={42} aria-hidden="true" />
           </div>
         )}
 

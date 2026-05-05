@@ -3,7 +3,7 @@
  * Implements scoring logic and recommendations for skin analysis
  */
 
-import type { SkinAnalysis } from '@/types';
+import type { SkinAnalysis, SkinConcern as NormalizedSkinConcern } from '@/types';
 
 export enum ScoreLevel {
   EXCELLENT = 'excellent',
@@ -108,14 +108,100 @@ export const SKIN_CONCERNS: Array<{ key: string; label: string }> = [
   { key: 'wrinkle', label: 'Wrinkles' },
   { key: 'pore', label: 'Pores' },
   { key: 'redness', label: 'Redness' },
-  { key: 'darkCircle', label: 'Dark Circles' },
-  { key: 'eyeBag', label: 'Eye Bags' },
+  { key: 'dark_circle_v2', label: 'Dark Circles' },
+  { key: 'eye_bag', label: 'Eye Bags' },
   { key: 'firmness', label: 'Firmness' },
   { key: 'oiliness', label: 'Oiliness' },
   { key: 'texture', label: 'Texture' },
   { key: 'radiance', label: 'Radiance' },
-  { key: 'ageSpot', label: 'Age Spots' },
+  { key: 'age_spot', label: 'Spots' },
+  { key: 'droopy_upper_eyelid', label: 'Upper Eyelid' },
+  { key: 'droopy_lower_eyelid', label: 'Lower Eyelid' },
 ];
+
+export const CONCERN_LABELS: Record<string, string> = Object.fromEntries(
+  SKIN_CONCERNS.map((concern) => [concern.key, concern.label])
+);
+
+export const CONCERN_PRODUCT_QUERIES: Record<string, string> = {
+  moisture: 'hyaluronic acid hydrating serum',
+  acne: 'salicylic acid acne cleanser',
+  wrinkle: 'retinol anti-aging cream',
+  pore: 'niacinamide pore minimizing serum',
+  dark_circle_v2: 'vitamin C eye cream',
+  dark_circle: 'vitamin C eye cream',
+  redness: 'centella asiatica calming cream',
+  oiliness: 'oil free mattifying moisturizer',
+  texture: 'AHA BHA chemical exfoliant',
+  radiance: 'vitamin C brightening serum',
+  firmness: 'peptide firming cream',
+  age_spot: 'dark spot correcting serum',
+  eye_bag: 'caffeine depuffing eye cream',
+};
+
+export function getSkinScoreColor(score: number): string {
+  if (score >= 80) return '#15803d';
+  if (score >= 60) return '#d97706';
+  return '#b91c1c';
+}
+
+export function extractSkinScore(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+  if (!value || typeof value !== 'object') return null;
+
+  const record = value as Record<string, unknown>;
+  const candidate = record.ui_score ?? record.score ?? record.raw_score;
+  return typeof candidate === 'number' && Number.isFinite(candidate) ? Math.round(candidate) : null;
+}
+
+export function extractRawSkinScore(value: unknown): number | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const candidate = (value as Record<string, unknown>).raw_score;
+  return typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : undefined;
+}
+
+export function normalizeSkinConcerns(scores?: Record<string, unknown> | null): NormalizedSkinConcern[] {
+  if (!scores) return [];
+
+  return SKIN_CONCERNS
+    .map<NormalizedSkinConcern | null>(({ key, label }) => {
+      const score = extractSkinScore(scores[key]);
+      if (score === null) return null;
+      const value = scores[key];
+      const outputMaskName = value && typeof value === 'object'
+        ? (value as Record<string, unknown>).output_mask_name
+        : undefined;
+      const rawScore = extractRawSkinScore(value);
+
+      const concern: NormalizedSkinConcern = {
+        key,
+        label,
+        score,
+      };
+      if (rawScore !== undefined) concern.rawScore = rawScore;
+      if (typeof outputMaskName === 'string') concern.outputMaskName = outputMaskName;
+      return concern;
+    })
+    .filter((concern): concern is NormalizedSkinConcern => concern !== null)
+    .sort((a, b) => a.score - b.score);
+}
+
+export function deriveSimulationIntensities(
+  scores?: Record<string, unknown> | null,
+  concernKeys = ['wrinkle', 'radiance', 'acne', 'pore', 'texture', 'dark_circle_v2', 'redness', 'oiliness', 'eye_bag', 'age_spot']
+): Record<string, number> {
+  const intensities: Record<string, number> = {};
+
+  for (const key of concernKeys) {
+    const score = extractSkinScore(scores?.[key]);
+    const simulationKey = key === 'dark_circle_v2' ? 'dark_circle' : key === 'eye_bag' ? 'eye_bags' : key === 'age_spot' ? 'spots' : key;
+    intensities[simulationKey] = score === null
+      ? 0.3
+      : Math.max(0.1, Math.min(0.9, Number(((100 - score) / 100).toFixed(2))));
+  }
+
+  return intensities;
+}
 
 /**
  * Process raw skin analysis data into structured concerns

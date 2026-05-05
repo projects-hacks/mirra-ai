@@ -9,6 +9,7 @@ export const ENABLE_CAMERA_KIT = process.env.NEXT_PUBLIC_ENABLE_CAMERA_KIT !== "
 // ── API Endpoints ──────────────────────────────────
 export const ApiRoutes = {
   SKIN_ANALYZE: "/api/skin/analyze",
+  SKIN_INSIGHTS: "/api/skin/insights",
   SKIN_SIMULATE: "/api/skin/simulate",
   SKIN_HISTORY: "/api/skin/history",
   VTO_CLOTHES: "/api/vto/clothes",

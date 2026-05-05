@@ -7,7 +7,9 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile, status
 
 from app.core.deps import read_image, resolve_user_id
+from app.services.agent import agent_service
 from app.services.supabase_client import supabase
+from app.services.weather import get_weather
 from app.tools import skin_tools
 
 router = APIRouter()
@@ -77,3 +79,58 @@ async def get_skin_history(
         .execute()
     )
     return {"history": result.data or []}
+
+
+@router.post("/insights")
+async def get_skin_insights(
+    request: Request,
+    user_id: str | None = Form(default=None),
+) -> dict[str, Any]:
+    """Generate AI skin reasoning from latest scan, weather, and scan history."""
+    if not supabase:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase is not configured",
+        )
+
+    resolved_user_id = resolve_user_id(request, user_id)
+    if not resolved_user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+
+    scans_result = (
+        supabase.table("skin_scans")
+        .select("*")
+        .eq("user_id", resolved_user_id)
+        .order("created_at", desc=True)
+        .limit(5)
+        .execute()
+    )
+    scans = scans_result.data or []
+    if not scans:
+        raise HTTPException(status_code=404, detail="No skin scans found")
+
+    body_model_result = (
+        supabase.table("body_model")
+        .select("skin_tone")
+        .eq("user_id", resolved_user_id)
+        .limit(1)
+        .execute()
+    )
+    body_model_rows = body_model_result.data or []
+    skin_tone = body_model_rows[0].get("skin_tone") if body_model_rows else None
+
+    latest_scan = scans[0]
+    scan_weather = latest_scan.get("weather_at_scan")
+    if not scan_weather:
+        location = latest_scan.get("location_at_scan") or "San Francisco"
+        try:
+            scan_weather = await get_weather(location)
+        except Exception:
+            scan_weather = None
+
+    return await agent_service.generate_skin_insights(
+        scores=latest_scan.get("scores") or {},
+        skin_tone=skin_tone,
+        weather=scan_weather,
+        history=scans[1:],
+    )

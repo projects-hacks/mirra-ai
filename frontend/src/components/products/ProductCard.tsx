@@ -4,6 +4,7 @@ import { useState, memo } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { retryWithBackoff } from "@/lib/api";
 import Image from "next/image";
+import { Shirt } from "lucide-react";
 
 interface ProductCardProps {
   product: {
@@ -82,10 +83,10 @@ const ProductCard = memo(function ProductCard({
           </div>
         ) : (
           <div
-            className="w-full h-[160px] flex items-center justify-center text-3xl"
-            style={{ background: "var(--surface-container)" }}
+            className="w-full h-[160px] flex items-center justify-center"
+            style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
           >
-            👔
+            <Shirt size={34} aria-hidden="true" />
           </div>
         )}
         <div className="item-info">

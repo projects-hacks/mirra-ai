@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarDays } from "lucide-react";
 
 interface CalendarPromptScreenProps {
   onConnect: () => void | Promise<void>;
@@ -35,7 +36,9 @@ export function CalendarPromptScreen({ onConnect, onSkip }: Readonly<CalendarPro
         }}
       >
         <div className="flex flex-col gap-2">
-          <div className="text-4xl mb-2">📅</div>
+          <div className="mb-2 flex justify-center">
+            <CalendarDays size={40} aria-hidden="true" />
+          </div>
           <h2 className="text-2xl font-bold text-white">Connect Your Calendar</h2>
           <p className="text-sm text-white/80">
             Want to connect your calendar so I know what&apos;s coming up?

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import Image from "next/image";
+import { CheckCircle2, X } from "lucide-react";
 
 interface SkinSimulationCardProps {
   originalUrl: string;
@@ -58,7 +58,7 @@ const SkinSimulationCard = ({
           onClick={onClose}
           className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/20 transition-colors min-w-[44px] min-h-[44px]"
         >
-          <span className="material-symbols-outlined text-[24px]">close</span>
+          <X size={22} aria-hidden="true" />
         </button>
         <h2 className="text-base sm:text-lg font-bold tracking-tight">SKIN PROGRESSION</h2>
         <div className="w-10" />
@@ -74,13 +74,11 @@ const SkinSimulationCard = ({
         onPointerCancel={onPointerUp}
       >
         {/* Before Image */}
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={originalUrl}
           alt="Before"
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover"
-          priority
+          className="h-full w-full object-cover"
         />
         
         {/* After Image */}
@@ -88,13 +86,11 @@ const SkinSimulationCard = ({
           className="absolute inset-0"
           style={{ clipPath: `inset(0 0 0 ${sliderPos}%)` }}
         >
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={simulatedUrl}
             alt="After"
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
-            priority
+            className="h-full w-full object-cover"
           />
         </div>
 
@@ -104,9 +100,7 @@ const SkinSimulationCard = ({
           style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}
         >
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-            <span className="material-symbols-outlined text-[16px] text-black">
-              swap_horiz
-            </span>
+            <span className="h-3 w-3 rounded-full bg-black" aria-hidden="true" />
           </div>
         </div>
 
@@ -125,7 +119,7 @@ const SkinSimulationCard = ({
         <div className="flex flex-wrap gap-2">
           {topConcerns.length > 0 ? topConcerns.map((concern) => (
             <div key={concern} className="px-3 py-1.5 bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30 rounded-full text-sm font-medium capitalize flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              <CheckCircle2 size={16} aria-hidden="true" />
               {concern}
             </div>
           )) : (

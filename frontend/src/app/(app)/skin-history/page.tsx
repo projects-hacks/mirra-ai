@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Cake, Clock, Droplets, MapPin, Thermometer, Wind } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
-import BottomNav from "@/components/navigation/BottomNav";
 
 // ── Types ────────────────────────────────────────────
 interface SkinScores {
@@ -162,13 +162,6 @@ function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: key
   );
 }
 
-function getContextEmoji(context: string): string {
-  if (context === 'morning') return '🌅';
-  if (context === 'afternoon') return '☀️';
-  if (context === 'evening') return '🌆';
-  return '🌙';
-}
-
 // Scan card with details
 function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boolean }>) {
   const [expanded, setExpanded] = useState(false);
@@ -211,24 +204,40 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
       {/* Context pills */}
       <div className="flex gap-2 flex-wrap text-xs">
         {scan.scan_context && (
-          <span className="context-pill">
-            {getContextEmoji(scan.scan_context)} {scan.scan_context}
+          <span className="context-pill inline-flex items-center gap-1">
+            <Clock size={13} aria-hidden="true" />
+            {scan.scan_context}
           </span>
         )}
         {scan.location_at_scan && (
-          <span className="context-pill">📍 {scan.location_at_scan}</span>
+          <span className="context-pill inline-flex items-center gap-1">
+            <MapPin size={13} aria-hidden="true" />
+            {scan.location_at_scan}
+          </span>
         )}
         {scan.weather_at_scan?.temp_f && (
-          <span className="context-pill">🌡️ {Math.round(scan.weather_at_scan.temp_f)}°F</span>
+          <span className="context-pill inline-flex items-center gap-1">
+            <Thermometer size={13} aria-hidden="true" />
+            {Math.round(scan.weather_at_scan.temp_f)}°F
+          </span>
         )}
         {scan.weather_at_scan?.humidity && (
-          <span className="context-pill">💧 {scan.weather_at_scan.humidity}%</span>
+          <span className="context-pill inline-flex items-center gap-1">
+            <Droplets size={13} aria-hidden="true" />
+            {scan.weather_at_scan.humidity}%
+          </span>
         )}
         {scan.weather_at_scan?.wind_mph && (
-          <span className="context-pill">💨 {Math.round(scan.weather_at_scan.wind_mph)} mph</span>
+          <span className="context-pill inline-flex items-center gap-1">
+            <Wind size={13} aria-hidden="true" />
+            {Math.round(scan.weather_at_scan.wind_mph)} mph
+          </span>
         )}
         {scan.skin_age && (
-          <span className="context-pill">🎂 Skin age {scan.skin_age}</span>
+          <span className="context-pill inline-flex items-center gap-1">
+            <Cake size={13} aria-hidden="true" />
+            Skin age {scan.skin_age}
+          </span>
         )}
       </div>
       
@@ -482,7 +491,6 @@ export default function SkinHistoryPage() {
           </>
         )}
       </div>
-      <BottomNav />
     </div>
   );
 }

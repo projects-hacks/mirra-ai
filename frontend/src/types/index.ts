@@ -88,6 +88,25 @@ export interface SkinTone {
   undertone: string;
 }
 
+export interface SkinToneData {
+  skin_color?: string;
+  eye_color?: string | null;
+  lip_color?: string | null;
+  hair_color?: string | null;
+  eyebrow_color?: string | null;
+  undertone?: string | null;
+  color_season?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SkinConcern {
+  key: string;
+  label: string;
+  score: number;
+  rawScore?: number;
+  outputMaskName?: string;
+}
+
 // ── Products ────────────────────────────────────────
 export interface Product {
   title: string;

@@ -40,10 +40,17 @@ export interface SkinHistoryRow {
   scores?: Record<string, unknown>;
   skin_age?: number | null;
   created_at?: string;
+  selfie_url?: string | null;
+  weather_at_scan?: unknown;
+  location_at_scan?: string | null;
 }
 
 export interface SkinHistoryResponse {
   history: SkinHistoryRow[];
+}
+
+export interface SkinInsightsResponse extends AgentInsight {
+  tool_calls_made?: string[];
 }
 
 export interface VtoImageResponse {
@@ -275,6 +282,8 @@ export const skinApi = {
     const response = await fetchApi<SkinHistoryResponse>(ApiRoutes.SKIN_HISTORY);
     return response.history;
   },
+
+  insights: () => fetchWithFormData<SkinInsightsResponse>(ApiRoutes.SKIN_INSIGHTS, new FormData()),
 
   summary: async (): Promise<SkinSummary[]> => {
     const history = await skinApi.history();

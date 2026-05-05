@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types";
@@ -79,10 +79,6 @@ interface EditableProfile {
   budget_max: string;
 }
 
-interface LatestScanRecord {
-  selfie_url?: string | null;
-}
-
 interface SkinScanRow extends Omit<SkinScan, "weather_at_scan"> {
   weather_at_scan?: SkinScan["weather_at_scan"] | string;
 }
@@ -90,94 +86,6 @@ interface SkinScanRow extends Omit<SkinScan, "weather_at_scan"> {
 interface SettledQueryResult {
   data?: unknown;
   count?: number | null;
-}
-
-// ── Helpers ──────────────────────────────────────────
-function scoreColor(score: number): string {
-  if (score >= 80) return "var(--success)";
-  if (score >= 60) return "#f59e0b";
-  return "var(--error)";
-}
-
-function ScoreBar({ label, value }: Readonly<{ label: string; value: number }>) {
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1" style={{ color: "var(--on-surface-variant)" }}>
-        <span>{label}</span>
-        <span style={{ color: scoreColor(value), fontWeight: 600 }}>{value}</span>
-      </div>
-      <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-variant)" }}>
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${value}%`, background: scoreColor(value) }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// Trend indicator
-function TrendIndicator({ scans }: Readonly<{ scans: SkinScan[] }>) {
-  if (scans.length < 2) return null;
-  
-  const latest = scans[0]?.scores?.overall ?? 0;
-  const previous = scans[1]?.scores?.overall ?? 0;
-  const diff = latest - previous;
-  
-  if (Math.abs(diff) < 2) {
-    return (
-      <span className="text-xs flex items-center gap-1" style={{ color: "var(--on-surface-variant)" }}>
-        <ArrowRight size={14} aria-hidden="true" /> Stable
-      </span>
-    );
-  }
-  
-  return (
-    <span 
-      className="text-xs flex items-center gap-1 font-medium"
-      style={{ color: diff > 0 ? "var(--success)" : "var(--error)" }}
-    >
-      {diff > 0 ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />}
-      {Math.abs(diff)} pts
-    </span>
-  );
-}
-
-// Mini chart for last 7 scans
-function MiniChart({ scans }: Readonly<{ scans: SkinScan[] }>) {
-  if (scans.length < 2) return null;
-  
-  const points = scans.slice(0, 7).reverse().map((s) => s.scores?.overall ?? 75);
-  const max = Math.max(...points, 100);
-  const min = Math.min(...points, 0);
-  const range = max - min || 1;
-  
-  return (
-    <div className="flex items-end gap-1 h-12">
-      {points.map((value, i) => {
-        const height = ((value - min) / range) * 100;
-        return (
-          <div
-            key={`chart-${i}-${value}`}
-            className="flex-1 rounded-t transition-all"
-            style={{
-              height: `${height}%`,
-              minHeight: "4px",
-              background: scoreColor(value),
-              opacity: i === points.length - 1 ? 1 : 0.6,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function getContextEmoji(context: string): string {
-  if (context === 'morning') return '🌅';
-  if (context === 'afternoon') return '☀️';
-  if (context === 'evening') return '🌆';
-  return '🌙';
 }
 
 // ── Main Component ────────────────────────────────────
@@ -194,8 +102,6 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [isReanalyzing, setIsReanalyzing] = useState(false);
-  const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditableProfile>({
     displayName: "",
     preferred_currency: "USD",
@@ -343,106 +249,6 @@ export default function ProfilePage() {
     setCalendarConnected(false);
   }, [user]);
 
-  // ── Re-analyze skin ────────────────────────────────
-  const handleReanalyze = useCallback(async () => {
-    if (!user) return;
-    
-    setIsReanalyzing(true);
-    setReanalyzeError(null);
-    
-    try {
-      const supabase = getSupabase();
-      
-      // Get latest selfie from skin_scans
-      const { data: latestScan, error: scanError } = await supabase
-        .from("skin_scans")
-        .select("selfie_url")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-      
-      const latestSkinScan = latestScan as LatestScanRecord | null;
-
-      if (scanError || !latestSkinScan?.selfie_url) {
-        throw new Error("No selfie found. Please complete onboarding first.");
-      }
-      
-      // Download the selfie
-      const response = await fetch(latestSkinScan.selfie_url);
-      if (!response.ok) {
-        throw new Error("Failed to download selfie");
-      }
-      
-      const blob = await response.blob();
-      
-      // Convert to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      
-      const selfieBase64 = await base64Promise;
-      
-      // Get client IP for location detection
-      const ipResponse = await fetch("https://api.ipify.org?format=json");
-      const ipData = await ipResponse.json();
-      const clientIp = ipData.ip;
-      
-      // Call backend analyze endpoint
-      const analyzeResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/analyze`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: user.id,
-          selfie: selfieBase64,
-          ip_address: clientIp,
-        }),
-      });
-      
-      if (!analyzeResponse.ok) {
-        const errorData = await analyzeResponse.json();
-        throw new Error(errorData.detail || "Analysis failed");
-      }
-      
-      const result = await analyzeResponse.json();
-      
-      // Update local state with new data
-      if (result.body_model) {
-        setBodyModel(result.body_model);
-      }
-      
-      // Reload skin scans
-      const { data: newScans } = await supabase
-        .from("skin_scans")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      
-      if (newScans) {
-        const parsedScans = (newScans as SkinScanRow[]).map((scan) => ({
-          ...scan,
-          scores: typeof scan.scores === 'string' ? JSON.parse(scan.scores) : scan.scores,
-          weather_at_scan: typeof scan.weather_at_scan === 'string' ? JSON.parse(scan.weather_at_scan) : scan.weather_at_scan,
-        }));
-        setSkinScans(parsedScans);
-      }
-      
-      // Success!
-      setIsReanalyzing(false);
-      
-    } catch (error) {
-      console.error("Re-analyze error:", error);
-      setReanalyzeError(error instanceof Error ? error.message : "Failed to re-analyze");
-      setIsReanalyzing(false);
-    }
-  }, [user]);
-
   // ── Render ─────────────────────────────────────────
   if (isLoading) {
     return (
@@ -454,13 +260,6 @@ export default function ProfilePage() {
 
   const scores = bodyModel?.skin_scores ?? {} as SkinScores;
   const overallScore = scores.overall ?? 75;
-  const latestScan = skinScans[0];
-  
-  // Top 3 concerns (lowest scores)
-  const topConcerns = Object.entries(scores)
-    .filter(([k]) => k !== "overall")
-    .sort(([, a], [, b]) => (a as number) - (b as number))
-    .slice(0, 3);
 
   return (
     <div
@@ -573,72 +372,55 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── Skin Intelligence Card (Enhanced) ── */}
+        {/* ── Skin Health Summary ── */}
         {bodyModel && (
-          <div className="glass-card space-y-4">
-            {/* Header with score and trend */}
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium mb-1">Skin Intelligence</p>
-                <TrendIndicator scans={skinScans} />
+          <div className="glass-card flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Skin Health</p>
+              <p className="mt-1 text-xs" style={{ color: "var(--on-surface-variant)" }}>
+                {skinScans.length > 0
+                  ? `${skinScans.length} saved scans. Latest ${new Date(skinScans[0].created_at).toLocaleDateString()}.`
+                  : "Open Skin Health to review scan details."}
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/skin-history")}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium"
+                style={{ color: "var(--primary)" }}
+              >
+                View history
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold">
+                {overallScore}
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold" style={{ color: scoreColor(overallScore) }}>
-                  {overallScore}
-                </div>
-                <p className="text-xs mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                  Overall Score
+              <p className="text-xs mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
+                Overall
+              </p>
+            </div>
+            <button
+              onClick={() => router.push("/skin")}
+              className="btn-secondary shrink-0 text-sm"
+            >
+              Open
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Face and tone snapshot ── */}
+        {bodyModel && (
+          <div className="glass-card space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Appearance Snapshot</p>
+                <p className="mt-1 text-xs" style={{ color: "var(--on-surface-variant)" }}>
+                  Current face and tone context used by styling flows.
                 </p>
               </div>
             </div>
-
-            {/* Mini chart */}
-            {skinScans.length >= 2 && (
-              <div>
-                <p className="text-xs mb-2" style={{ color: "var(--on-surface-variant)" }}>
-                  Last 7 scans
-                </p>
-                <MiniChart scans={skinScans} />
-              </div>
-            )}
-
-            {/* Top 3 concerns */}
-            {topConcerns.length > 0 && (
-              <div className="space-y-2.5">
-                <p className="text-xs font-medium" style={{ color: "var(--on-surface-variant)" }}>
-                  Areas to improve
-                </p>
-                {topConcerns.map(([key, value]) => (
-                  <ScoreBar
-                    key={key}
-                    label={key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                    value={value as number}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Latest scan context */}
-            {latestScan && (
-              <div className="flex gap-2 flex-wrap text-xs">
-                {latestScan.scan_context && (
-                  <span className="context-pill">
-                    {getContextEmoji(latestScan.scan_context)} {latestScan.scan_context}
-                  </span>
-                )}
-                {latestScan.location_at_scan && (
-                  <span className="context-pill">📍 {latestScan.location_at_scan}</span>
-                )}
-                {latestScan.weather_at_scan?.temp_f && (
-                  <span className="context-pill">🌡️ {Math.round(latestScan.weather_at_scan.temp_f)}°F</span>
-                )}
-                {latestScan.weather_at_scan?.humidity && (
-                  <span className="context-pill">💧 {latestScan.weather_at_scan.humidity}%</span>
-                )}
-              </div>
-            )}
-
-            {/* Face attributes */}
             <div className="flex gap-2 flex-wrap text-xs">
               {bodyModel.face_shape?.shape && (
                 <span className="context-pill">{bodyModel.face_shape.shape} face</span>
@@ -659,59 +441,6 @@ export default function ProfilePage() {
                 </span>
               )}
             </div>
-
-            {skinScans.length > 0 && (
-              <p className="text-xs" style={{ color: "var(--on-surface-muted)" }}>
-                Last scanned {new Date(skinScans[0].created_at).toLocaleDateString()} · {skinScans.length} total scans
-              </p>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => router.push("/new-scan")}
-                className="btn-primary flex-1 text-sm flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                New Scan
-              </button>
-              <button
-                onClick={handleReanalyze}
-                disabled={isReanalyzing}
-                className="btn-secondary flex-1 text-sm flex items-center justify-center gap-2"
-              >
-                {isReanalyzing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Re-analyze
-                  </>
-                )}
-              </button>
-            </div>
-            
-            <button
-              onClick={() => router.push("/skin-history")}
-              className="btn-secondary w-full text-sm"
-            >
-              View Detailed History
-              <ArrowRight size={16} aria-hidden="true" />
-            </button>
-            
-            {reanalyzeError && (
-              <p className="text-xs px-1" style={{ color: "var(--error)" }}>
-                {reanalyzeError}
-              </p>
-            )}
           </div>
         )}
 
