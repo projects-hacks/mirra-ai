@@ -7,7 +7,7 @@ This plan transforms Mirra from a partially-wired prototype into a **demo-ready 
 **Key Technical Stack:**
 - Frontend: Next.js 14, TypeScript, Tailwind CSS, PWA
 - Backend: FastAPI, Python 3.12, Pydantic
-- Voice: Deepgram Voice Agent (Nova-3 STT → GPT-5-mini Think → Aura-2 TTS)
+- Voice: Deepgram Voice Agent (Nova-3 STT → GPT-4o-mini Think → Aura-2 TTS)
 - AI/AR: Perfect Corp APIs (9 endpoints), Perfect Corp JS Camera Kit
 - AI Metadata: Gemini 2.5 Flash (closet photo extraction)
 - Shopping: Serper (Google Shopping)
@@ -55,17 +55,17 @@ GET  /s2s/v2.0/task/skin-simulation/{id}   → poll → result image URL (24hr)
 
 **Intensity params (each 0.0–1.0):** `wrinkle`, `radiance`, `acne`, `pores`, `texture`, `dark_circle`, `redness`, `oiliness`, `eye_bags`, `spots`
 
-- [ ] 1.1 Add `SKIN_SIMULATION` to VTOTaskType enum
+- [x] 1.1 Add `SKIN_SIMULATION` to VTOTaskType enum ✅ DONE
   - Open `backend/app/core/constants.py`
   - Add `SKIN_SIMULATION = "skin-simulation"` to the `VTOTaskType` enum (after line 58)
   - This tells `perfectcorp.py` which endpoint path to use
 
-- [ ] 1.2 Add `SIMULATE_SKIN` to ToolName enum
+- [x] 1.2 Add `SIMULATE_SKIN` to ToolName enum ✅ DONE
   - Open `backend/app/core/constants.py`
   - Add `SIMULATE_SKIN = "simulate_skin"` to the `ToolName` enum (after line 141, after `ANALYZE_FACE`)
   - This is the name the voice agent will use to call this tool
 
-- [ ] 1.3 Create the `simulate_skin` tool function
+- [x] 1.3 Create the `simulate_skin` tool function ✅ DONE
   - Create logic in `backend/app/tools/skin_tools.py` (add after the `analyze_face` function)
   - Function signature: `async def simulate_skin(selfie_bytes: bytes, intensities: dict, user_id: str | None = None) -> dict`
   - The function should:
@@ -79,13 +79,13 @@ GET  /s2s/v2.0/task/skin-simulation/{id}   → poll → result image URL (24hr)
     4. Return `{"simulation_url": result["url"], "intensities_used": intensities}`
   - _Why auto-derive:_ The voice agent says "show me improvement" — it shouldn't need to guess intensity numbers. We compute them from the user's actual skin data.
 
-- [ ] 1.4 Register `simulate_skin` in the tool executor
+- [x] 1.4 Register `simulate_skin` in the tool executor ✅ DONE
   - Open `backend/app/services/tool_executor.py`
   - Add a new `case ToolName.SIMULATE_SKIN:` block (after line 30, after ANALYZE_FACE)
   - Route to: `await _require_selfie(selfie_bytes, skin_tools.simulate_skin, intensities=args.get("intensities", {}), user_id=user_id)`
   - Import is already handled since `skin_tools` is imported at line 7
 
-- [ ] 1.5 Register `simulate_skin` in voice.py function definitions
+- [x] 1.5 Register `simulate_skin` in voice.py function definitions ✅ DONE
   - Open `backend/app/routers/voice.py`
   - Add a new entry to the `_function_definitions()` list (after line 36, after ANALYZE_FACE):
   ```python
@@ -104,7 +104,7 @@ GET  /s2s/v2.0/task/skin-simulation/{id}   → poll → result image URL (24hr)
   }
   ```
 
-- [ ] 1.6 Add `skin-simulation` to perfectcorp.py task payload builder
+- [x] 1.6 Add `skin-simulation` to perfectcorp.py task payload builder ✅ DONE
   - Open `backend/app/services/perfectcorp.py`
   - In the `call_api` function (line 203), add `"skin-simulation"` to the analysis-type check:
     ```python
@@ -136,10 +136,9 @@ The JS Camera Kit provides **automatic image quality gating** — it validates f
 **Keep `getUserMedia` for:** Clothes VTO (Camera Kit has no `cloth` mode)
 **Use Camera Kit for:** Skin Analysis, Skin Tone, Face Attributes, Skin Simulation, Earrings, Necklace, Makeup
 
-- [ ] 3.1 Install the JS Camera Kit SDK
-  - Add the Perfect Corp JS SDK script tag to `frontend/src/app/layout.tsx`
-  - Place it inside `<head>` with `async` loading
-  - The SDK URL should come from Perfect Corp developer portal (hackathon credentials)
+- [x] 3.1 Install the JS Camera Kit SDK ✅ DONE
+  - SDK dynamically injected by `useCameraKit` hook (no static script tag)
+  - Removed static `<Script>` from `layout.tsx`
   - Add TypeScript type declaration in `frontend/src/types/ymk.d.ts`:
     ```typescript
     interface YMKCaptureResult {
@@ -153,15 +152,10 @@ The JS Camera Kit provides **automatic image quality gating** — it validates f
     };
     ```
 
-- [ ] 3.2 Create `useCameraKit` hook
-  - Create `frontend/src/hooks/useCameraKit.ts`
-  - Implement `useCameraKit()` hook that:
-    1. Registers `window.ymkAsyncInit` on mount
-    2. Listens for `faceDetectionCaptured` event
-    3. Exposes `capture(mode: FaceDetectionMode)` method
-    4. Returns `{ capture, lastImage, isReady, error }`
-  - Supported modes enum: `'skincare' | 'hdskincare' | 'shadefinder' | 'facereshape' | 'earring' | 'necklace' | 'makeup'`
-  - On capture, convert base64 image and send to backend via existing WebSocket `{ type: "selfie", data: base64 }`
+- [x] 3.2 Create `useCameraKit` hook ✅ DONE
+  - Created `frontend/src/hooks/useCameraKit.ts` (260 lines)
+  - Supports all face detection modes
+  - Dynamically injects SDK script
 
 - [ ] 3.3 Create a `CameraKitCapture` component
   - Create `frontend/src/components/layers/CameraKitCapture.tsx`
@@ -170,21 +164,9 @@ The JS Camera Kit provides **automatic image quality gating** — it validates f
   - When `visible` is true, call `YMK.init({ faceDetectionMode: mode })` and `YMK.openCameraKit()`
   - Style the container to sit behind the main camera layer (z-index management)
 
-- [ ] 3.4 Wire Camera Kit into the voice tool flow
-  - Open `frontend/src/hooks/useVoiceAgent.ts`
-  - When backend sends `{ type: "vto_result", tool: "analyze_skin", status: "running" }`:
-    1. Trigger Camera Kit capture in `skincare` mode
-    2. Wait for `faceDetectionCaptured`
-    3. Send quality-gated selfie to backend
-  - Map tool names to Camera Kit modes:
-    - `analyze_skin` → `"skincare"`
-    - `analyze_skin_tone` → `"shadefinder"`
-    - `analyze_face` → `"facereshape"`
-    - `simulate_skin` → `"skincare"`
-    - `try_on_earrings` → `"earring"`
-    - `try_on_necklace` → `"necklace"`
-    - `try_on_makeup` → `"makeup"`
-  - For tools NOT in this map (`try_on_clothes`, `change_hairstyle`): keep using existing `getUserMedia` capture
+- [x] 3.4 Wire Camera Kit into the voice tool flow ✅ DONE
+  - Implemented in `page.tsx` with tool→mode mapping
+  - Skin tools → `skincare`, makeup tools → `makeup`, native capture for clothes/hair
 
 - [ ] 3.5 Fallback: keep existing `getUserMedia` as backup
   - If Camera Kit SDK fails to load (network, CORS, etc.), fall back to existing `useCamera.ts`
@@ -205,49 +187,12 @@ The JS Camera Kit provides **automatic image quality gating** — it validates f
 
 The current system prompt (`backend/agent/system-prompt.md`) lists tools that don't exist in the codebase (e.g., `simulate_aging`, `try_on_look`, `transfer_makeup`, `change_hair_color`, `try_on_ring`, `try_on_watch`, `try_on_hat`, `try_on_scarf`, `enhance_photo`, `fix_lighting`). It also doesn't mention the new `simulate_skin` tool or the health-first behavior. This must be fixed or the agent will try to call non-existent tools.
 
-- [ ] 5.1 Remove non-existent tools from system prompt
-  - Open `backend/agent/system-prompt.md`
-  - Remove these tools that are NOT in `tool_executor.py`:
-    - `simulate_aging` (not implemented)
-    - `try_on_look` (not implemented)
-    - `transfer_makeup` (not implemented)
-    - `try_on_scarf` (not implemented)
-    - `try_on_hat` (not implemented)
-    - `try_on_ring` (not implemented)
-    - `try_on_watch` (not implemented)
-    - `change_hair_color` (not implemented)
-    - `add_waves` (not implemented)
-    - `enhance_photo` (not implemented)
-    - `fix_lighting` (not implemented)
+- [x] 5.1 Remove non-existent tools from system prompt ✅ DONE
 
-- [ ] 5.2 Add `simulate_skin` tool to system prompt
-  - Add under "Skin Intelligence" section:
-    ```
-    - `simulate_skin(selfie, intensities)` → before/after improvement image.
-      Shows what the user's skin could look like with consistent treatment.
-      Auto-derives intensities from their latest skin scan if not provided.
-    ```
+- [x] 5.2 Add `simulate_skin` tool to system prompt ✅ DONE
 
-- [ ] 5.3 Update behavior sequence for health-first
-  - Change "On First Open" to emphasize skin health:
-    ```
-    ### On First Open
-    1. Silently scan: `analyze_skin` + `analyze_skin_tone`
-    2. Greet with a skin insight: "Your moisture's at 52 — a bit dry today."
-    3. Offer: "Want to see what your skin could look like with better hydration?"
-    4. If yes: call `simulate_skin` → show before/after
-    ```
-  - Add new section "When User Asks About Skin":
-    ```
-    ### When User Asks About Skin
-    1. Call `analyze_skin` if not done yet
-    2. Show scores — highlight the 2-3 worst concerns
-    3. Compare to last scan: "Your acne improved 15% since last week"
-    4. Offer simulation: "Want to see improvement?"
-    5. If yes: `simulate_skin` → show before/after
-    6. Recommend products: `search_products("hyaluronic acid serum")`
-    7. Generate proof card for skincare purchase
-    ```
+- [x] 5.3 Update behavior sequence for health-first ✅ DONE
+  - Skin flow updated: analyze → compare → offer simulation → recommend products
 
 - [ ] 5.4 Add the available tools list that matches actual code
   - Rewrite the tools section to only list the 14 tools that exist in `tool_executor.py` + `voice.py`:
@@ -390,19 +335,11 @@ When `simulate_skin` returns an image URL, the frontend needs to show a compelli
   - CSS: use `clip-path` for the slider reveal effect
   - Add subtle pulse animation when card first appears
 
-- [ ] 8.2 Wire SkinSimulationCard into AgentOverlay
-  - Open `frontend/src/components/layers/AgentOverlay.tsx`
-  - When a `vto_result` message arrives with `tool === "simulate_skin"`:
-    1. Extract `simulation_url` and `original_url` (the selfie)
-    2. Render `<SkinSimulationCard>` in the message stream
-  - Auto-scroll to the card when it appears
-  - Save the original selfie URL from the latest `selfie` frame for the "before" image
+- [ ] 8.2 Wire SkinSimulationCard into AgentOverlay — **see §18.1 below for detailed steps**
 
-- [ ] 8.3 Store the current selfie for before/after reference
-  - Open `frontend/src/hooks/useVoiceAgent.ts`
-  - When a selfie is captured and sent, also store it in a React ref: `lastSelfieRef.current = base64Data`
-  - Convert to a displayable URL: `URL.createObjectURL(blob)` or `data:image/jpeg;base64,{data}`
-  - Pass this URL to AgentOverlay as `originalSelfieUrl` prop
+- [x] 8.3 Store the current selfie for before/after reference ✅ DONE
+  - `useVoiceAgent.ts` now exposes `lastSelfieUrl` state
+  - `page.tsx` passes `originalSelfieUrl={voice.lastSelfieUrl}` to `AgentOverlay`
 
 ### 9. Checkpoint — Verify Skin Simulation Frontend
 
@@ -580,9 +517,298 @@ These are manual test flows to verify the full pipeline before recording the dem
 | Global styles | `frontend/src/app/globals.css` |
 | Layout | `frontend/src/app/layout.tsx` |
 
+| Skin suggestions | `backend/app/services/skin_suggestions.py` (NEW §17) |
+| Camera Kit hook | `frontend/src/hooks/useCameraKit.ts` |
+| VTODisplay | `frontend/src/components/vto/VTODisplay.tsx` |
+| SkinSimulationCard | `frontend/src/components/cards/SkinSimulationCard.tsx` |
+| SkinAnalysisCard | `frontend/src/components/cards/SkinAnalysisCard.tsx` |
+| ItemCardRow | `frontend/src/components/cards/ItemCardRow.tsx` |
+
+## Progress Summary
+
+| Section | Status |
+|---------|--------|
+| §1 Skin Simulation Backend | ✅ 6/7 done (1.7 mock remaining) |
+| §3 Camera Kit | ✅ 3/5 done (3.3 component, 3.5 fallback remaining) |
+| §5 System Prompt | ✅ 3/4 done (5.4 tools list remaining) |
+| §7 Mobile UI/UX | 🔲 Not started |
+| §8 Simulation Frontend | ⬜ 1/3 done (8.1 card exists, 8.2 wiring needed) |
+| §10 Demo Data | 🔲 Not started |
+| §14 Skin Product Recs | 🔲 NEW — Not started |
+| §15 Product → VTO Flow | 🔲 NEW — Not started |
+| §16 Skin Journey | 🔲 NEW — Not started |
+| §17 Skin Suggestions | 🔲 NEW — Not started |
+| §18 Frontend Viz Gaps | 🔲 NEW — Not started |
+| §19 Voice Product Flows | 🔲 NEW — Not started |
+| §20 Mock Data | 🔲 NEW — Not started |
+
 ## Notes
 
-- Camera Kit integration (§3) is **optional** — if the SDK isn't available or causes issues, `getUserMedia` works fine. Prioritize §1, §5, §7, §8, §10 first.
-- API budget: 1000 units total. Mock during dev (tasks 1-10). Switch to live for final testing (§12) and recording (§13).
-- Each checkpoint (§2, §4, §6, §9, §11) is a "stop and verify" moment — don't proceed past a checkpoint if the previous section's tests fail.
-- All code should follow existing patterns — look at how `analyze_skin` is wired end-to-end before building `simulate_skin`.
+- **Priority order for remaining work:** §18 (wire existing components) → §14 (skincare recs) → §17 (suggestions) → §15 (product→VTO) → §16 (skin journey) → §20 (mocks) → §7 (UI polish)
+- Camera Kit integration (§3) is **optional** — `getUserMedia` works fine as fallback.
+- API budget: 1000 units total. Mock during dev. Switch to live for final testing (§12) and recording (§13).
+- §14-§20 are the **new sections** covering skincare recommendations, product→VTO flows, skin journey persistence, suggestions engine, and frontend visualization gaps.
+- All code should follow existing patterns — look at how `analyze_skin` is wired end-to-end.
+
+### 14. Skin Product Recommendations (Serper → Skincare)
+
+The agent already has `search_products` wired to Serper Google Shopping. But it currently only searches for fashion. We need the agent to **automatically recommend skincare products based on the user's worst skin scores**, and show them in a tappable product card that links to purchase.
+
+**Current state:** `serper.py` works. `search_products` tool exists. But the agent doesn't know HOW to form good skincare queries from skin data.
+
+- [ ] 14.1 Add skincare query builder to `skin_tools.py`
+  - Create helper: `def build_skincare_queries(scores: dict) -> list[str]`
+  - Logic: find the 2-3 worst scores (lowest `ui_score`), map each to a product query:
+    - `moisture < 50` → `"hyaluronic acid hydrating serum"`
+    - `acne > 70` (bad) → `"salicylic acid acne treatment"`
+    - `wrinkle > 60` → `"retinol anti-aging cream"`
+    - `pore > 65` → `"niacinamide pore minimizer"`
+    - `dark_circle > 60` → `"vitamin C eye cream dark circles"`
+    - `redness > 60` → `"centella asiatica calming moisturizer"`
+    - `oiliness > 70` → `"oil-free mattifying moisturizer"`
+    - `texture > 60` → `"AHA BHA chemical exfoliant"`
+    - `radiance < 50` → `"vitamin C brightening serum"`
+  - Return top 3 queries sorted by severity
+
+- [ ] 14.2 Create `RECOMMEND_SKIN_PRODUCTS` tool (optional shortcut)
+  - Add to `ToolName` enum: `RECOMMEND_SKIN_PRODUCTS = "recommend_skin_products"`
+  - In `tool_executor.py`: fetch latest skin scan → call `build_skincare_queries` → run `serper.search()` for each → merge results
+  - OR: skip this and just teach the agent in the system prompt to chain `analyze_skin` → `search_products` with good queries. The second approach is simpler and avoids a new tool.
+
+- [ ] 14.3 Update system prompt with skincare recommendation behavior
+  - In `backend/agent/system-prompt.md`, add under "When User Asks About Skin":
+    ```
+    6. For each top concern, search for targeted products:
+       - Low moisture → search_products("hyaluronic acid serum")
+       - High acne → search_products("salicylic acid treatment")
+       - High wrinkle → search_products("retinol cream")
+    7. Present products with: name, price, image, and WHY it helps their specific concern
+    8. Offer: "Want to try this look?" → if applicable, try_on_makeup with the product
+    ```
+
+- [ ] 14.4 Add skincare product mock data
+  - Create `backend/mocks/skincare-products.json` with 5 realistic skincare products
+  - Each: `title`, `price`, `source`, `link`, `imageUrl`, `rating`
+  - Used when `USE_MOCKS=true` and query contains skincare keywords
+
+### 15. Product Card → VTO Flow (Try-On from Recommendations)
+
+When the agent shows product results (fashion or skincare), the user should be able to **tap a product card to trigger VTO try-on**. Currently `ItemCardRow` renders product cards but they're not tappable.
+
+**The flow:** User sees product → taps card → agent calls `try_on_clothes` / `try_on_makeup` with that product's image URL → VTO result renders on camera.
+
+- [ ] 15.1 Make `ItemCardRow` cards tappable
+  - Open `frontend/src/components/cards/ItemCardRow.tsx`
+  - Add `onClick` handler to each card div
+  - On tap: send a WebSocket message to trigger VTO:
+    ```typescript
+    // Send message via global __mirraWS
+    const ws = (globalThis as any).__mirraWS;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: "user_action",
+        action: "try_on",
+        item: { url: item.imageUrl, category: item.category, name: item.name }
+      }));
+    }
+    ```
+  - Add visual affordance: subtle "Try On" overlay on hover/tap
+
+- [ ] 15.2 Handle `user_action` messages in `voice.py`
+  - In the `_handle_client_message` function, add a new case:
+    ```python
+    case "user_action":
+        if data.get("action") == "try_on":
+            item = data["item"]
+            # Inject a function call as if the agent requested it
+            await _handle_function_call(session, ws, dg_ws, {
+                "function_name": "try_on_clothes",
+                "input": {"garment_url": item["url"], "garment_category": item.get("category", "upper")}
+            })
+    ```
+  - This bypasses the voice agent — direct user tap → VTO execution
+
+- [ ] 15.3 Add category-aware VTO routing for product taps
+  - When user taps a product, determine which VTO tool to use:
+    - Fashion items (dress, top, pants) → `try_on_clothes`
+    - Makeup products → `try_on_makeup`
+    - Earrings → `try_on_earrings`
+    - Necklaces → `try_on_necklace`
+  - Use product category or keywords from title to auto-detect
+  - Skincare products should NOT trigger VTO — instead show a "Simulate improvement" CTA
+
+### 16. Skin Journey — Persistence & Timeline
+
+The skin history page (`/skin-history`) already reads from `skin_scans` table and shows trend charts. But it's missing:
+1. **Simulation results** aren't persisted (URL expires in 2 hours)
+2. **No "skin journey" narrative** — just raw scores
+3. **No recommendations** tied to scan results
+4. **No comparison view** — can't compare two scans side-by-side
+
+- [ ] 16.1 Persist simulation images to Supabase Storage
+  - In `skin_tools.simulate_skin()`, after getting the result URL:
+    1. Download the image via `httpx.get(simulation_url)`
+    2. Upload to Supabase Storage bucket `skin-simulations/{user_id}/{timestamp}.jpg`
+    3. Get public URL from Supabase
+    4. Store in `skin_simulations` table: `user_id`, `original_selfie_url`, `simulated_url`, `intensities`, `created_at`
+  - This preserves the before/after even after the 2-hour API URL expires
+
+- [ ] 16.2 Create `skin_simulations` table in Supabase
+  - Schema:
+    ```sql
+    CREATE TABLE skin_simulations (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id UUID REFERENCES auth.users(id),
+      original_selfie_url TEXT,
+      simulated_url TEXT NOT NULL,
+      intensities JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    ```
+
+- [ ] 16.3 Add simulation history to `/skin-history` page
+  - Below each scan card, show a "Simulations" section if any exist for that time period
+  - Render a mini before/after thumbnail (40px × 40px each)
+  - Tap to expand to full `SkinSimulationCard` with slider
+
+- [ ] 16.4 Add "Skin Journey Narrative" to skin-history page
+  - At the top of the page, generate a human-readable summary:
+    - "Your moisture improved 12% over the last 3 weeks"
+    - "Acne scores have been stable — your routine is working"
+    - "Redness spiked on April 28 (high humidity day)"
+  - Compute from `skin_scans` data client-side
+  - Show as a glassmorphic card with insights
+
+- [ ] 16.5 Add scan comparison view
+  - On the skin-history page, add "Compare" button
+  - User selects two scans → side-by-side score comparison
+  - Show delta for each metric with color coding (green = improved, red = worse)
+  - Include selfie thumbnails if available
+
+### 17. Skin Suggestions Engine
+
+After analyzing skin, the agent should proactively suggest actionable improvements — not just show numbers. This is the "health advisor" part that makes Mirra different.
+
+- [ ] 17.1 Create `skin_suggestions.py` module
+  - Create `backend/app/services/skin_suggestions.py`
+  - Function: `def generate_suggestions(scores: dict, weather: dict | None = None) -> list[dict]`
+  - Each suggestion: `{ "concern": str, "score": int, "severity": str, "tip": str, "product_query": str }`
+  - Logic per concern:
+    - `moisture < 40`: severity="high", tip="Your skin is very dehydrated. Apply hyaluronic acid serum morning and night.", product_query="hyaluronic acid serum"
+    - `acne > 75`: severity="high", tip="Active breakouts detected. Use a gentle salicylic acid cleanser.", product_query="salicylic acid cleanser"
+    - `wrinkle > 65`: severity="medium", tip="Early fine lines visible. Start retinol 2-3 nights per week.", product_query="retinol serum"
+    - etc. for all 10+ concerns
+  - Factor in weather: high humidity → reduce heavy moisturizer suggestion, low humidity → increase hydration
+  - Return top 5 most actionable suggestions, sorted by severity
+
+- [ ] 17.2 Wire suggestions into `analyze_skin` tool response
+  - In `skin_tools.analyze_skin()`, after getting scores:
+    1. Call `generate_suggestions(scores, weather)` (weather from latest context if available)
+    2. Add `"suggestions"` key to the returned dict
+  - The agent then has structured suggestions to read back to the user
+
+- [ ] 17.3 Create `SkinSuggestionsCard` frontend component
+  - Create `frontend/src/components/cards/SkinSuggestionsCard.tsx`
+  - Props: `suggestions: Array<{ concern, score, severity, tip, product_query }>`
+  - Design: glassmorphic card with accordion-style items
+  - Each suggestion shows: concern icon, score bar, tip text
+  - "Shop treatment" button per suggestion → triggers `search_products(product_query)`
+  - Color-coded severity: red (high), amber (medium), green (low)
+
+- [ ] 17.4 Render `SkinSuggestionsCard` in AgentOverlay
+  - In `AgentOverlay.tsx`, when a `tool_result` for `analyze_skin` arrives that contains `suggestions`:
+    - Render `<SkinSuggestionsCard>` after the scores
+  - The suggestions card should appear below the `SkinAnalysisCard`
+
+### 18. Frontend Visualization Gaps
+
+These are UI components and behaviors that are missing or broken in the current frontend.
+
+- [ ] 18.1 Wire `SkinSimulationCard` into `AgentOverlay`
+  - `SkinSimulationCard.tsx` EXISTS (verified) but is NOT rendered anywhere
+  - In `AgentOverlay.tsx`, add:
+    ```tsx
+    const skinSimResults = messages.filter(
+      (m) => m.type === "tool_result" && (m as any).tool === ToolName.SIMULATE_SKIN
+    );
+    const latestSkinSim = skinSimResults.at(-1) ?? null;
+    ```
+  - Render it in the JSX after proof card block:
+    ```tsx
+    {latestSkinSim && (
+      <SkinSimulationCard
+        originalUrl={originalSelfieUrl ?? ""}
+        simulatedUrl={(latestSkinSim as any).data?.simulation_url}
+        intensities={(latestSkinSim as any).data?.intensities_used ?? {}}
+      />
+    )}
+    ```
+
+- [ ] 18.2 Fix `SkinAnalysisCard` to show in overlay
+  - `SkinAnalysisCard.tsx` EXISTS but verify it renders when `analyze_skin` completes
+  - The `analyze_skin` result arrives as `{ type: "vto_result", tool: "analyze_skin", status: "complete", scores: {...} }`
+  - Check that `AgentOverlay` handles `scores` in the `tool_result` message
+
+- [ ] 18.3 Create `ProductRecommendationCard` component
+  - Create `frontend/src/components/cards/ProductRecommendationCard.tsx`
+  - Different from `ItemCardRow`: this is a detailed card for a SINGLE product recommendation
+  - Shows: large product image, name, price, rating stars, "Why this helps" reason text, "Try On" / "Buy" buttons
+  - For skincare: "Try On" button is replaced with "Simulate Improvement" → triggers `simulate_skin`
+  - For fashion: "Try On" button → triggers `try_on_clothes` with the product image URL
+
+- [ ] 18.4 Add "Simulate Improvement" CTA after skin analysis
+  - After `SkinAnalysisCard` renders, show a floating CTA button: "See your skin with treatment →"
+  - On tap: send voice command equivalent — trigger `simulate_skin` via WebSocket
+  - This is the key conversion point: analysis → simulation → product recommendation
+
+- [ ] 18.5 Add loading states for chained tool calls
+  - When the agent chains: `analyze_skin` → `simulate_skin` → `search_products`
+  - Show a progress stepper in the overlay:
+    - Step 1: "Scanning skin…" ✓
+    - Step 2: "Simulating improvement…" (in progress)
+    - Step 3: "Finding products…" (pending)
+  - Use existing `LOADING_TEXT` map + `currentTool` state
+
+- [ ] 18.6 Handle VTO result display for simulation
+  - Currently `CameraLayer` shows VTO results for clothes/makeup
+  - Skin simulation result should NOT replace the camera feed
+  - Instead, it should appear as a `SkinSimulationCard` in the `AgentOverlay` (task 18.1)
+  - Verify that the `shouldFreeze` logic in `CameraLayer.tsx` does NOT freeze for `simulate_skin`
+
+### 19. Voice-Initiated Product Flows
+
+The voice agent needs clear behavior patterns for recommending and purchasing products. Currently the agent can search but doesn't have a structured "recommend → try on → buy" pipeline.
+
+- [ ] 19.1 Update system prompt with product recommendation flow
+  - Add to `backend/agent/system-prompt.md`:
+    ```markdown
+    ### Product Recommendation Flow
+    1. When recommending products, always explain WHY (link to user's skin/style data)
+    2. For fashion: search_products → show results → ask "Want to try it on?" → try_on_clothes
+    3. For skincare: search_products → show results → explain benefit → offer simulate_skin
+    4. Always generate proof_card before suggesting purchase
+    5. Never push products — only recommend when user asks or after analysis reveals need
+    ```
+
+- [ ] 19.2 Add "owned-first" enforcement to product recommendations
+  - The system prompt already has "owned-first" for fashion (check closet before shopping)
+  - Extend to skincare: check if user's previous purchases (from `proof_cards` table) include similar products
+  - If user already bought a retinol serum last week, don't recommend another one
+
+- [ ] 19.3 Add product category detection to `serper.py`
+  - Current `serper.search()` returns raw products with no category
+  - Add `category` field to each product result:
+    - Parse from title keywords: "serum", "cream", "dress", "earring", etc.
+    - Map to VTO tool: `skincare`, `upper`, `lower`, `full`, `earring`, `necklace`, `makeup`
+  - This enables task 15.3 (category-aware VTO routing)
+
+### 20. Mock Data for New Flows
+
+- [ ] 20.1 Create `skin-simulation.json` mock
+  - Path: `backend/mocks/skin-simulation.json`
+  - Content: `{ "task_status": "success", "result": { "url": "https://placehold.co/600x800/1a1a2e/e0e0e0?text=Skin+Simulation" } }`
+
+- [ ] 20.2 Verify existing mocks cover all tools
+  - Check each tool has a corresponding mock in `backend/mocks/`
+  - Missing mocks will cause `mock_interceptor.py` to fall through to live API (burns units)
+  - Tools needing mocks: `skin-analysis` ✅, `skin-simulation` (20.1), `face-attr-analysis`, `skin-tone-analysis`, `cloth-v3`, `2d-vto/earring`, `2d-vto/necklace`, `hairstyle-transfer`
