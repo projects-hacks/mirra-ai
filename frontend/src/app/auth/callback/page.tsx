@@ -25,8 +25,14 @@ function CallbackHandler() {
           throw new Error(callbackError);
         }
 
-        // The browser client uses Supabase's implicit flow, so detectSessionInUrl
-        // parses the OAuth hash and stores the session without a PKCE verifier.
+        const code = url.searchParams.get("code");
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            throw exchangeError;
+          }
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {

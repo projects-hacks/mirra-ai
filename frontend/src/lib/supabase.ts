@@ -1,19 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/constants";
 
-let client: ReturnType<typeof createClient> | null = null;
+let client: ReturnType<typeof createBrowserClient> | null = null;
 
-/** Singleton Supabase client for browser usage with localStorage for PKCE. */
+/** Singleton Supabase browser client. Uses cookie-backed PKCE storage. */
 export function getSupabase() {
   if (!client) {
-    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        flowType: "implicit",
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        persistSession: true,
-      },
-    });
+    client = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
   return client;
 }
