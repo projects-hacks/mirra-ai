@@ -13,9 +13,7 @@ function normalizeApiUrl(rawUrl: string | undefined): string {
 
   try {
     const parsed = new URL(configured);
-    const pageProtocol = typeof window !== "undefined" ? window.location.protocol : null;
-
-    if (parsed.protocol === "http:" && pageProtocol === "https:" && !isLocalHostname(parsed.hostname)) {
+    if (parsed.protocol === "http:" && !isLocalHostname(parsed.hostname)) {
       parsed.protocol = "https:";
     }
 

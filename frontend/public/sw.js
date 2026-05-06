@@ -1,8 +1,8 @@
 // Mirra PWA Service Worker - Enterprise Implementation
-// Version: 2.0.1
+// Version: 2.0.2
 // Strategy: Network-first for dynamic content, Cache-first for static assets
 
-const CACHE_VERSION = "v2.0.1";
+const CACHE_VERSION = "v2.0.2";
 const CACHE_NAMES = {
   static: `mirra-static-${CACHE_VERSION}`,
   dynamic: `mirra-dynamic-${CACHE_VERSION}`,
@@ -24,7 +24,7 @@ const CACHE_MAX_AGE = {
 
 // ── Install Event ──────────────────────────────────
 globalThis.addEventListener("install", (event) => {
-  console.log("[SW] Installing service worker v2.0.1");
+  console.log("[SW] Installing service worker v2.0.2");
   
   event.waitUntil(
     caches.open(CACHE_NAMES.static).then((cache) => {
@@ -39,7 +39,7 @@ globalThis.addEventListener("install", (event) => {
 
 // ── Activate Event ─────────────────────────────────
 globalThis.addEventListener("activate", (event) => {
-  console.log("[SW] Activating service worker v2.0.1");
+  console.log("[SW] Activating service worker v2.0.2");
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
