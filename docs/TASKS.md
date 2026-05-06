@@ -150,6 +150,15 @@ This section documents what was completed across the previous implementation pas
     - outfit clothes preview no longer uses the portrait selfie for body try-on
     - outfit VTO now depends on the stored full-body image from Try-On Studio
     - added user-facing guidance when the body source image is missing
+  - Completed another mobile polish pass across GlowUp, Try-On, and Outfit Builder:
+    - primary action rows now stack cleanly on narrow screens
+    - search controls and source-image controls no longer rely on cramped horizontal layouts
+    - accessory product cards scale down more safely on mobile
+    - save / share / reset / download controls now behave as full-width stacked actions where appropriate
+  - Completed another persistence and partial-failure pass:
+    - GlowUp accessory rows now surface per-category empty / unavailable states
+    - Outfit Builder gap-product search now surfaces per-gap empty / unavailable states
+    - Outfit Builder proof-card generation now only attaches the local outfit preview generated inside that flow, instead of reusing stale shared VTO state
   - Upgraded GlowUp persistence:
     - `Save Look` now persists via proof-card generation instead of downloading only
     - save success state is surfaced in the UI
@@ -203,11 +212,8 @@ This section documents what was completed across the previous implementation pas
     - product search
     - persistence into look diary / proof cards
   - Complete GlowUp UX hardening:
-    - accessory states
-    - save/share persistence
-    - mobile polish
-    - visual consistency under partial backend failure
-  - Run a full desktop / mobile verification pass across skin, GlowUp, Try-On, and persistence flows
+    - remaining visual consistency under broader partial backend failure
+  - Run a final full desktop / mobile verification pass across skin, GlowUp, Try-On, Outfit Builder, and persistence flows
 
 ---
 

@@ -215,6 +215,7 @@ function AccessoryRow({
   onTryOn,
   isApplying,
   isLoading,
+  statusMessage,
 }: Readonly<{
   title: string;
   products: Product[];
@@ -222,6 +223,7 @@ function AccessoryRow({
   onTryOn: (product: Product) => void;
   isApplying: boolean;
   isLoading: boolean;
+  statusMessage?: string | null;
 }>) {
   return (
     <div className="space-y-3">
@@ -241,7 +243,12 @@ function AccessoryRow({
             Loading product options...
           </div>
         )}
-        {!isLoading && products.length === 0 && (
+        {!isLoading && statusMessage && products.length === 0 && (
+          <div className="min-w-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+            {statusMessage}
+          </div>
+        )}
+        {!isLoading && products.length === 0 && !statusMessage && (
           <div className="min-w-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
             No product images are available for this query yet. Try refreshing the GlowUp plan after product search is healthy.
           </div>
@@ -249,7 +256,7 @@ function AccessoryRow({
         {products.map((product) => (
           <article
             key={`${title}-${product.link}`}
-            className="min-w-[220px] max-w-[220px] rounded-[1.5rem] border border-white/15 bg-white/5 p-3"
+            className="min-w-[180px] max-w-[220px] rounded-[1.5rem] border border-white/15 bg-white/5 p-3 sm:min-w-[220px]"
           >
             <div className="aspect-square overflow-hidden rounded-[1.1rem] bg-black/10">
               <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" />
@@ -283,6 +290,7 @@ export default function GlowupPage() {
   const [analysis, setAnalysis] = useState<GlowupAnalysis | null>(null);
   const [plan, setPlan] = useState<GlowupPlan | null>(null);
   const [accessories, setAccessories] = useState<AccessoryCatalog>({ earrings: [], necklace: [] });
+  const [accessoryStatuses, setAccessoryStatuses] = useState<Record<AccessoryKind, string | null>>({ earrings: null, necklace: null });
   const [earliestSelfieUrl, setEarliestSelfieUrl] = useState<string | null>(null);
   const [latestSavedSelfieUrl, setLatestSavedSelfieUrl] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
@@ -398,9 +406,22 @@ export default function GlowupPage() {
         ]);
         if (cancelled) return;
 
-        setAccessories({
+        const nextAccessories = {
           earrings: earringsResult.status === "fulfilled" ? earringsResult.value.products : [],
           necklace: necklaceResult.status === "fulfilled" ? necklaceResult.value.products : [],
+        };
+        setAccessories(nextAccessories);
+        setAccessoryStatuses({
+          earrings: earringsResult.status === "rejected"
+            ? "Earring recommendations are temporarily unavailable."
+            : nextAccessories.earrings.length
+              ? null
+              : "No earring products came back for the current query.",
+          necklace: necklaceResult.status === "rejected"
+            ? "Necklace recommendations are temporarily unavailable."
+            : nextAccessories.necklace.length
+              ? null
+              : "No necklace products came back for the current query.",
         });
       } catch (loadError) {
         if (cancelled) return;
@@ -619,11 +640,11 @@ export default function GlowupPage() {
               Move from face analysis into undertone-aware makeup, hairstyle transfer, and accessory try-on in one guided flow.
             </p>
           </div>
-          <div className="flex gap-3">
-            <button type="button" className="btn-secondary" onClick={() => router.push("/capture")}>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => router.push("/capture")}>
               Refresh Selfie
             </button>
-            <button type="button" className="btn-primary" onClick={() => router.push("/dashboard")}>
+            <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => router.push("/dashboard")}>
               Back To Dashboard
             </button>
           </div>
@@ -745,7 +766,7 @@ export default function GlowupPage() {
                         {preset.description}
                       </p>
                     </div>
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
+                    <span className="max-w-full rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] break-words text-right">
                       {preset.best_for.join(" / ")}
                     </span>
                   </div>
@@ -823,6 +844,7 @@ export default function GlowupPage() {
                 onTryOn={(product) => handleAccessory("earrings", product)}
                 isApplying={isApplying}
                 isLoading={isLoading}
+                statusMessage={accessoryStatuses.earrings}
               />
               <AccessoryRow
                 title="Necklaces"
@@ -831,6 +853,7 @@ export default function GlowupPage() {
                 onTryOn={(product) => handleAccessory("necklace", product)}
                 isApplying={isApplying}
                 isLoading={isLoading}
+                statusMessage={accessoryStatuses.necklace}
               />
             </div>
             {activeAccessoryUrl && accessoryRecommendations.length > 0 && (
@@ -851,11 +874,11 @@ export default function GlowupPage() {
           <p className="label-caps">Save The Look</p>
           <h2 className="mt-2 text-2xl">Share or keep this version</h2>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button type="button" className="btn-secondary" onClick={() => void handleSave()} disabled={!hasAppliedLook}>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => void handleSave()} disabled={!hasAppliedLook}>
             Save Look
           </button>
-          <button type="button" className="btn-primary" onClick={() => void handleShare()} disabled={!hasAppliedLook}>
+          <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => void handleShare()} disabled={!hasAppliedLook}>
             <Share2 size={16} className="mr-2 inline" />
             Share
           </button>

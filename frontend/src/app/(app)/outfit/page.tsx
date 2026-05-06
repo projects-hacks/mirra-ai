@@ -162,7 +162,7 @@ function MatchGroup({
 
 export default function OutfitPage() {
   const dispatch = useAppDispatch();
-  const { selfie, vtoResult } = useAppState();
+  const { selfie } = useAppState();
   const { user } = useAuth();
 
   const [selectedOccasion, setSelectedOccasion] = useState<OccasionOption | null>(null);
@@ -170,11 +170,13 @@ export default function OutfitPage() {
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResponse | null>(null);
   const [gapProducts, setGapProducts] = useState<Record<string, Product[]>>({});
+  const [gapStatuses, setGapStatuses] = useState<Record<string, string>>({});
   const [selectedGapProducts, setSelectedGapProducts] = useState<Record<string, Product>>({});
   const [proofCard, setProofCard] = useState<ProofCardShape | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isTryingOn, setIsTryingOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [outfitPreviewImage, setOutfitPreviewImage] = useState<string | null>(null);
   const [bodyImage, setBodyImage] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -228,6 +230,7 @@ export default function OutfitPage() {
     setSelectedOccasion(occasion);
     setProofCard(null);
     setError(null);
+    setOutfitPreviewImage(null);
     setIsLoading(true);
 
     try {
@@ -244,15 +247,33 @@ export default function OutfitPage() {
 
       const gapList = ((match as MatchResponse).gaps ?? []).slice(0, 3);
       if (gapList.length > 0) {
-        const productEntries = await Promise.all(
+        const productEntries = await Promise.allSettled(
           gapList.map(async (gap) => {
             const response = await productsApi.search(gap);
             return [gap, response.products.slice(0, 4)] as const;
           })
         );
-        setGapProducts(Object.fromEntries(productEntries));
+        const nextProducts: Record<string, Product[]> = {};
+        const nextStatuses: Record<string, string> = {};
+
+        productEntries.forEach((entry, index) => {
+          const gap = gapList[index];
+          if (entry.status === "fulfilled") {
+            nextProducts[gap] = entry.value[1];
+            if (!entry.value[1].length) {
+              nextStatuses[gap] = "No products came back for this gap yet. Try a broader query in Try-On Studio.";
+            }
+          } else {
+            nextProducts[gap] = [];
+            nextStatuses[gap] = "Product search is temporarily unavailable for this gap.";
+          }
+        });
+
+        setGapProducts(nextProducts);
+        setGapStatuses(nextStatuses);
       } else {
         setGapProducts({});
+        setGapStatuses({});
       }
       setSelectedGapProducts({});
     } catch (loadError) {
@@ -291,6 +312,7 @@ export default function OutfitPage() {
         type: "SET_VTO_RESULT",
         payload: { imageUrl, toolName: ToolName.TRY_ON_CLOTHES, timestamp: Date.now() },
       });
+      setOutfitPreviewImage(imageUrl);
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
@@ -325,6 +347,7 @@ export default function OutfitPage() {
         type: "SET_VTO_RESULT",
         payload: { imageUrl, toolName: ToolName.TRY_ON_CLOTHES, timestamp: Date.now() },
       });
+      setOutfitPreviewImage(imageUrl);
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
@@ -352,7 +375,7 @@ export default function OutfitPage() {
         look_name: `${selectedOccasion.title} Look`,
         selected_items: selectedItems,
         occasion: selectedOccasion.value,
-        vto_image_url: vtoResult?.imageUrl,
+        vto_image_url: outfitPreviewImage ?? undefined,
         weather: weather ? `${Math.round(weather.temp)}F ${weather.condition}` : matchResult?.context?.weather,
         season: matchResult?.context?.season,
       });
@@ -403,10 +426,10 @@ export default function OutfitPage() {
       )}
 
       <section className="glass-card p-5 sm:p-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/15 text-[var(--primary)]">
-            <Sparkles size={20} />
-          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/15 text-[var(--primary)]">
+              <Sparkles size={20} />
+            </div>
           <div>
             <p className="label-caps">Step 1</p>
             <h2 className="text-2xl">Choose the occasion</h2>
@@ -480,7 +503,7 @@ export default function OutfitPage() {
               <p className="label-caps">Step 2</p>
               <h2 className="mt-2 text-2xl">Matched closet items</h2>
             </div>
-            <button type="button" className="btn-primary" onClick={() => void handleTryLook()} disabled={isTryingOn || !bodyBlob}>
+            <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => void handleTryLook()} disabled={isTryingOn || !bodyBlob}>
               {isTryingOn ? "Trying On..." : "Try This Look"}
             </button>
           </div>
@@ -516,6 +539,11 @@ export default function OutfitPage() {
                 </div>
 
                 <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+                  {gapStatuses[gap] && (gapProducts[gap] ?? []).length === 0 && (
+                    <div className="min-w-full rounded-[1.4rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+                      {gapStatuses[gap]}
+                    </div>
+                  )}
                   {(gapProducts[gap] ?? []).map((product) => {
                     const isSelected = selectedGapProducts[gap]?.link === product.link;
                     return (
@@ -558,8 +586,13 @@ export default function OutfitPage() {
               <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
                 Turn your owned pieces and selected new items into a final approval card.
               </p>
+              {!outfitPreviewImage && bodyImage && (
+                <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
+                  Build the proof card now, or run clothes preview first if you want the generated try-on image attached.
+                </p>
+              )}
             </div>
-            <button type="button" className="btn-primary" onClick={() => void handleBuildProofCard()} disabled={!canBuildProofCard || isLoading}>
+            <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => void handleBuildProofCard()} disabled={!canBuildProofCard || isLoading}>
               <Wand2 size={16} className="mr-2 inline" />
               See Proof Card
             </button>

@@ -754,7 +754,7 @@ export default function TryOnPage() {
                   Perfect Corp clothes try-on needs a full-body photo: head to toe visible, straight pose, arms slightly away from the body, even lighting, and a plain background.
                 </p>
               </div>
-              <label className="btn-secondary cursor-pointer">
+              <label className="btn-secondary w-full cursor-pointer sm:w-auto">
                 <Upload size={16} className="mr-2 inline" />
                 Upload Full-Body Image
                 <input
@@ -772,7 +772,7 @@ export default function TryOnPage() {
               </label>
               <button
                 type="button"
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto"
                 onClick={() => {
                   setBodyImageStatus(null);
                   setShowBodyCamera((current) => {
@@ -811,7 +811,7 @@ export default function TryOnPage() {
                   </p>
                   <button
                     type="button"
-                    className="btn-primary"
+                    className="btn-primary w-full sm:w-auto"
                     disabled={!isBodyCameraReady}
                     onClick={() => void handleBodyCameraCapture()}
                   >
@@ -843,12 +843,12 @@ export default function TryOnPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <button type="button" className="btn-secondary" onClick={clearBodyImage}>
+                    <button type="button" className="btn-secondary w-full sm:w-auto" onClick={clearBodyImage}>
                       Remove Body Image
                     </button>
                     <button
                       type="button"
-                      className="btn-secondary"
+                      className="btn-secondary w-full sm:w-auto"
                       onClick={() => {
                         setBodyImageStatus(null);
                         setShowBodyCamera((current) => {
@@ -902,7 +902,7 @@ export default function TryOnPage() {
 
               <button
                 type="button"
-                className="btn-primary"
+                className="btn-primary w-full sm:w-auto"
                 disabled={!clothesUrl.trim() || isApplying || !bodyBlob}
                 onClick={() => {
                   const trimmedUrl = clothesUrl.trim();
@@ -921,14 +921,14 @@ export default function TryOnPage() {
             <div className="space-y-3">
               <label className="block text-sm font-medium">
                 Search products
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <input
                     value={clothesSearch}
                     onChange={(event) => setClothesSearch(event.target.value)}
                     placeholder="silk blouse"
                     className="min-h-11 flex-1 rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
                   />
-                  <button type="button" className="btn-secondary" onClick={() => void searchClothes()}>
+                  <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => void searchClothes()}>
                     <Search size={16} />
                   </button>
                 </div>
@@ -1071,14 +1071,14 @@ export default function TryOnPage() {
 
               <label className="block text-sm font-medium">
                 Search query
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <input
                     value={accessorySearch}
                     onChange={(event) => setAccessorySearch(event.target.value)}
                     placeholder="gold sculptural hoop earrings"
                     className="min-h-11 flex-1 rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
                   />
-                  <button type="button" className="btn-secondary" onClick={() => void searchAccessories()}>
+                  <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => void searchAccessories()}>
                     <Search size={16} />
                   </button>
                 </div>
@@ -1127,18 +1127,18 @@ export default function TryOnPage() {
           <p className="label-caps">Studio Controls</p>
           <h2 className="mt-2 text-2xl">Reset, download, or save your latest result</h2>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button type="button" className="btn-secondary" onClick={resetPreview}>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
+          <button type="button" className="btn-secondary w-full sm:w-auto" onClick={resetPreview}>
             <RotateCcw size={16} className="mr-2 inline" />
             Reset
           </button>
-          <button type="button" className="btn-secondary" onClick={downloadPreview} disabled={!activeResultImage}>
+          <button type="button" className="btn-secondary w-full sm:w-auto" onClick={downloadPreview} disabled={!activeResultImage}>
             <Download size={16} className="mr-2 inline" />
             Download
           </button>
           <button
             type="button"
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
             onClick={() => void savePreview()}
             disabled={activeTab === "clothes" ? !clothesPreviewImage : !facePreviewImage}
           >
