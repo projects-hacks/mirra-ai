@@ -227,10 +227,54 @@ function logAuthEvent(message: string, detail?: Record<string, unknown>) {
   }
 }
 
-async function handle401(context?: { url?: string; status?: number }): Promise<never> {
-  logAuthEvent("session ended — signing out and redirecting to /", {
+/**
+ * Decide what to do with a 401 that survived our refresh + retry.
+ *
+ * Two situations end up here:
+ *
+ * 1. Local Supabase session is gone (no access_token, no refresh_token).
+ *    The user is genuinely logged out — sign out cleanly and redirect home.
+ *
+ * 2. Local Supabase session is healthy, but the backend rejected the token.
+ *    This is a server-side problem (env mismatch, JWT secret rotated, Supabase
+ *    auth outage, …). Kicking the user out makes the bug feel like the app is
+ *    broken. We log loudly and throw an ApiError so the caller can show a
+ *    soft error, but the user keeps their session.
+ */
+async function handle401(context?: {
+  url?: string;
+  status?: number;
+  body?: unknown;
+}): Promise<never> {
+  let hasLocalSession = false;
+  try {
+    const supabase = getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
+    hasLocalSession = !!session?.access_token;
+  } catch {
+    hasLocalSession = false;
+  }
+
+  if (hasLocalSession) {
+    logAuthEvent(
+      "backend rejected request despite a healthy local session — keeping the user signed in",
+      {
+        url: context?.url,
+        status: context?.status,
+        body: context?.body,
+      }
+    );
+    throw new ApiError(
+      401,
+      "This service is temporarily unavailable. Refresh the page in a moment.",
+      context?.body
+    );
+  }
+
+  logAuthEvent("local session is gone — signing out and redirecting to /", {
     url: context?.url,
     status: context?.status,
+    body: context?.body,
   });
   try {
     const supabase = getSupabase();
@@ -410,7 +454,8 @@ export async function fetchApi<T>(
       if (!alreadyRefreshed && (await tryRefreshSessionForApi())) {
         return requestOnce(true);
       }
-      return handle401({ url, status: response.status });
+      const body = await parseErrorBody(response);
+      return handle401({ url, status: response.status, body });
     }
     if (!response.ok) {
       const body = await parseErrorBody(response);
@@ -444,7 +489,8 @@ export async function fetchWithFormData<T>(
       if (!alreadyRefreshed && (await tryRefreshSessionForApi())) {
         return requestOnce(true);
       }
-      return handle401({ url, status: response.status });
+      const body = await parseErrorBody(response);
+      return handle401({ url, status: response.status, body });
     }
     if (!response.ok) {
       const body = await parseErrorBody(response);
