@@ -11,27 +11,45 @@ type AuthSession = Session & {
   provider_refresh_token?: string | null;
 };
 
-async function waitForSession() {
+/**
+ * Google OAuth (PKCE) returns `?code=...`. We read the session first (the SSR
+ * client may have already exchanged), then exchange explicitly if needed.
+ */
+async function establishSession(): Promise<AuthSession> {
   const supabase = getSupabase();
+
   const initial = await supabase.auth.getSession();
   if (initial.error) throw initial.error;
-  if (initial.data.session) return initial.data.session as AuthSession;
+  if (initial.data.session?.user) {
+    return initial.data.session as AuthSession;
+  }
+
+  const url = new URL(globalThis.location.href);
+  const code = url.searchParams.get("code");
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    if (!data.session?.user) {
+      throw new Error("Sign-in incomplete. Please try again.");
+    }
+    return data.session as AuthSession;
+  }
 
   return new Promise<AuthSession>((resolve, reject) => {
     const timeout = setTimeout(() => {
       subscription.unsubscribe();
-      reject(new Error("No session established"));
-    }, 4000);
+      reject(new Error("Sign-in timed out. Check your connection and try again."));
+    }, 15000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
         clearTimeout(timeout);
         subscription.unsubscribe();
         resolve(session as AuthSession);
       }
-      }
-    );
+    });
   });
 }
 
@@ -55,9 +73,7 @@ function CallbackHandler() {
           throw new Error(callbackError);
         }
 
-        // `createBrowserClient` already handles PKCE URL detection.
-        // Waiting for the established session avoids double-exchanging the auth code.
-        const session = await waitForSession();
+        const session = await establishSession();
 
         // Extract Google provider token for calendar access
         const providerToken = session.provider_token;
@@ -103,7 +119,7 @@ function CallbackHandler() {
         console.error("OAuth callback error:", err);
         const errorMessage = err instanceof Error ? err.message : "Authentication failed";
         setError(errorMessage);
-        setTimeout(() => router.replace("/"), 3000);
+        setTimeout(() => router.replace("/"), 5000);
       }
     };
 

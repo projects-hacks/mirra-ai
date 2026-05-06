@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, ScanFace, TriangleAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { getSession, refreshSession } from "@/lib/auth";
 import { useAppDispatch } from "@/components/providers/AppProvider";
 import { getSupabase } from "@/lib/supabase";
 import { apiPost, skinApi } from "@/lib/api";
@@ -121,10 +122,34 @@ export default function CapturePage() {
   const [analysisStage, setAnalysisStage] = useState<AnalysisStage>("uploading");
   const [error, setError] = useState<string | null>(null);
 
+  // After OAuth, React auth state can lag behind Supabase cookies for a moment.
+  // Retry session read before sending the user home (avoids a false "logged out" redirect).
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading || user) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const { data: first } = await getSession();
+      if (cancelled) return;
+      if (first.session?.user) return;
+
+      await refreshSession();
+      if (cancelled) return;
+      const { data: second } = await getSession();
+      if (second.session?.user) return;
+
+      await new Promise((r) => setTimeout(r, 600));
+      if (cancelled) return;
+      const { data: third } = await getSession();
+      if (third.session?.user) return;
+
       router.replace("/");
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, router, user]);
 
   const handleCapture = useCallback(async (selfie: string) => {
