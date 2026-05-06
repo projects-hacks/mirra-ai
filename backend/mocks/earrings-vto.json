@@ -1,9 +1,0 @@
-{
-  "data": {
-    "task_status": "success",
-    "result": {
-      "result_image_url": "https://storage.example.com/vto/earrings-result-001.png",
-      "earring_detected": true
-    }
-  }
-}

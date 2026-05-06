@@ -23,6 +23,7 @@ export const ApiRoutes = {
   OUTFIT_PROOF_CARD: "/api/outfit/proof-card",
   PROOF_CARDS: "/api/proof-cards",
   PRODUCTS_SEARCH: "/api/products/search",
+  PRODUCTS_RESOLVE_IMAGE: "/api/products/resolve-image",
   WEATHER: "/api/context/weather",
 } as const;
 

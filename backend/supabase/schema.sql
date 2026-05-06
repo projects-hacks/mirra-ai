@@ -40,13 +40,10 @@ create table user_preferences (
   known_allergies text[] default '{}',
   skin_type text,         -- 'oily','dry','combination','normal','sensitive'
   skin_concerns text[] default '{}', -- ['acne','wrinkles','dark_circles']
-  -- Voice & UX
-  tts_voice text default 'aura-2-thalia-en',
   language text default 'en',
   notifications_enabled boolean default true,
   -- Privacy
   store_selfies boolean default true,
-  store_voice boolean default false,  -- always false, explicit
   data_retention_days int default 365,
   -- Calendar
   google_calendar_token jsonb,

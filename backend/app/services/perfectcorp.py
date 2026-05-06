@@ -1,17 +1,34 @@
 """Perfect Corp API client — async upload → task → poll → result."""
 import asyncio
+from enum import Enum
 from typing import Any
 
 import httpx
 
 from app.core.config import settings
-from app.core.mock_interceptor import should_mock, get_mock
 
 BASE = settings.PERFECT_CORP_BASE_URL
 HEADERS = {"Authorization": f"Bearer {settings.PERFECT_CORP_API_KEY}"}
 
 # Endpoints that use v2.1 instead of v2.0
-V21_ENDPOINTS = {"hair-transfer"}
+V21_ENDPOINTS = {"hair-transfer", "skin-analysis"}
+
+
+class MirraErrorCategory(str, Enum):
+    """Stable user-facing error taxonomy for provider failures."""
+
+    PRODUCT_PAGE_URL = "product_page_url"
+    EXPIRED_IMAGE_URL = "expired_image_url"
+    FACE_REJECTED = "face_rejected"
+    BODY_POSE_REJECTED = "body_pose_rejected"
+    REFERENCE_REJECTED = "reference_rejected"
+    API_TIMEOUT = "api_timeout"
+    UNSUPPORTED_CATEGORY = "unsupported_category"
+    PROVIDER_AUTH = "provider_auth"
+    PROVIDER_UNITS = "provider_units"
+    PROVIDER_INTERNAL = "provider_internal"
+    SAFETY_BLOCKED = "safety_blocked"
+    INVALID_INPUT = "invalid_input"
 
 
 class PerfectCorpAPIError(Exception):
@@ -43,21 +60,61 @@ class PerfectCorpAPIError(Exception):
         
         return any(code in self.error_code for code in retryable_codes)
     
+    def category(self) -> MirraErrorCategory:
+        """Map Perfect Corp and HTTP errors to Mirra's stable taxonomy."""
+        code = self.error_code.lower()
+        message = self.error_message.lower()
+        combined = f"{code} {message}"
+
+        if "invalidaccesstoken" in combined or "unauthorized" in combined or "http_401" in code:
+            return MirraErrorCategory.PROVIDER_AUTH
+        if "credit" in combined or "unit" in combined or "insufficient" in combined:
+            return MirraErrorCategory.PROVIDER_UNITS
+        if "nsfw" in combined:
+            return MirraErrorCategory.SAFETY_BLOCKED
+        if "download" in combined or "not found" in combined or "404" in combined or "403" in combined:
+            return MirraErrorCategory.EXPIRED_IMAGE_URL
+        if "invalid_parameter" in combined or "invalidparameters" in combined or "invalid parameter" in combined:
+            return MirraErrorCategory.UNSUPPORTED_CATEGORY
+        if "invalid_ref" in combined or "object_detection" in combined or "ref_" in combined:
+            return MirraErrorCategory.REFERENCE_REJECTED
+        if "pose" in combined or "shoulder" in combined or "photo_check_invalid" in combined:
+            return MirraErrorCategory.BODY_POSE_REJECTED
+        if "face" in combined or "lighting" in combined or "eye_closed" in combined or "occluded" in combined:
+            return MirraErrorCategory.FACE_REJECTED
+        if "timeout" in combined or "invalidtaskid" in combined:
+            return MirraErrorCategory.API_TIMEOUT
+        if "runtime" in combined or "internal" in combined or "inference" in combined:
+            return MirraErrorCategory.PROVIDER_INTERNAL
+        return MirraErrorCategory.INVALID_INPUT
+
     def get_user_message(self) -> str:
         """Get user-friendly error message."""
-        error_messages = {
-            "error_face_angle": "Please face the camera directly and keep your head straight.",
-            "error_src_face_too_small": "Please move closer to the camera so your face fills more of the frame.",
-            "error_face_position_invalid": "Please center your face in the frame and ensure it's fully visible.",
-            "error_lighting_dark": "Please move to a better-lit area for clearer analysis.",
-            "error_below_min_image_size": "Image quality is too low. Please use a higher resolution camera.",
+        messages = {
+            MirraErrorCategory.PRODUCT_PAGE_URL: "This is a product page, not a clean image. Try another product image.",
+            MirraErrorCategory.EXPIRED_IMAGE_URL: "That image link expired or is blocked. Try another product image.",
+            MirraErrorCategory.FACE_REJECTED: "Retake with your face centered, visible, and well lit.",
+            MirraErrorCategory.BODY_POSE_REJECTED: "Use a front-facing standing photo with face and shoulders visible.",
+            MirraErrorCategory.REFERENCE_REJECTED: "The product image is not clear enough for try-on.",
+            MirraErrorCategory.API_TIMEOUT: "The render took too long. Please retry.",
+            MirraErrorCategory.UNSUPPORTED_CATEGORY: "This item is not supported in this try-on mode yet.",
+            MirraErrorCategory.PROVIDER_AUTH: "Perfect Corp credentials are not configured or are invalid.",
+            MirraErrorCategory.PROVIDER_UNITS: "Perfect Corp units are unavailable. Check the unit balance.",
+            MirraErrorCategory.PROVIDER_INTERNAL: "The visual engine could not process this image. Try another photo.",
+            MirraErrorCategory.SAFETY_BLOCKED: "This image could not be processed due to safety filters.",
+            MirraErrorCategory.INVALID_INPUT: "Unable to process this image. Try another photo or product image.",
         }
-        
-        for key, message in error_messages.items():
-            if key in self.error_code:
-                return message
-        
-        return "Unable to analyze image. Please try taking another photo."
+        return messages[self.category()]
+
+    def to_detail(self) -> dict[str, str]:
+        """FastAPI-safe response detail."""
+        return {
+            "category": self.category().value,
+            "code": self.error_code,
+            "message": self.get_user_message(),
+            "provider_message": self.error_message,
+            "task_type": self.task_type,
+        }
 
 
 def _api_version(task_type: str) -> str:
@@ -71,11 +128,8 @@ async def upload_image(task_type: str, image_bytes: bytes, client: httpx.AsyncCl
     logger = logging.getLogger(__name__)
     
     version = _api_version(task_type)
-    # For nested paths like "2d-vto/earring", the file endpoint uses the base path
-    file_path = task_type.split("/")[0] if "/" in task_type else task_type
-    
     file_res = await client.post(
-        f"{BASE}/s2s/{version}/file/{file_path}",
+        f"{BASE}/s2s/{version}/file/{task_type}",
         json={"files": [{"content_type": "image/jpeg", "file_name": "input.jpg", "file_size": len(image_bytes)}]},
         headers=HEADERS,
     )
@@ -189,9 +243,6 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
     For VTO tasks that require a reference image, pass `ref_file_url` in params.
     For skin analysis, pass `dst_actions` and `format` in params.
     """
-    if should_mock():
-        return get_mock(task_type)
-
     params = params or {}
     version = _api_version(task_type)
 

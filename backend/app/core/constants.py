@@ -94,46 +94,7 @@ class ProductSource(StrEnum):
 
 
 # ============================================================
-# DEEPGRAM / VOICE
-# ============================================================
-
-class DeepgramMessageType(StrEnum):
-    # Client → Server
-    SETTINGS = "Settings"
-    FUNCTION_CALL_RESPONSE = "FunctionCallResponse"
-    INJECT_AGENT_MESSAGE = "InjectAgentMessage"
-    INJECT_USER_MESSAGE = "InjectUserMessage"
-    UPDATE_PROMPT = "UpdatePrompt"
-    UPDATE_SPEAK = "UpdateSpeak"
-    UPDATE_THINK = "UpdateThink"
-    KEEP_ALIVE = "KeepAlive"
-
-    # Server → Client
-    WELCOME = "Welcome"
-    SETTINGS_APPLIED = "SettingsApplied"
-    CONVERSATION_TEXT = "ConversationText"
-    AGENT_THINKING = "AgentThinking"
-    AGENT_STARTED_SPEAKING = "AgentStartedSpeaking"
-    AGENT_AUDIO_DONE = "AgentAudioDone"
-    USER_STARTED_SPEAKING = "UserStartedSpeaking"
-    FUNCTION_CALL_REQUEST = "FunctionCallRequest"
-    INJECTION_REFUSED = "InjectionRefused"
-    PROMPT_UPDATED = "PromptUpdated"
-
-
-class WSClientMessageType(StrEnum):
-    SELFIE = "selfie"
-    READY = "ready"
-    STOP = "stop"
-
-
-class WSServerMessageType(StrEnum):
-    VTO_RESULT = "vto_result"
-    ERROR = "error"
-
-
-# ============================================================
-# TOOL NAMES (must match function_definitions in voice.py)
+# TOOL NAMES
 # ============================================================
 
 class ToolName(StrEnum):

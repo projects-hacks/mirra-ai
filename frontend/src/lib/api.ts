@@ -61,6 +61,16 @@ export interface VtoImageResponse {
   [key: string]: unknown;
 }
 
+export interface ResolvedProductImage {
+  input_url: string;
+  resolved_image_url: string;
+  content_type: string;
+  width?: number | null;
+  height?: number | null;
+  source: string;
+  warnings: string[];
+}
+
 export interface OutfitMatchResponse {
   matches?: Record<string, unknown[]>;
   gaps?: unknown[];
@@ -140,7 +150,16 @@ function errorMessageFromBody(body: unknown): string {
   if (typeof body === "string") return body;
   if (body && typeof body === "object" && "detail" in body) {
     const detail = (body as { detail: unknown }).detail;
-    return typeof detail === "string" ? detail : JSON.stringify(detail);
+    if (typeof detail === "string") return detail;
+    if (detail && typeof detail === "object" && "message" in detail) {
+      const message = (detail as { message: unknown }).message;
+      return typeof message === "string" ? message : JSON.stringify(message);
+    }
+    return JSON.stringify(detail);
+  }
+  if (body && typeof body === "object" && "message" in body) {
+    const message = (body as { message: unknown }).message;
+    return typeof message === "string" ? message : JSON.stringify(message);
   }
   return "Request failed";
 }
@@ -362,6 +381,8 @@ export const productsApi = {
       `${ApiRoutes.PRODUCTS_SEARCH}?${params.toString()}`
     );
   },
+
+  resolveImage: (url: string) => apiPost<ResolvedProductImage>(ApiRoutes.PRODUCTS_RESOLVE_IMAGE, { url }),
 };
 
 export const weatherApi = {

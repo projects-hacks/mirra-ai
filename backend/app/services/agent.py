@@ -48,7 +48,7 @@ class AgentService:
     """Generate structured, explainable responses from upstream tool outputs."""
 
     def __init__(self, api_key: str | None = None):
-        self.api_key = api_key or settings.GOOGLE_AI_STUDIO_KEY
+        self.api_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_AI_STUDIO_KEY
 
     async def generate_glowup_plan(
         self,

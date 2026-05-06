@@ -1,4 +1,4 @@
-"""Shared outfit orchestration for REST and voice flows."""
+"""Shared outfit orchestration for REST flows."""
 from __future__ import annotations
 
 from typing import Any

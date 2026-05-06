@@ -3,6 +3,7 @@
 > **Deadline:** May 7, 2026 @ 2:00 PM PDT (3 days)
 > **Strategy:** Reuse ALL existing backend tools. Replace voice frontend with guided pages.
 > **Key constraint:** Every feature must demo in 90 seconds.
+> **Perfect Corp source of truth:** [`docs/PERFECT_CORP_API_SOURCE_OF_TRUTH.md`](./PERFECT_CORP_API_SOURCE_OF_TRUTH.md)
 
 ---
 
@@ -22,14 +23,13 @@
 | Proof card generator | `backend/app/services/proof_card_generator.py` | ✅ |
 | Color analyzer | `backend/app/services/color_analyzer.py` | ✅ |
 | Weather service | `backend/app/services/weather.py` | ✅ |
-| Tool executor (routes all tools) | `backend/app/services/tool_executor.py` | ✅ |
 | Outfit orchestration service | `backend/app/services/outfit_service.py` | ✅ Cleanup pass complete |
 | Supabase client + schema | `backend/app/services/supabase_client.py` | ✅ |
 | Camera Kit hook | `frontend/src/hooks/useCameraKit.ts` | ✅ |
 | Landing page experience | `frontend/src/app/page.tsx` | ✅ Phase 2 done; production marketing overhaul complete |
 | Selfie capture flow | `frontend/src/app/capture/page.tsx` + `frontend/src/components/onboarding/SelfieCaptureScreen.tsx` | ✅ |
 | Shared authenticated app shell | `frontend/src/app/(app)/layout.tsx` + `frontend/src/components/navigation/BottomNav.tsx` | ✅ |
-| Dashboard experience wrapper | `frontend/src/components/app/DashboardExperience.tsx` + `frontend/src/app/(app)/dashboard/page.tsx` | ✅ |
+| Dashboard experience route | `frontend/src/app/(app)/dashboard/page.tsx` | ✅ |
 | Shared skin summary domain logic | `frontend/src/lib/skinSummary.ts` | ✅ Cleanup pass complete |
 | Shared user context / location resolver | `frontend/src/lib/userContext.ts` | ✅ Cleanup pass complete |
 | Proof cards frontend API client | `frontend/src/lib/api.ts` (`proofCardsApi`) | ✅ Cleanup pass complete |
@@ -38,8 +38,8 @@
 | GlowUp makeup presets | `backend/app/data/makeup_presets.py` | ✅ |
 | Outfit builder page | `frontend/src/app/(app)/outfit/page.tsx` | ✅ |
 | Try-On studio page | `frontend/src/app/(app)/try-on/page.tsx` | ✅ |
-| Skin History page (trends, charts) | `frontend/src/app/skin-history/page.tsx` | ✅ |
-| Closet page (grid + upload) | `frontend/src/app/closet/page.tsx` | ✅ |
+| Skin History page (trends, charts) | `frontend/src/app/(app)/skin-history/page.tsx` | ✅ |
+| Closet page (grid + upload) | `frontend/src/app/(app)/closet/page.tsx` | ✅ |
 | SkinAnalysisCard component | `frontend/src/components/cards/SkinAnalysisCard.tsx` | ✅ |
 | SkinSimulationCard component | `frontend/src/components/cards/SkinSimulationCard.tsx` | ✅ |
 | ProofCard component | `frontend/src/components/cards/ProofCard.tsx` | ✅ |
@@ -91,7 +91,7 @@ This section documents what was completed across the previous implementation pas
   - Wired recent looks to real proof-card history via `proofCardsApi` in `frontend/src/lib/api.ts`.
   - Reused the same proof-card client in the look diary page.
 - Backend SOLID cleanup completed:
-  - Extracted closet matching and proof-card generation orchestration from `backend/app/services/tool_executor.py` into `backend/app/services/outfit_service.py`.
+  - Centralized closet matching and proof-card generation orchestration in `backend/app/services/outfit_service.py`.
   - Updated `backend/app/routers/outfit.py` to depend on the public outfit service instead of private executor helpers.
 
 ### Validation completed on the current cleanup pass
@@ -100,7 +100,6 @@ This section documents what was completed across the previous implementation pas
 - `npm run build` passes in `frontend`
 - Backend syntax check passes for:
   - `backend/app/services/outfit_service.py`
-  - `backend/app/services/tool_executor.py`
   - `backend/app/routers/outfit.py`
 
 ---
@@ -175,7 +174,7 @@ async def generate_outfit_reasoning(
 
 ## Phase 1: REST API Layer (Backend — 2-3 hours)
 
-The existing tools are invoked via `tool_executor.py` which expects `(name, args, selfie_b64, user_id)`. We need REST endpoints that call directly into the tool functions, bypassing the voice pipeline entirely.
+The REST endpoints call tool functions directly and bypass the removed voice pipeline.
 
 ### 1.1 Create `/api/skin` endpoints
 
@@ -240,7 +239,7 @@ Create `backend/app/routers/outfit.py`:
 ```python
 # POST /api/outfit/match
 # - Accepts: user_id, occasion, location
-# - Calls: matching_engine via tool_executor._match_closet()
+# - Calls: outfit_service.match_closet()
 # - Returns: { matches: {...}, gaps: [...], context: {...} }
 
 # POST /api/outfit/proof-card
@@ -511,11 +510,11 @@ This is the "AI Makeover" feature — **the most visually impressive demo moment
 - [ ] Seed 4-5 skin scan history records (trending data)
 - [ ] Seed 2 calendar events (board meeting + date night)
 
-### 8.3 Mock Interceptor
+### 8.3 Live API Validation
 
-- [ ] Verify all 9 API types have mocks in `backend/app/core/mock_interceptor.py`
-- [ ] Create `skin-simulation.json` mock if missing
-- [ ] Test full flow with `USE_MOCKS=true` (burns 0 API units)
+- [ ] Verify all Perfect Corp flows against live API credentials
+- [ ] Confirm user-facing errors for rejected selfies, product-page URLs, and expired result URLs
+- [ ] Record known API-unit cost per demo run
 
 ### 8.4 Demo Recording
 

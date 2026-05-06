@@ -9,11 +9,12 @@ class Settings(BaseSettings):
     PERFECT_CORP_API_KEY: str = ""
     PERFECT_CORP_BASE_URL: str = "https://yce-api-01.makeupar.com"
 
-    # Deepgram
-    DEEPGRAM_API_KEY: str = ""
-
-    # Google AI Studio (for Gemini 3.1 Pro via Deepgram BYO)
+    # Google Gemini
+    GEMINI_API_KEY: str = ""
     GOOGLE_AI_STUDIO_KEY: str = ""
+
+    # Product image resolver
+    PRODUCT_IMAGE_STORAGE_BUCKET: str = "resolved-product-images"
 
     # Google Calendar
     GOOGLE_CALENDAR_CREDENTIALS: str = ""  # JSON string (legacy, for global credentials)
@@ -32,7 +33,6 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # App
-    USE_MOCKS: bool = True
     PORT: int = 8000
     CORS_ORIGIN: str = "http://localhost:3000"
 

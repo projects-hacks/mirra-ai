@@ -3,16 +3,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LoaderCircle, RotateCcw, Save, Search, Sparkles } from "lucide-react";
-import { glowupApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
+import { CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Sparkles } from "lucide-react";
+import { glowupApi, outfitApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
 import { ToolName } from "@/lib/constants";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
 import { useImageTransition } from "@/hooks/useImageTransition";
+import { getSupabase } from "@/lib/supabase";
 import type { GlowupAnalysis, GlowupHairstyle, GlowupMakeupPreset, GlowupPlan, Product } from "@/types";
 
 type TryOnTab = "clothes" | "makeup" | "hair" | "accessories";
 type AccessoryKind = "earrings" | "necklace";
-const DIRECT_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"];
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, base64Data] = dataUrl.split(",");
@@ -42,22 +42,6 @@ function extractImageUrl(result: VtoImageResponse): string | null {
 
 function productImageIsLikelyUsable(product: Product): boolean {
   return product.imageUrl.startsWith("http://") || product.imageUrl.startsWith("https://");
-}
-
-function isLikelyDirectImageUrl(rawUrl: string): boolean {
-  try {
-    const parsed = new URL(rawUrl.trim());
-    if (!["http:", "https:"].includes(parsed.protocol)) return false;
-
-    const normalizedPath = parsed.pathname.toLowerCase();
-    if (DIRECT_IMAGE_EXTENSIONS.some((extension) => normalizedPath.endsWith(extension))) {
-      return true;
-    }
-
-    return /(images?|media|cdn|cloudfront)/i.test(parsed.hostname);
-  } catch {
-    return false;
-  }
 }
 
 function PreviewPanel({
@@ -96,6 +80,45 @@ function PreviewPanel({
   );
 }
 
+function StudioStatus({
+  isApplying,
+  stage,
+  currentTitle,
+  savedMessage,
+}: Readonly<{
+  isApplying: boolean;
+  stage: string | null;
+  currentTitle: string;
+  savedMessage: string | null;
+}>) {
+  return (
+    <section className="glass-card p-5">
+      <p className="label-caps">Render State</p>
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center gap-3 rounded-2xl bg-white/55 px-4 py-3">
+          {isApplying ? (
+            <LoaderCircle className="animate-spin text-[var(--primary)]" size={18} />
+          ) : (
+            <CheckCircle2 className="text-emerald-500" size={18} />
+          )}
+          <div>
+            <p className="text-sm font-semibold">{isApplying ? stage ?? "Rendering try-on" : "Preview ready"}</p>
+            <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{currentTitle}</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/35 px-4 py-3 text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
+          Product links are resolved on the backend before Perfect Corp sees them, so product pages and temporary thumbnails can be converted into image references.
+        </div>
+        {savedMessage && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+            {savedMessage}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 const TABS: Array<{ id: TryOnTab; title: string; subtitle: string }> = [
   { id: "clothes", title: "Clothes", subtitle: "Paste a garment URL or search products." },
   { id: "makeup", title: "Makeup", subtitle: "Apply preset looks from the GlowUp data." },
@@ -117,6 +140,8 @@ export default function TryOnPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeStage, setActiveStage] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const [clothesUrl, setClothesUrl] = useState("");
   const [clothesCategory, setClothesCategory] = useState<"upper" | "lower" | "full">("upper");
@@ -205,12 +230,17 @@ export default function TryOnPage() {
     if (!selfieBlob) return;
 
     setIsApplying(true);
+    setActiveStage("Resolving reference image");
+    setSaveMessage(null);
     setIsResetToOriginal(false);
     setError(null);
     dispatch({ type: "SET_PROCESSING", payload: true });
     dispatch({ type: "SET_CURRENT_TOOL", payload: tool });
 
     try {
+      window.setTimeout(() => {
+        setActiveStage((stage) => stage === "Resolving reference image" ? "Rendering with Perfect Corp" : stage);
+      }, 900);
       const result = await runner();
       const imageUrl = extractImageUrl(result);
       if (!imageUrl) throw new Error("The VTO result did not return an image.");
@@ -222,12 +252,14 @@ export default function TryOnPage() {
         payload: { imageUrl, toolName: tool, timestamp: Date.now() },
       });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
+      setActiveStage("Ready to save");
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
       setError(tryError instanceof Error ? tryError.message : "Failed to apply that try-on.");
     } finally {
       setIsApplying(false);
+      setActiveStage(null);
     }
   }
 
@@ -264,17 +296,55 @@ export default function TryOnPage() {
     setCurrentImage(null);
     setCurrentTitle("Original Selfie");
     setIsResetToOriginal(true);
+    setSaveMessage(null);
     dispatch({ type: "CLEAR_VTO" });
     dispatch({ type: "SET_CURRENT_TOOL", payload: null });
     dispatch({ type: "SET_PROCESSING", payload: false });
   }
 
-  function savePreview() {
+  function downloadPreview() {
     if (!previewImage) return;
     const anchor = document.createElement("a");
     anchor.href = previewImage;
     anchor.download = "mirra-try-on.jpg";
     anchor.click();
+  }
+
+  async function savePreview() {
+    const imageUrl = currentImage ?? vtoResult?.imageUrl;
+    if (!imageUrl) {
+      setError("Apply a try-on result before saving to your diary.");
+      return;
+    }
+
+    setSaveMessage(null);
+    setError(null);
+
+    try {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Sign in again before saving this look.");
+
+      await outfitApi.proofCard({
+        user_id: userId,
+        look_name: currentTitle,
+        selected_items: [
+          {
+            name: currentTitle,
+            category: activeTab,
+            source: "Try-On Studio",
+            imageUrl,
+          },
+        ],
+        occasion: "try-on studio",
+        vto_image_url: imageUrl,
+      });
+
+      setSaveMessage("Saved to your look diary.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save this look.");
+    }
   }
 
   if (isHydrated && !selfie) {
@@ -316,7 +386,15 @@ export default function TryOnPage() {
       )}
 
       {selfie && previewImage && (
-        <PreviewPanel originalImage={selfie} currentImage={previewImage} currentTitle={currentTitle} />
+        <div className="grid gap-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
+          <PreviewPanel originalImage={selfie} currentImage={previewImage} currentTitle={currentTitle} />
+          <StudioStatus
+            isApplying={isApplying}
+            stage={activeStage}
+            currentTitle={currentTitle}
+            savedMessage={saveMessage}
+          />
+        </div>
       )}
 
       <section className="glass-card p-5 sm:p-6">
@@ -373,7 +451,7 @@ export default function TryOnPage() {
                 />
               </label>
               <p className="text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
-                Use a direct image URL like `.jpg`, `.png`, or `.webp`. Product-page links from Amazon or other stores usually will not work here.
+                Paste a product page or direct image URL. The backend resolves it into a direct image before sending it to Perfect Corp.
               </p>
 
               <label className="block text-sm font-medium">
@@ -395,11 +473,6 @@ export default function TryOnPage() {
                 disabled={!clothesUrl.trim() || isApplying}
                 onClick={() => {
                   const trimmedUrl = clothesUrl.trim();
-                  if (!isLikelyDirectImageUrl(trimmedUrl)) {
-                    setError("Paste a direct garment image URL ending in .jpg, .png, or .webp. Product-page links like Amazon listings will not work.");
-                    return;
-                  }
-
                   void runTryOn(
                     ToolName.TRY_ON_CLOTHES,
                     "Custom garment",
@@ -597,16 +670,20 @@ export default function TryOnPage() {
       <section className="glass-card flex flex-wrap items-center justify-between gap-3 p-5 sm:p-6">
         <div>
           <p className="label-caps">Studio Controls</p>
-          <h2 className="mt-2 text-2xl">Reset or save your latest result</h2>
+          <h2 className="mt-2 text-2xl">Reset, download, or save your latest result</h2>
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="button" className="btn-secondary" onClick={resetPreview}>
             <RotateCcw size={16} className="mr-2 inline" />
             Reset
           </button>
-          <button type="button" className="btn-primary" onClick={savePreview} disabled={!previewImage}>
+          <button type="button" className="btn-secondary" onClick={downloadPreview} disabled={!previewImage}>
+            <Download size={16} className="mr-2 inline" />
+            Download
+          </button>
+          <button type="button" className="btn-primary" onClick={() => void savePreview()} disabled={!currentImage && !vtoResult?.imageUrl}>
             <Save size={16} className="mr-2 inline" />
-            Save
+            Save To Diary
           </button>
         </div>
       </section>

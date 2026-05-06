@@ -2,17 +2,24 @@
 import base64
 import json
 from typing import Any
-from urllib.parse import urlparse
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.services import perfectcorp
 from app.core.deps import read_image
+from app.services.product_image_resolver import ProductImageResolverError, resolve_product_image
 from app.tools import fashion_tools, beauty_tools, accessory_tools, hair_tools
 
 router = APIRouter()
-DIRECT_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif")
+CLOTHES_CATEGORY_MAP = {
+    "upper": "upper_body",
+    "upper_body": "upper_body",
+    "lower": "lower_body",
+    "lower_body": "lower_body",
+    "full": "full_body",
+    "full_body": "full_body",
+}
 
 
 class SkinAnalysisRequest(BaseModel):
@@ -25,20 +32,28 @@ class TryOnRequest(BaseModel):
     vto_type: str  # clothes, earrings, etc.
 
 
-def _is_likely_direct_image_url(raw_url: str) -> bool:
+def _provider_error_to_http(exc: Exception) -> HTTPException:
+    if isinstance(exc, perfectcorp.PerfectCorpAPIError):
+        category = exc.category()
+        status_code = 401 if category == perfectcorp.MirraErrorCategory.PROVIDER_AUTH else 400
+        return HTTPException(status_code=status_code, detail=exc.to_detail())
+    if isinstance(exc, TimeoutError):
+        return HTTPException(
+            status_code=504,
+            detail={
+                "category": perfectcorp.MirraErrorCategory.API_TIMEOUT.value,
+                "message": "The render took too long. Please retry.",
+                "provider_message": str(exc),
+            },
+        )
+    return HTTPException(status_code=500, detail="Try-on failed unexpectedly.")
+
+
+async def _resolve_reference_url(raw_url: str) -> str:
     try:
-        parsed = urlparse(raw_url.strip())
-    except ValueError:
-        return False
-
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        return False
-
-    normalized_path = parsed.path.lower()
-    if normalized_path.endswith(DIRECT_IMAGE_EXTENSIONS):
-        return True
-
-    return any(token in parsed.netloc.lower() for token in ("image", "images", "media", "cdn", "cloudfront"))
+        return (await resolve_product_image(raw_url)).resolved_image_url
+    except ProductImageResolverError as exc:
+        raise HTTPException(status_code=400, detail=exc.to_detail()) from exc
 
 
 @router.post("/skin-analysis")
@@ -64,14 +79,23 @@ async def try_on_clothes(
     garment_url: str = Form(...),
     garment_category: str = Form(default="upper"),
 ) -> dict[str, Any]:
-    if not _is_likely_direct_image_url(garment_url):
+    selfie_bytes = await read_image(selfie)
+    resolved_url = await _resolve_reference_url(garment_url)
+    provider_category = CLOTHES_CATEGORY_MAP.get(garment_category)
+    if not provider_category:
         raise HTTPException(
             status_code=400,
-            detail="Paste a direct garment image URL (.jpg, .png, .webp). Product-page links like Amazon listings do not work here.",
+            detail={
+                "category": perfectcorp.MirraErrorCategory.UNSUPPORTED_CATEGORY.value,
+                "message": "This clothing category is not supported yet.",
+                "provider_message": f"garment_category={garment_category}",
+            },
         )
 
-    selfie_bytes = await read_image(selfie)
-    return await fashion_tools.try_on_clothes(selfie_bytes, garment_url, garment_category)
+    try:
+        return await fashion_tools.try_on_clothes(selfie_bytes, resolved_url, provider_category)
+    except Exception as exc:
+        raise _provider_error_to_http(exc) from exc
 
 
 @router.post("/makeup")
@@ -86,7 +110,10 @@ async def try_on_makeup(
         raise HTTPException(status_code=400, detail="Invalid effects JSON") from exc
     if not isinstance(parsed_effects, list):
         raise HTTPException(status_code=400, detail="effects must be a JSON array")
-    return await beauty_tools.try_on_makeup(selfie_bytes, parsed_effects)
+    try:
+        return await beauty_tools.try_on_makeup(selfie_bytes, parsed_effects)
+    except Exception as exc:
+        raise _provider_error_to_http(exc) from exc
 
 
 @router.post("/earrings")
@@ -95,7 +122,11 @@ async def try_on_earrings(
     earring_url: str = Form(...),
 ) -> dict[str, Any]:
     selfie_bytes = await read_image(selfie)
-    return await accessory_tools.try_on_earrings(selfie_bytes, earring_url)
+    resolved_url = await _resolve_reference_url(earring_url)
+    try:
+        return await accessory_tools.try_on_earrings(selfie_bytes, resolved_url)
+    except Exception as exc:
+        raise _provider_error_to_http(exc) from exc
 
 
 @router.post("/necklace")
@@ -104,7 +135,11 @@ async def try_on_necklace(
     necklace_url: str = Form(...),
 ) -> dict[str, Any]:
     selfie_bytes = await read_image(selfie)
-    return await accessory_tools.try_on_necklace(selfie_bytes, necklace_url)
+    resolved_url = await _resolve_reference_url(necklace_url)
+    try:
+        return await accessory_tools.try_on_necklace(selfie_bytes, resolved_url)
+    except Exception as exc:
+        raise _provider_error_to_http(exc) from exc
 
 
 @router.post("/hair")
@@ -113,4 +148,8 @@ async def try_on_hair(
     ref_hair_url: str = Form(...),
 ) -> dict[str, Any]:
     selfie_bytes = await read_image(selfie)
-    return await hair_tools.change_hairstyle(selfie_bytes, ref_hair_url)
+    resolved_url = await _resolve_reference_url(ref_hair_url)
+    try:
+        return await hair_tools.change_hairstyle(selfie_bytes, resolved_url)
+    except Exception as exc:
+        raise _provider_error_to_http(exc) from exc

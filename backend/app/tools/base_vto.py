@@ -6,6 +6,30 @@ from app.core import cache
 from app.core.constants import CachePrefix
 
 
+def extract_result_image_url(result: dict[str, Any]) -> str | None:
+    """Extract the image URL from common Perfect Corp success shapes."""
+    if not isinstance(result, dict):
+        return None
+
+    for key in ("image_url", "result_image_url", "url"):
+        value = result.get(key)
+        if isinstance(value, str) and value:
+            return value
+
+    nested_candidates = [
+        result.get("results"),
+        result.get("result"),
+        result.get("data"),
+    ]
+    for nested in nested_candidates:
+        if isinstance(nested, dict):
+            nested_url = extract_result_image_url(nested)
+            if nested_url:
+                return nested_url
+
+    return None
+
+
 async def execute_vto(
     task_type: str,
     selfie_bytes: bytes,
@@ -27,9 +51,10 @@ async def execute_vto(
 
     result = await perfectcorp.call_vto(task_type, selfie_bytes, ref_image_url, extra_params)
     inner = result.get("result", result)
+    image_url = extract_result_image_url(result)
 
     vto_result = {
-        "image_url": inner.get("result_image_url"),
+        "image_url": image_url,
         **{k: v for k, v in inner.items() if k != "result_image_url"},
     }
 

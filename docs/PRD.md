@@ -109,6 +109,8 @@ Direct access to all VTO capabilities:
 
 ## 4. Perfect Corp API Usage (9/9)
 
+Implementation source of truth: [`docs/PERFECT_CORP_API_SOURCE_OF_TRUTH.md`](./PERFECT_CORP_API_SOURCE_OF_TRUTH.md)
+
 | # | API | Where Used | Demo Moment |
 |---|-----|-----------|-------------|
 | 1 | `skin-analysis` | Skin tab — 14 scores + skin age | "Your moisture is 48/100" |

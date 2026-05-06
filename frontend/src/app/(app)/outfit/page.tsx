@@ -113,7 +113,9 @@ function MatchGroup({
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-2xl">👕</div>
+                  <div className="flex h-full w-full items-center justify-center text-[var(--on-surface-variant)]">
+                    <Shirt size={28} aria-hidden="true" />
+                  </div>
                 )}
               </div>
               <div className="min-w-0 flex-1">

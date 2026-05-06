@@ -98,8 +98,9 @@ class TestAIMetadataExtractor:
     def test_init_without_api_key_raises_error(self):
         """Test initialization without API key raises error."""
         with patch('app.services.ai_metadata_extractor.settings') as mock_settings:
+            mock_settings.GEMINI_API_KEY = ""
             mock_settings.GOOGLE_AI_STUDIO_KEY = ""
-            with pytest.raises(ValueError, match="GOOGLE_AI_STUDIO_KEY is required"):
+            with pytest.raises(ValueError, match="GEMINI_API_KEY is required"):
                 AIMetadataExtractor()
     
     @pytest.mark.asyncio
@@ -362,7 +363,7 @@ class TestExtractedMetadata:
 async def test_convenience_function(mock_api_key, sample_image_url, sample_gemini_response):
     """Test the convenience extract_metadata function."""
     with patch('app.services.ai_metadata_extractor.settings') as mock_settings:
-        mock_settings.GOOGLE_AI_STUDIO_KEY = mock_api_key
+        mock_settings.GEMINI_API_KEY = mock_api_key
         
         with patch('app.services.ai_metadata_extractor.AIMetadataExtractor.extract_metadata', new_callable=AsyncMock) as mock_extract:
             expected_metadata = ExtractedMetadata(

@@ -107,9 +107,9 @@ class AIMetadataExtractor:
     
     def __init__(self, api_key: Optional[str] = None):
         """Initialize the extractor with API key."""
-        self.api_key = api_key or settings.GOOGLE_AI_STUDIO_KEY
+        self.api_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_AI_STUDIO_KEY
         if not self.api_key:
-            raise ValueError("GOOGLE_AI_STUDIO_KEY is required for AI metadata extraction")
+            raise ValueError("GEMINI_API_KEY is required for AI metadata extraction")
     
     async def extract_metadata(
         self,

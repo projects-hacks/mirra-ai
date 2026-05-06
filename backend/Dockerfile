@@ -14,8 +14,6 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY app/ ./app/
-COPY mocks/ ./mocks/
-COPY agent/ ./agent/
 COPY start.sh ./start.sh
 
 RUN chmod +x /app/start.sh

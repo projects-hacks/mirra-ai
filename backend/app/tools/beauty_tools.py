@@ -4,6 +4,7 @@ from typing import Any
 from app.services import perfectcorp
 from app.core import cache
 from app.core.constants import VTOTaskType, CachePrefix
+from app.tools.base_vto import extract_result_image_url
 
 
 async def try_on_makeup(selfie_bytes: bytes, effects: list[dict[str, Any]]) -> dict:
@@ -25,8 +26,9 @@ async def try_on_makeup(selfie_bytes: bytes, effects: list[dict[str, Any]]) -> d
         {"effects": effects, "version": "1.0"},
     )
     inner = result.get("result", result)
+    image_url = extract_result_image_url(result)
     vto_result = {
-        "image_url": inner.get("result_image_url"),
+        "image_url": image_url,
         **{k: v for k, v in inner.items() if k != "result_image_url"},
     }
 

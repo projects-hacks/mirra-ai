@@ -340,7 +340,7 @@ class OnboardingService:
 
             skin_analysis, skin_tone, face_attributes = results
 
-            # Handle individual failures - re-raise exceptions instead of using mocks
+            # Handle individual failures by surfacing the upstream error.
             if isinstance(skin_analysis, Exception):
                 logger.error(f"Skin analysis failed: {str(skin_analysis)}")
                 raise skin_analysis

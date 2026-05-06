@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core import cache
 from app.core.auth_middleware import JWTAuthMiddleware
 from app.routers import (
-    voice, vto, context, closet, onboarding, profile, calendar_auth,
+    vto, context, closet, onboarding, profile, calendar_auth,
     closet_analytics, proof_cards, outfit_history, style_profile,
     closet_recommendations, skin, outfit, products, glowup,
 )
@@ -60,7 +60,6 @@ app.include_router(proof_cards.router, prefix="/api/proof-cards", tags=["Proof C
 app.include_router(outfit_history.router, prefix="/api/outfit-history", tags=["Outfit History"])
 app.include_router(style_profile.router, prefix="/api/style-profile", tags=["Style Profile"])
 app.include_router(calendar_auth.router, prefix="/api/calendar", tags=["Calendar"])
-app.add_api_websocket_route("/ws/voice", voice.voice_websocket)
 
 
 @app.get("/")
@@ -85,6 +84,5 @@ async def health():
     return {
         "status": "ok",
         "version": "1.0.0",
-        "mocks": settings.USE_MOCKS,
         "redis": redis_status,
     }
