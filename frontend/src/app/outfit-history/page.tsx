@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/lib/constants';
+import { getApiUrl } from '@/lib/constants';
 import { getSupabase } from '@/lib/supabase';
 import ClosetNav from '@/components/navigation/ClosetNav';
 import OutfitHistoryCard from '@/components/closet/OutfitHistoryCard';
@@ -87,7 +87,7 @@ export default function OutfitHistoryPage() {
 
         // Fetch outfit logs
         const logsResponse = await fetch(
-          `${API_URL}/api/outfit-history?user_id=${userId}`,
+          getApiUrl(`/api/outfit-history?user_id=${userId}`),
           {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,
@@ -104,7 +104,7 @@ export default function OutfitHistoryPage() {
 
         // Fetch summary
         const summaryResponse = await fetch(
-          `${API_URL}/api/outfit-history/summary?user_id=${userId}`,
+          getApiUrl(`/api/outfit-history/summary?user_id=${userId}`),
           {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,
@@ -369,14 +369,14 @@ export default function OutfitHistoryPage() {
                     if (!session) return;
 
                     const logsResponse = await fetch(
-                      `${API_URL}/api/outfit-history?user_id=${userId}`,
+                      getApiUrl(`/api/outfit-history?user_id=${userId}`),
                       { headers: { 'Authorization': `Bearer ${session.access_token}` } }
                     );
                     const logsData = await logsResponse.json();
                     setOutfitLogs(logsData.outfit_logs || []);
 
                     const summaryResponse = await fetch(
-                      `${API_URL}/api/outfit-history/summary?user_id=${userId}`,
+                      getApiUrl(`/api/outfit-history/summary?user_id=${userId}`),
                       { headers: { 'Authorization': `Bearer ${session.access_token}` } }
                     );
                     const summaryData = await summaryResponse.json();

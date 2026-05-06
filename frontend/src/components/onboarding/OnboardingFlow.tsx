@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import * as React from "react";
 import { TriangleAlert } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { API_URL } from "@/lib/constants";
+import { getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { AuthScreen } from "./AuthScreen";
 import { CameraPermissionScreen } from "./CameraPermissionScreen";
@@ -51,7 +51,7 @@ function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
       try {
         // Step 1: Seed closet with demo items
         console.log("Seeding closet with demo items...");
-        const seedResponse = await fetch(`${API_URL}/api/onboarding/seed-closet`, {
+        const seedResponse = await fetch(getApiUrl("/api/onboarding/seed-closet"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId }),
@@ -63,7 +63,7 @@ function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
 
         // Step 2: Mark onboarding as complete
         console.log("Marking onboarding as complete...");
-        const completeResponse = await fetch(`${API_URL}/api/onboarding/complete`, {
+        const completeResponse = await fetch(getApiUrl("/api/onboarding/complete"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, calendar_connected: false }),

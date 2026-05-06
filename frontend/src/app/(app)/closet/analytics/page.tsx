@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import ClosetNav from "@/components/navigation/ClosetNav";
 import { SkeletonAnalyticsCard } from "@/components/common/SkeletonLoader";
@@ -85,7 +86,7 @@ export default function ClosetAnalyticsPage() {
           return;
         }
 
-        const response = await fetch("/api/closet/analytics", {
+        const response = await fetch(getApiUrl("/api/closet/analytics"), {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },

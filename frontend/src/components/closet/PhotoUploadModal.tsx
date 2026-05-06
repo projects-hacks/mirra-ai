@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { uploadToStorage as uploadFile } from "@/lib/storage";
 
@@ -255,7 +256,7 @@ export default function PhotoUploadModal({
   // Extract metadata using AI
   const extractMetadata = useCallback(async (imageUrl: string): Promise<ExtractedMetadata> => {
     try {
-      const response = await fetch("/api/closet/extract-metadata", {
+      const response = await fetch(getApiUrl("/api/closet/extract-metadata"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl }),

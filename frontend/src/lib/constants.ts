@@ -25,7 +25,15 @@ function normalizeApiUrl(rawUrl: string | undefined): string {
   }
 }
 
-export const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
+export function getApiBaseUrl(): string {
+  return normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
+}
+
+export function getApiUrl(path = ""): string {
+  return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export const API_URL = getApiBaseUrl();
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 export const ENABLE_CAMERA_KIT = process.env.NEXT_PUBLIC_ENABLE_CAMERA_KIT !== "false";

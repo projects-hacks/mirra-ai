@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { API_URL } from "@/lib/constants";
+import { getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import ClosetGrid from "@/components/closet/ClosetGrid";
 import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
@@ -123,7 +123,7 @@ export default function ClosetPage() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/closet?user_id=${encodeURIComponent(user.id)}`, {
+      const response = await fetch(getApiUrl(`/api/closet?user_id=${encodeURIComponent(user.id)}`), {
         headers: {
           Authorization: `Bearer ${activeSession.access_token}`,
         },
@@ -191,7 +191,7 @@ export default function ClosetPage() {
         }
 
         // Create closet item
-        const response = await fetch(`${API_URL}/api/closet`, {
+        const response = await fetch(getApiUrl("/api/closet"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -284,7 +284,7 @@ export default function ClosetPage() {
           throw new Error("Not authenticated");
         }
 
-        const response = await fetch(`${API_URL}/api/closet/batch`, {
+        const response = await fetch(getApiUrl("/api/closet/batch"), {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -325,7 +325,7 @@ export default function ClosetPage() {
         throw new Error("Not authenticated");
       }
 
-      const response = await fetch(`${API_URL}/api/closet/batch`, {
+      const response = await fetch(getApiUrl("/api/closet/batch"), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

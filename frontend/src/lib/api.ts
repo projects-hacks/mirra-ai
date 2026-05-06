@@ -1,4 +1,4 @@
-import { API_URL, ApiRoutes } from "@/lib/constants";
+import { ApiRoutes, getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
 import { ToolName } from "@/lib/constants";
@@ -266,7 +266,7 @@ export async function fetchApi<T>(
 ): Promise<T> {
   const { retry, headers: optionHeaders, ...fetchOptions } = options;
   const retryOptions = retry === true ? {} : retry;
-  const url = `${API_URL}${normalizePath(path)}`;
+  const url = getApiUrl(normalizePath(path));
 
   const requestOnce = async () => {
     const headers = await getAuthHeaders();
@@ -294,7 +294,7 @@ export async function fetchWithFormData<T>(
   retry?: RetryOptions | boolean
 ): Promise<T> {
   const retryOptions = retry === true ? {} : retry;
-  const url = `${API_URL}${normalizePath(path)}`;
+  const url = getApiUrl(normalizePath(path));
 
   const requestOnce = async () => {
     const headers = await getAuthHeaders("");

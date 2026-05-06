@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 
 // ── Types ────────────────────────────────────────────
@@ -48,7 +49,7 @@ export default function ClosetStatistics() {
           return;
         }
 
-        const response = await fetch("/api/closet/analytics", {
+        const response = await fetch(getApiUrl("/api/closet/analytics"), {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },

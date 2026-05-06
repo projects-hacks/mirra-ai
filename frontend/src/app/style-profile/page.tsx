@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '@/lib/constants';
+import { getApiUrl } from '@/lib/constants';
 import { getSupabase } from '@/lib/supabase';
 import StyleInsightsChart from '@/components/closet/StyleInsightsChart';
 import { SkeletonAnalyticsCard } from '@/components/common/SkeletonLoader';
@@ -71,7 +71,7 @@ export default function StyleProfilePage() {
         }
 
         const response = await fetch(
-          `${API_URL}/api/style-profile?user_id=${userId}`,
+          getApiUrl(`/api/style-profile?user_id=${userId}`),
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,

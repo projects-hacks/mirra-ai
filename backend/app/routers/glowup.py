@@ -189,13 +189,40 @@ def _enrich_plan(face_attrs: dict[str, Any], skin_tone: dict[str, Any], plan: di
 async def analyze_glowup(selfie: UploadFile = File(...)) -> dict[str, Any]:
     try:
         selfie_bytes = await read_image(selfie)
-        face_attrs, skin_tone = await asyncio.gather(
+        analysis_results = await asyncio.gather(
             skin_tools.analyze_face(selfie_bytes),
             skin_tools.analyze_skin_tone(selfie_bytes),
+            return_exceptions=True,
         )
+
+        face_result, tone_result = analysis_results
+        warnings: list[str] = []
+
+        if isinstance(face_result, Exception):
+            logger.warning("Glowup face analysis degraded to fallback: %s", face_result)
+            face_attrs = {
+                "shape": "Balanced",
+                "eye_shape": "Defined",
+                "lip_shape": "Natural",
+            }
+            warnings.append("face_analysis_unavailable")
+        else:
+            face_attrs = _normalize_face_attrs(face_result)
+
+        if isinstance(tone_result, Exception):
+            logger.warning("Glowup skin tone analysis degraded to fallback: %s", tone_result)
+            skin_tone = {
+                "undertone": "neutral",
+            }
+            warnings.append("skin_tone_unavailable")
+        else:
+            skin_tone = _normalize_skin_tone(tone_result)
+
         return {
-            "face_attributes": _normalize_face_attrs(face_attrs),
-            "skin_tone": _normalize_skin_tone(skin_tone),
+            "face_attributes": face_attrs,
+            "skin_tone": skin_tone,
+            "warnings": warnings,
+            "degraded": bool(warnings),
         }
     except PerfectCorpAPIError as exc:
         raise _provider_error_to_http(exc, "glowup_analysis") from exc

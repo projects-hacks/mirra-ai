@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/constants";
+import { getApiUrl } from "@/lib/constants";
 import { SelfieCaptureScreen } from "@/components/onboarding/SelfieCaptureScreen";
 
 // ── Analysis Progress Component ──────────────────────
@@ -98,7 +98,7 @@ export default function NewScanPage() {
       const clientIp = ipData.ip;
 
       // Call backend analyze endpoint
-      const analyzeResponse = await fetch(`${API_URL}/api/onboarding/analyze`, {
+      const analyzeResponse = await fetch(getApiUrl("/api/onboarding/analyze"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

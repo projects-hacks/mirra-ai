@@ -159,6 +159,12 @@ This section documents what was completed across the previous implementation pas
     - GlowUp accessory rows now surface per-category empty / unavailable states
     - Outfit Builder gap-product search now surfaces per-gap empty / unavailable states
     - Outfit Builder proof-card generation now only attaches the local outfit preview generated inside that flow, instead of reusing stale shared VTO state
+  - Fixed remaining production transport issues:
+    - frontend API callers now resolve the backend origin at runtime instead of depending on stale compile-time `API_URL` values
+    - remaining closet / outfit-history / onboarding / recommendation flows no longer use local relative `/api/...` fetches against the Vercel origin
+    - service worker cache version was bumped to flush stale cached bundles in production
+  - Hardened GlowUp backend analysis:
+    - `/api/glowup/analyze` now degrades to a safe starter face/tone payload when one provider analysis path fails, instead of returning a hard 500 for partial provider failure
   - Upgraded GlowUp persistence:
     - `Save Look` now persists via proof-card generation instead of downloading only
     - save success state is surfaced in the UI

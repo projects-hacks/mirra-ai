@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getApiUrl } from '@/lib/constants';
 import { getSupabase } from '@/lib/supabase';
 
 interface ItemDetailModalProps {
@@ -139,7 +140,7 @@ export default function ItemDetailModal({
 
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/closet/${item.id}`, {
+      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +172,7 @@ export default function ItemDetailModal({
 
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/closet/${item.id}`, {
+      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +204,7 @@ export default function ItemDetailModal({
 
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/closet/${item.id}`, {
+      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -230,7 +231,7 @@ export default function ItemDetailModal({
 
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/closet/${item.id}`, {
+      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

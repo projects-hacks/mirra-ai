@@ -4,6 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState } from 'react';
+import { getApiUrl } from '@/lib/constants';
 
 interface OutfitWeather {
   temperature?: number;
@@ -97,7 +98,7 @@ export default function OutfitHistoryCard({ log, onUpdate }: OutfitHistoryCardPr
     try {
       setIsUpdating(true);
 
-      const response = await fetch(`/api/outfit-history/${log.id}/outcome`, {
+      const response = await fetch(getApiUrl(`/api/outfit-history/${log.id}/outcome`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
