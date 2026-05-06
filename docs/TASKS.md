@@ -191,15 +191,22 @@ This section documents what was completed across the previous implementation pas
   - AI metadata extraction
 - Gemini-backed output is currently surfaced in frontend for:
   - skin reasoning card on dashboard / skin flow
-  - GlowUp plan consumption
-- Gemini work is not fully complete yet:
-  - it is not yet the single consistent orchestration layer across all intended Try-On and appearance flows
-  - not every visual flow is rendered from deterministic Gemini-backed JSON cards / steps / CTAs / failure states
-  - Try-On still relies more on direct API orchestration than Gemini-driven reasoning UI
+  - GlowUp reasoning card and recommendation actions
+  - Try-On reasoning card and recommendation actions
+  - Outfit reasoning / proof-card states
+- Completed Gemini-backed UI coverage:
+  - Dashboard and Skin render shared reasoning cards from normalized agent output.
+  - GlowUp Studio renders the shared reasoning trace card from normalized Gemini / fallback JSON.
+  - Try-On Studio renders the shared reasoning trace card from normalized Gemini / fallback JSON.
+  - Outfit Builder uses backend outfit reasoning and surfaces deterministic proof-card / gap states.
+- Remaining Gemini scope:
+  - Gemini is intentionally the reasoning/orchestration layer, not the Perfect Corp visual engine.
+  - Direct Perfect Corp execution remains deterministic for VTO and skin visuals.
+  - Any future flow added outside skin, GlowUp, Try-On, and Outfit Builder should reuse the same structured agent-card pattern.
 
 ### Remaining execution checklist
 
-- Completed:
+- Completed implementation:
   - Normalize API contracts for skin and VTO responses:
     - shared success shapes
     - shared error shapes
@@ -211,27 +218,30 @@ This section documents what was completed across the previous implementation pas
     - face rejected
     - API timeout
     - unsupported category
-- In progress:
   - Finish Gemini UI coverage so reasoning is surfaced consistently where intended with deterministic rendering and no silent fallback behavior
-    - completed on GlowUp Studio:
-      - shared reasoning trace card now renders normalized Gemini / fallback plan output
-      - recommendation actions now scroll into makeup, hair, and accessories sections
-    - completed on Try-On Studio:
-      - shared reasoning trace card now renders normalized Gemini / fallback plan output
-      - recommendation actions now switch directly into clothes, makeup, hair, or accessories tabs
-    - still remaining:
-      - broader end-to-end reasoning coverage outside skin / glowup / try-on
-  - Complete Try-On flow separation and QA:
-    - preview state
-    - clothes
-    - makeup
-    - hair
-    - accessories
-    - product search
-    - persistence into look diary / proof cards
+    - deterministic reasoning card rendering
+    - recommendation actions in GlowUp and Try-On
+    - typed fallback data instead of silent empty states
+  - Complete Try-On flow separation:
+    - clothes uses a dedicated full-body image contract
+    - makeup, hair, earrings, and necklace use the portrait selfie contract
+    - product search and product image resolution use explicit partial-failure states
+    - persistence writes the selected result into proof cards / diary
   - Complete GlowUp UX hardening:
-    - remaining visual consistency under broader partial backend failure
-  - Run a final full desktop / mobile verification pass across skin, GlowUp, Try-On, Outfit Builder, and persistence flows
+    - accessory loading / empty / unavailable states
+    - save-to-proof-card persistence
+    - share/download scoped to the current GlowUp result
+    - mobile layout polish
+    - partial backend failure handling
+- Verification status:
+  - Passed `npm run lint` in `frontend`.
+  - Passed `npx tsc --noEmit` in `frontend`.
+  - Fixed production same-origin API redirect class by calling slash-normalized collection routes:
+    - `/api/closet/`
+    - `/api/proof-cards/`
+  - Still pending before calling the whole checklist fully done:
+    - final browser QA on deployed desktop and mobile for Skin, GlowUp, Try-On, Outfit Builder, Closet, and proof-card persistence
+    - confirm no remaining 307 redirects from same-origin `/api/*` routes in production DevTools
 
 ---
 

@@ -120,7 +120,7 @@ export default function ClosetPage() {
   } = useSWR<ClosetItem[]>(
     userId ? (["closet", userId] as const) : null,
     async ([, currentUserId]: readonly [string, string]) => {
-      const data = await fetchApi<ClosetApiResponse>(`/api/closet?user_id=${encodeURIComponent(currentUserId)}`);
+      const data = await fetchApi<ClosetApiResponse>(`/api/closet/?user_id=${encodeURIComponent(currentUserId)}`);
       return transformClosetItems(data);
     }
   );
@@ -155,7 +155,7 @@ export default function ClosetPage() {
         }
 
         // Create closet item
-        await fetchApi("/api/closet", {
+        await fetchApi("/api/closet/", {
           method: "POST",
           body: JSON.stringify({
             user_id: user.id,

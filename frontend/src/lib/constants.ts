@@ -55,7 +55,7 @@ export const ApiRoutes = {
   GLOWUP_RECOMMEND: "/api/glowup/recommend",
   OUTFIT_MATCH: "/api/outfit/match",
   OUTFIT_PROOF_CARD: "/api/outfit/proof-card",
-  PROOF_CARDS: "/api/proof-cards",
+  PROOF_CARDS: "/api/proof-cards/",
   PRODUCTS_SEARCH: "/api/products/search",
   PRODUCTS_RESOLVE_IMAGE: "/api/products/resolve-image",
   WEATHER: "/api/context/weather",
