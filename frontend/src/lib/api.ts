@@ -1,4 +1,5 @@
 import { ApiRoutes, getApiUrl } from "@/lib/constants";
+import { refreshSession } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
 import { ToolName } from "@/lib/constants";
@@ -157,12 +158,23 @@ function normalizePath(path: string): string {
 
 async function getAuthHeaders(contentType = "application/json"): Promise<Record<string, string>> {
   const supabase = getSupabase();
-  const { data: { session } } = await supabase.auth.getSession();
   const headers: Record<string, string> = {};
 
   if (contentType) {
     headers["Content-Type"] = contentType;
   }
+
+  let { data: { session } } = await supabase.auth.getSession();
+
+  // If supabase has not yet rehydrated the session (race right after OAuth or a
+  // soft reload), try a single shared refresh before firing the request. This
+  // avoids the wasted round-trip "no auth → 401 → refresh → retry".
+  if (!session?.access_token) {
+    if (await tryRefreshSessionForApi()) {
+      ({ data: { session } } = await supabase.auth.getSession());
+    }
+  }
+
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`;
   }
@@ -170,7 +182,25 @@ async function getAuthHeaders(contentType = "application/json"): Promise<Record<
   return headers;
 }
 
-async function handle401(): Promise<never> {
+const DEBUG_AUTH =
+  typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEBUG_AUTH === "true";
+
+function logAuthEvent(message: string, detail?: Record<string, unknown>) {
+  if (typeof console === "undefined") return;
+  // Always emit a short warning so users can diagnose redirect surprises.
+  // Detail (URL, status, etc.) is gated behind NEXT_PUBLIC_DEBUG_AUTH to avoid PII leakage in shared logs.
+  if (DEBUG_AUTH && detail) {
+    console.warn(`[auth] ${message}`, detail);
+  } else {
+    console.warn(`[auth] ${message}`);
+  }
+}
+
+async function handle401(context?: { url?: string; status?: number }): Promise<never> {
+  logAuthEvent("session ended — signing out and redirecting to /", {
+    url: context?.url,
+    status: context?.status,
+  });
   try {
     const supabase = getSupabase();
     await supabase.auth.signOut();
@@ -182,6 +212,38 @@ async function handle401(): Promise<never> {
     window.location.href = "/";
   }
   throw new ApiError(401, "Session expired. Redirecting to sign-in.");
+}
+
+/**
+ * Single-flight refresh: if a 401 fires on N parallel requests we want one
+ * refresh, not N. The cached promise is cleared as soon as it settles so the
+ * next 401 (e.g. seconds later) starts a fresh refresh.
+ */
+let inflightApiRefresh: Promise<boolean> | null = null;
+
+async function tryRefreshSessionForApi(): Promise<boolean> {
+  if (inflightApiRefresh) return inflightApiRefresh;
+
+  inflightApiRefresh = (async () => {
+    try {
+      const { data, error } = await refreshSession();
+      if (error) {
+        logAuthEvent("refresh returned error", { message: error.message });
+        return false;
+      }
+      return !!data.session?.access_token;
+    } catch (err) {
+      // refreshSession() can throw on network blips — treat that the same as a soft failure.
+      logAuthEvent("refresh threw", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return false;
+    } finally {
+      inflightApiRefresh = null;
+    }
+  })();
+
+  return inflightApiRefresh;
 }
 
 async function parseErrorBody(response: Response): Promise<unknown> {
@@ -306,14 +368,19 @@ export async function fetchApi<T>(
   const retryOptions = retry === true ? {} : retry;
   const url = getApiUrl(normalizePath(path));
 
-  const requestOnce = async () => {
+  const requestOnce = async (alreadyRefreshed = false) => {
     const headers = await getAuthHeaders();
     const response = await fetch(url, {
       ...fetchOptions,
       headers: { ...headers, ...optionHeaders },
     });
 
-    if (response.status === 401) return handle401();
+    if (response.status === 401) {
+      if (!alreadyRefreshed && (await tryRefreshSessionForApi())) {
+        return requestOnce(true);
+      }
+      return handle401({ url, status: response.status });
+    }
     if (!response.ok) {
       const body = await parseErrorBody(response);
       throw new ApiError(response.status, errorMessageFromBody(body), body);
@@ -323,7 +390,7 @@ export async function fetchApi<T>(
   };
 
   if (!retryOptions) return requestOnce();
-  return retryWithBackoff(requestOnce, retryOptions);
+  return retryWithBackoff(() => requestOnce(), retryOptions);
 }
 
 export async function fetchWithFormData<T>(
@@ -334,7 +401,7 @@ export async function fetchWithFormData<T>(
   const retryOptions = retry === true ? {} : retry;
   const url = getApiUrl(normalizePath(path));
 
-  const requestOnce = async () => {
+  const requestOnce = async (alreadyRefreshed = false) => {
     const headers = await getAuthHeaders("");
     const response = await fetch(url, {
       method: "POST",
@@ -342,7 +409,12 @@ export async function fetchWithFormData<T>(
       body: formData,
     });
 
-    if (response.status === 401) return handle401();
+    if (response.status === 401) {
+      if (!alreadyRefreshed && (await tryRefreshSessionForApi())) {
+        return requestOnce(true);
+      }
+      return handle401({ url, status: response.status });
+    }
     if (!response.ok) {
       const body = await parseErrorBody(response);
       throw new ApiError(response.status, errorMessageFromBody(body), body);
@@ -352,7 +424,7 @@ export async function fetchWithFormData<T>(
   };
 
   if (!retryOptions) return requestOnce();
-  return retryWithBackoff(requestOnce, retryOptions);
+  return retryWithBackoff(() => requestOnce(), retryOptions);
 }
 
 export const api = fetchApi;

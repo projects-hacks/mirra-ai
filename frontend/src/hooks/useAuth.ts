@@ -27,6 +27,8 @@ export function useAuth() {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshTokenRef = useRef<() => Promise<void>>(async () => {});
+  /** Set on SIGNED_IN so we do not call refreshSession() immediately (races OAuth cookie commit). */
+  const lastOAuthSignInAtRef = useRef(0);
   const [loading, setLoading] = useState(true);
 
   // ── 17.4: BroadcastChannel helpers ────────────────────
@@ -51,7 +53,13 @@ export function useAuth() {
     const refreshInMs = expiresAtMs - nowMs - fiveMinMs;
 
     if (refreshInMs <= 0) {
-      // Token already close to expiry — refresh immediately
+      const msSinceOAuth = Date.now() - lastOAuthSignInAtRef.current;
+      if (msSinceOAuth >= 0 && msSinceOAuth < 12_000) {
+        refreshTimerRef.current = setTimeout(() => {
+          void refreshTokenRef.current();
+        }, 4000);
+        return;
+      }
       void refreshTokenRef.current();
       return;
     }
@@ -62,22 +70,32 @@ export function useAuth() {
   }, []);
 
   const refreshToken = useCallback(async () => {
-    const { data, error } = await refreshSession();
-
-    if (error || !data.session) {
-      // Refresh failed → sign out and redirect
-      console.warn("Token refresh failed — signing out", error?.message);
-      await authSignOut();
-      dispatch({ type: "SET_USER", payload: null });
-      localStorage.clear();
-      if (typeof globalThis.window !== "undefined") globalThis.location.href = "/";
-      return;
+    // Two attempts with a short delay so a transient network blip does not
+    // kick the user out. supabase-js can also throw on offline/CORS so we
+    // wrap each attempt in try/catch.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const { data, error } = await refreshSession();
+        if (!error && data.session) {
+          const mapped = mapUser(data.session.user);
+          broadcast({ event: "TOKEN_REFRESHED", user: mapped });
+          scheduleTokenRefresh(data.session.expires_at);
+          return;
+        }
+        if (error) {
+          console.warn(`[auth] proactive refresh attempt ${attempt + 1} failed`, error.message);
+        }
+      } catch (err) {
+        console.warn(`[auth] proactive refresh attempt ${attempt + 1} threw`, err);
+      }
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 800));
     }
 
-    // Broadcast refresh to other tabs (Task 17.4)
-    const mapped = mapUser(data.session.user);
-    broadcast({ event: "TOKEN_REFRESHED", user: mapped });
-    scheduleTokenRefresh(data.session.expires_at);
+    console.warn("[auth] proactive refresh exhausted retries — signing out");
+    await authSignOut();
+    dispatch({ type: "SET_USER", payload: null });
+    localStorage.clear();
+    if (typeof globalThis.window !== "undefined") globalThis.location.href = "/";
   }, [broadcast, dispatch, scheduleTokenRefresh]);
 
   useEffect(() => {
@@ -145,6 +163,7 @@ export function useAuth() {
           scheduleTokenRefresh(authSession.expires_at); // Task 17.1
 
           if (_event === "SIGNED_IN") {
+            lastOAuthSignInAtRef.current = Date.now();
             broadcast({ event: "SIGNED_IN", user: mapped });
           }
           if (_event === "TOKEN_REFRESHED") {
