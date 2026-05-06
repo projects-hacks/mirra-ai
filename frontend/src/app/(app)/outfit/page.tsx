@@ -408,20 +408,24 @@ export default function OutfitPage() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="banner-error" role="alert">
           {error}
         </div>
       )}
 
       {!selfie && (
-        <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+        <div className="banner-warn" role="status">
           Capture a selfie first if you want to build the outfit context and proof card.
         </div>
       )}
 
       {!bodyImage && (
-        <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-          Clothes preview in Outfit Builder needs the same full-body image used by <Link href="/try-on" className="font-semibold underline">Try-On Studio</Link>. Add it there before using clothes VTO here.
+        <div className="banner-warn" role="status">
+          Clothes preview in Outfit Builder needs the same full-body image used by{" "}
+          <Link href="/try-on" className="font-semibold underline decoration-[#fde68a]/80 underline-offset-2">
+            Try-On Studio
+          </Link>
+          . Add it there before using clothes VTO here.
         </div>
       )}
 

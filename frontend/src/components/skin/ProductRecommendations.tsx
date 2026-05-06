@@ -51,8 +51,8 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
           Live shopping results are matched to your lowest skin scores.
         </p>
         {!isLoading && failedCount > 0 && (
-          <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <TriangleAlert size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-300/45 bg-amber-100/60 px-4 py-3 text-sm text-amber-950">
+            <TriangleAlert size={17} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
             <span>
               {failedCount} product search {failedCount === 1 ? "query needs" : "queries need"} a retry, but your scan data is still available.
             </span>
@@ -80,9 +80,9 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
                 </span>
               </div>
               {group.status === "error" ? (
-                <div className="surface-subcard rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <div className="surface-subcard rounded-2xl border border-amber-300/45 bg-amber-100/55 p-4 text-sm text-amber-950">
                   <p className="font-semibold">Product search did not complete.</p>
-                  <p className="mt-1 text-xs leading-5">{group.error ?? "Try refreshing this concern or searching manually."}</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-900/90">{group.error ?? "Try refreshing this concern or searching manually."}</p>
                 </div>
               ) : group.products.length ? (
                 <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>

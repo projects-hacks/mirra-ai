@@ -43,7 +43,7 @@ export default function QuickActionsGrid() {
           <Link
             key={action.href}
             href={action.href}
-            className="surface-card group rounded-[1.25rem] border border-black/8 p-4 shadow-[0_12px_28px_rgba(17,24,39,0.06)] backdrop-blur transition-transform hover:-translate-y-0.5"
+            className="surface-card group rounded-[1.25rem] border border-black/8 p-4 shadow-[0_12px_28px_rgba(17,24,39,0.06)] backdrop-blur transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(17,24,39,0.1)] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
           >
             <span
               className="flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-[0_10px_24px_rgba(17,24,39,0.12)] transition-transform group-hover:scale-105"

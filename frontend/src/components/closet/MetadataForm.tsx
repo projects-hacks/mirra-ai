@@ -241,7 +241,7 @@ export default function MetadataForm({
                 placeholder="e.g., Blue Denim Jacket"
               />
               {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                <p className="mt-1 text-sm" style={{ color: "var(--error)" }}>{errors.name}</p>
               )}
             </div>
 
@@ -264,7 +264,7 @@ export default function MetadataForm({
                 ))}
               </select>
               {errors.category && (
-                <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+                <p className="mt-1 text-sm" style={{ color: "var(--error)" }}>{errors.category}</p>
               )}
             </div>
 
@@ -297,7 +297,7 @@ export default function MetadataForm({
                   placeholder="e.g., Navy Blue"
                 />
                 {errors.color && (
-                  <p className="text-red-500 text-sm mt-1">{errors.color}</p>
+                  <p className="mt-1 text-sm" style={{ color: "var(--error)" }}>{errors.color}</p>
                 )}
               </div>
 
@@ -321,7 +321,7 @@ export default function MetadataForm({
                   />
                 </div>
                 {errors.color_hex && (
-                  <p className="text-red-500 text-sm mt-1">
+                  <p className="mt-1 text-sm" style={{ color: "var(--error)" }}>
                     {errors.color_hex}
                   </p>
                 )}
@@ -394,7 +394,7 @@ export default function MetadataForm({
                 <span>Formal</span>
               </div>
               {errors.formality && (
-                <p className="text-red-500 text-sm mt-1">{errors.formality}</p>
+                <p className="mt-1 text-sm" style={{ color: "var(--error)" }}>{errors.formality}</p>
               )}
             </div>
 

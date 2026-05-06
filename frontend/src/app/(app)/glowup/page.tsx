@@ -652,19 +652,19 @@ export default function GlowupPage() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="banner-error" role="alert">
           {error}
         </div>
       )}
 
       {planNotice && !error && (
-        <div className="rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="banner-warn" role="status">
           {planNotice}
         </div>
       )}
 
       {saveMessage && !error && (
-        <div className="rounded-2xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div className="banner-success" role="status">
           {saveMessage}
         </div>
       )}

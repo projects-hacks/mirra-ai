@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatApiError, outfitHistoryApi } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
-import ClosetNav from '@/components/navigation/ClosetNav';
+import ClosetSubNav from '@/components/navigation/ClosetSubNav';
 import OutfitHistoryCard from '@/components/closet/OutfitHistoryCard';
 import { SkeletonOutfitHistory } from '@/components/common/SkeletonLoader';
 
@@ -147,8 +147,9 @@ export default function OutfitHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-24">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-10">
+        <div className="mx-auto max-w-4xl">
+          <ClosetSubNav variant="gradient" />
           {/* Header Skeleton */}
           <div className="mb-6">
             <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-4"></div>
@@ -167,22 +168,23 @@ export default function OutfitHistoryPage() {
           {/* Outfit Logs Skeleton */}
           <SkeletonOutfitHistory count={5} />
         </div>
-        <ClosetNav />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-10">
+        <div className="mx-auto max-w-4xl space-y-4">
+          <ClosetSubNav variant="gradient" />
           <div className="glass-panel p-8 text-center">
-            <span className="material-symbols-outlined text-red-400 text-5xl mb-4">error</span>
-            <h2 className="text-xl font-semibold text-white mb-2">Error Loading History</h2>
-            <p className="text-white/70 mb-4">{error}</p>
+            <span className="material-symbols-outlined mb-4 text-5xl text-red-400">error</span>
+            <h2 className="mb-2 text-xl font-semibold text-white">Error loading history</h2>
+            <p className="banner-error mb-4 text-left">{error}</p>
             <button
+              type="button"
               onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              className="rounded-full bg-white/15 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/25"
             >
               Retry
             </button>
@@ -193,10 +195,11 @@ export default function OutfitHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-24">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6 pb-10">
+      <div className="mx-auto max-w-4xl">
+        <ClosetSubNav variant="gradient" />
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -343,8 +346,6 @@ export default function OutfitHistoryPage() {
           </div>
         )}
       </div>
-
-      <ClosetNav />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatApiError, styleProfileApi } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
@@ -32,6 +32,26 @@ interface StyleProfile {
   };
 }
 
+function StyleProfileHeader({ title = 'Style Profile' }: Readonly<{ title?: string }>) {
+  const router = useRouter();
+  return (
+    <header className="page-header-shell" style={{ paddingTop: 'calc(var(--safe-top) + 0.5rem)' }}>
+      <div className="page-shell flex min-h-[52px] items-center justify-between gap-3 py-3 sm:py-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex min-h-11 items-center gap-2 text-sm"
+          style={{ color: 'var(--on-surface-variant)' }}
+        >
+          ← Back
+        </button>
+        <h1 className="section-display text-center text-base sm:text-lg">{title}</h1>
+        <div className="w-10 sm:w-12" aria-hidden />
+      </div>
+    </header>
+  );
+}
+
 export default function StyleProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<StyleProfile | null>(null);
@@ -39,7 +59,6 @@ export default function StyleProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Fetch user ID
   useEffect(() => {
     const fetchUser = async () => {
       const supabase = getSupabase();
@@ -53,7 +72,6 @@ export default function StyleProfilePage() {
     fetchUser();
   }, [router]);
 
-  // Fetch style profile
   useEffect(() => {
     if (!userId) return;
 
@@ -75,7 +93,6 @@ export default function StyleProfilePage() {
     fetchProfile();
   }, [userId, router]);
 
-  // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -85,7 +102,6 @@ export default function StyleProfilePage() {
     });
   };
 
-  // Get drift icon
   const getDriftIcon = (type: string) => {
     switch (type) {
       case 'formality_drift':
@@ -99,84 +115,42 @@ export default function StyleProfilePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen pb-24"
-        style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}
-      >
-        {/* Header */}
-        <div
-          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
-          style={{
-            background: 'rgba(var(--bg-rgb, 10,10,20),0.85)',
-            backdropFilter: 'blur(16px)',
-          }}
-        >
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-sm"
-            style={{ color: 'var(--on-surface-variant)' }}
-          >
-            ← Back
-          </button>
-          <h1 className="text-base font-semibold tracking-tight">Style Profile</h1>
-          <div className="w-12" />
-        </div>
+  const shell = (children: ReactNode) => (
+    <div className="min-h-screen pb-10" style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}>
+      <StyleProfileHeader />
+      <div className="page-shell mx-auto max-w-4xl space-y-6 pt-4">{children}</div>
+    </div>
+  );
 
-        <div className="max-w-4xl mx-auto px-5 space-y-6 pt-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonAnalyticsCard key={i} />
-          ))}
-        </div>
-      </div>
+  if (loading) {
+    return shell(
+      <>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonAnalyticsCard key={i} />
+        ))}
+      </>
     );
   }
 
   if (error || !profile) {
     return (
-      <div
-        className="min-h-screen pb-24"
-        style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}
-      >
-        {/* Header */}
-        <div
-          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
-          style={{
-            background: 'rgba(var(--bg-rgb, 10,10,20),0.85)',
-            backdropFilter: 'blur(16px)',
-          }}
-        >
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-sm"
-            style={{ color: 'var(--on-surface-variant)' }}
-          >
-            ← Back
-          </button>
-          <h1 className="text-base font-semibold tracking-tight">Style Profile</h1>
-          <div className="w-12" />
-        </div>
-
-        <div className="max-w-4xl mx-auto px-5 pt-4">
+      <div className="min-h-screen pb-10" style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}>
+        <StyleProfileHeader />
+        <div className="page-shell mx-auto max-w-4xl space-y-4 pt-4">
           {profile && profile.total_outfits === 0 ? (
             <EmptyAnalytics />
           ) : (
-            <div className="glass-card p-8 text-center">
+            <div className="glass-card space-y-4 p-6 text-center sm:p-8">
               <span
-                className="material-symbols-outlined text-[64px] mb-4"
+                className="material-symbols-outlined mb-2 text-[56px]"
                 style={{ color: 'var(--error)' }}
               >
                 error
               </span>
-              <p className="text-lg mb-4" style={{ color: 'var(--error)' }}>
+              <p className="banner-error text-left" role="alert">
                 {error || 'Failed to load style profile'}
               </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 rounded-lg"
-                style={{ background: 'var(--primary)', color: 'white' }}
-              >
+              <button type="button" onClick={() => window.location.reload()} className="btn-primary">
                 Retry
               </button>
             </div>
@@ -187,33 +161,11 @@ export default function StyleProfilePage() {
   }
 
   return (
-    <div
-      className="min-h-screen pb-24"
-      style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}
-    >
-      {/* Header */}
-      <div
-        className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
-        style={{
-          background: 'rgba(var(--bg-rgb, 10,10,20),0.85)',
-          backdropFilter: 'blur(16px)',
-        }}
-      >
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm"
-          style={{ color: 'var(--on-surface-variant)' }}
-        >
-          ← Back
-        </button>
-        <h1 className="text-base font-semibold tracking-tight">Style Profile</h1>
-        <div className="w-12" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-5 space-y-6 pt-4">
-        {/* Period Info */}
+    <div className="min-h-screen pb-10" style={{ background: 'var(--bg)', color: 'var(--on-surface)' }}>
+      <StyleProfileHeader />
+      <div className="page-shell mx-auto max-w-4xl space-y-6 pt-4">
         <div className="glass-card p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm" style={{ color: 'var(--on-surface-variant)' }}>
                 Profile Period
@@ -223,8 +175,9 @@ export default function StyleProfilePage() {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-lg border transition-colors"
+              className="rounded-lg border px-4 py-2 transition-colors"
               style={{
                 borderColor: 'var(--outline)',
                 color: 'var(--on-surface)',
@@ -235,7 +188,6 @@ export default function StyleProfilePage() {
           </div>
         </div>
 
-        {/* Style Drift Insights */}
         {profile.drift_insights?.drift_detected && profile.drift_insights.insights.length > 0 && (
           <div
             className="glass-card p-6"
@@ -243,7 +195,7 @@ export default function StyleProfilePage() {
               background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05))',
             }}
           >
-            <div className="flex items-center gap-3 mb-4">
+            <div className="mb-4 flex items-center gap-3">
               <span
                 className="material-symbols-outlined text-[32px]"
                 style={{ color: 'var(--primary)' }}
@@ -263,7 +215,7 @@ export default function StyleProfilePage() {
               {profile.drift_insights.insights.map((insight, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-3 p-3 rounded-lg"
+                  className="flex items-start gap-3 rounded-lg p-3"
                   style={{ background: 'var(--surface-variant)' }}
                 >
                   <span
@@ -275,12 +227,12 @@ export default function StyleProfilePage() {
                   <div className="flex-1">
                     <p style={{ color: 'var(--on-surface)' }}>{insight.message}</p>
                     {insight.change && (
-                      <p className="text-sm mt-1" style={{ color: 'var(--on-surface-variant)' }}>
+                      <p className="mt-1 text-sm" style={{ color: 'var(--on-surface-variant)' }}>
                         Change: {(insight.change * 100).toFixed(1)}%
                       </p>
                     )}
                     {insight.change_percent && (
-                      <p className="text-sm mt-1" style={{ color: 'var(--on-surface-variant)' }}>
+                      <p className="mt-1 text-sm" style={{ color: 'var(--on-surface-variant)' }}>
                         Change: {insight.change_percent}%
                       </p>
                     )}
@@ -291,7 +243,6 @@ export default function StyleProfilePage() {
           </div>
         )}
 
-        {/* Style Insights Chart */}
         <StyleInsightsChart profile={profile} />
       </div>
     </div>

@@ -21,7 +21,7 @@ export default function BottomNavItem({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[44px] min-w-[58px] flex-1 items-center justify-center"
+      className="flex min-h-[44px] min-w-[58px] flex-1 items-center justify-center rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
       aria-current={isActive ? "page" : undefined}
     >
       <span

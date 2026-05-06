@@ -73,22 +73,26 @@ const API_STACK = [
 const WORKFLOW = [
   {
     title: "Capture once",
-    description: "Camera Kit quality gates the selfie so downstream analysis has the right face size, lighting, and pose.",
+    description:
+      "A guided selfie flow checks lighting and framing so skin, face, and try-on features get a usable portrait—no mystery uploads.",
     icon: Camera,
   },
   {
     title: "Read the signal",
-    description: "Perfect Corp APIs return skin, tone, face, and try-on data. Mirra normalizes it into a single appearance profile.",
+    description:
+      "Perfect Corp powers skin, tone, face attributes, and virtual try-on. Mirra folds those results into one profile you can actually use.",
     icon: ScanFace,
   },
   {
-    title: "Let the agent connect context",
-    description: "Gemini combines scan results, weather, history, closet, and product search into a visible reasoning trace.",
+    title: "Add real-world context",
+    description:
+      "Gemini ties together your scan, weather, history, closet, and product search into a visible reasoning trace—so recommendations match the day, not a generic model.",
     icon: Layers3,
   },
   {
-    title: "Act with proof",
-    description: "Simulate improvements, preview products, try outfits, and review spend before committing.",
+    title: "Decide with proof",
+    description:
+      "Simulate skin improvements, preview makeup and hair, match outfits, and see a proof-style summary before you spend.",
     icon: BadgeCheck,
   },
 ];
@@ -114,7 +118,7 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="min-h-[100dvh] overflow-x-hidden bg-[#f7f2ea] text-[#16202a]">
+    <main className="min-h-[100dvh] overflow-x-hidden bg-[#f7f2ea] text-[#16202a] [&_section[id]]:scroll-mt-20 md:[&_section[id]]:scroll-mt-24">
       <section className="relative isolate min-h-[88svh] overflow-hidden bg-[#111827] text-white">
         <img
           src={HERO_IMAGE}
@@ -131,7 +135,9 @@ export default function LandingPage() {
             </span>
             <span>
               <span className="eyebrow block text-sm text-white">MIRRA</span>
-              <span className="block text-xs text-white/58">AI Appearance Operator</span>
+              <span className="block max-w-[14rem] text-[0.7rem] leading-snug text-white/65 sm:max-w-none sm:text-xs">
+                Skin, style, closet &amp; try-on—one guided flow
+              </span>
             </span>
           </a>
           <nav className="hidden items-center gap-6 text-sm text-white/72 md:flex">
@@ -151,7 +157,27 @@ export default function LandingPage() {
           </button>
         </header>
 
-        <div id="top" className="mx-auto flex min-h-[calc(88svh-84px)] w-full max-w-7xl items-center px-5 pb-20 pt-12 sm:px-8 lg:px-10">
+        <nav
+          aria-label="Page sections"
+          className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-5 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-8 lg:px-10 md:hidden [&::-webkit-scrollbar]:hidden"
+        >
+          {[
+            ["#features", "Features"],
+            ["#workflow", "Flow"],
+            ["#proof", "Proof"],
+            ["#trust", "Trust"],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="shrink-0 rounded-full border border-white/18 bg-white/10 px-3 py-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/85 backdrop-blur transition-colors hover:bg-white/16"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <div id="top" className="mx-auto flex min-h-[calc(88svh-84px)] w-full max-w-7xl items-center px-5 pb-20 pt-8 sm:px-8 sm:pt-12 lg:px-10 md:pt-12">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-3 py-2 text-xs font-medium text-white/80 backdrop-blur">
               <Star size={14} aria-hidden="true" />
@@ -161,10 +187,10 @@ export default function LandingPage() {
               Mirra
             </h1>
             <p className="section-display mt-5 max-w-2xl text-xl text-white/88 sm:text-2xl">
-              The AI that manages skin, style, closet, and try-on decisions from one guided selfie flow.
+              One good selfie powers your whole look—skin scores, face-aware makeup and hair, closet matching, and try-ons you can review before you buy.
             </p>
             <p className="body-copy mt-5 max-w-2xl text-base text-white/68 sm:text-lg">
-              Mirra reads appearance signals, explains what changed, previews outcomes, and helps users buy with confidence instead of guessing.
+              Instead of juggling separate beauty apps, Mirra connects Perfect Corp analysis, weather and context, your wardrobe, and product search so you see what changed, what to try next, and why it fits—then decide with proof, not guesswork.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <button
@@ -205,11 +231,11 @@ export default function LandingPage() {
             <div>
               <p className="eyebrow text-[0.72rem] text-[#7a3f35]">What Mirra Shows</p>
               <h2 className="section-display text-ink-strong mt-3 max-w-xl text-4xl sm:text-5xl">
-                A full appearance operating system, not another try-on catalog.
+                Everything about how you look, wired together—not a one-off try-on toy.
               </h2>
             </div>
             <p className="body-copy max-w-2xl text-base text-[#51606f] lg:justify-self-end">
-              Users do not want disconnected scores, random products, and isolated filters. Mirra turns raw API results into decisions: what changed, what to try, what to buy, and why it fits.
+              People do not want another disconnected score or random product grid. Mirra turns analysis into a path: what the scan means, what to simulate, how your closet covers the moment, what to try on, and what is worth buying.
             </p>
           </div>
 
@@ -250,12 +276,12 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr]">
             <div>
-              <p className="eyebrow text-[0.72rem] text-[#b9d991]">Guided Agent Flow</p>
+              <p className="eyebrow text-[0.72rem] text-[#b9d991]">Guided flow</p>
               <h2 className="section-display mt-3 text-4xl text-white sm:text-5xl">
-                The user watches Mirra reason, then acts.
+                See the “why,” then do the next step.
               </h2>
               <p className="body-copy mt-5 text-base text-white/64">
-                The product story is intentionally simple: capture, analyze, reason, preview, decide.
+                Mirra is built like an operator for your appearance: one capture, then analysis, context, previews, and a clear decision—not a black box that only shows a final image.
               </p>
             </div>
 
@@ -303,7 +329,7 @@ export default function LandingPage() {
               Nine Perfect Corp APIs become one consumer journey.
             </h2>
             <p className="body-copy text-card-muted mt-5 text-base">
-              The demo can move from skin analysis into simulation, makeover, outfit try-on, accessories, hair, and purchase proof without changing products.
+              In one journey you can go from skin analysis to simulation, GlowUp-style makeup and hair, clothes and accessory try-on, and a proof-oriented summary—without hopping between disconnected demos.
             </p>
             <button
               type="button"
@@ -362,7 +388,7 @@ export default function LandingPage() {
               Confidence before checkout.
             </h2>
             <p className="body-copy mt-5 text-base text-[#51606f]">
-              Mirra explains tone match, style fit, closet coverage, skin conflicts, and new spend before a user buys. That makes AI try-on feel accountable.
+              Before checkout, Mirra surfaces tone match, fit with your closet, skin compatibility, and what new spend would add—so try-on feels accountable, not like a filter.
             </p>
             <div className="mt-7 grid gap-3">
               {[
@@ -415,7 +441,7 @@ export default function LandingPage() {
 
       <footer className="bg-[#101820] px-5 pb-8 text-white sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-white/10 pt-6 text-sm text-white/54 sm:flex-row sm:items-center sm:justify-between">
-          <p className="ui-title">Mirra. AI Appearance Operator.</p>
+          <p className="ui-title">Mirra — skin, style, closet &amp; try-on in one flow.</p>
           <div className="flex gap-5">
             <a href="/privacy" className="hover:text-white">Privacy</a>
             <a href="/terms" className="hover:text-white">Terms</a>

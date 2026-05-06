@@ -224,7 +224,7 @@ function StudioStatus({
           Product links are resolved on the backend before Perfect Corp sees them, so product pages and temporary thumbnails can be converted into image references.
         </div>
         {savedMessage && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+          <div className="banner-success text-xs" role="status">
             {savedMessage}
           </div>
         )}
@@ -688,13 +688,13 @@ export default function TryOnPage() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="banner-error" role="alert">
           {error}
         </div>
       )}
 
       {studioNotice && !error && (
-        <div className="rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="banner-warn" role="status">
           {studioNotice}
         </div>
       )}
@@ -832,7 +832,7 @@ export default function TryOnPage() {
                   </button>
                 </div>
                 {bodyCameraError && (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <div className="banner-error" role="alert">
                     {bodyCameraError}
                   </div>
                 )}
@@ -879,7 +879,7 @@ export default function TryOnPage() {
               </div>
             )}
             {!bodyImage && (
-              <div className="mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              <div className="banner-warn mt-4" role="status">
                 Upload a full-body image before running clothes try-on.
               </div>
             )}

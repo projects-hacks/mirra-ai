@@ -13,7 +13,7 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
 
   return (
     <header
-      className="page-header-shell px-4"
+      className="page-header-shell"
       style={{ paddingTop: "calc(var(--safe-top) + 0.85rem)" }}
     >
       <div className="page-shell flex min-h-[72px] items-center justify-between gap-4 py-4">
@@ -28,7 +28,7 @@ export default function AppHeader({ title, user }: Readonly<AppHeaderProps>) {
         <button
           type="button"
           onClick={() => router.push("/profile")}
-          className="flex h-11 w-11 items-center justify-center rounded-full border"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-[transform,box-shadow] hover:shadow-[0_8px_24px_rgba(139,92,246,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] active:scale-95"
           style={{
             backdropFilter: "blur(14px)",
             background: "rgba(15, 19, 39, 0.72)",

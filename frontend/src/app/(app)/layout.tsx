@@ -13,7 +13,8 @@ const TITLES: Record<string, string> = {
   "/skin/simulate": "Skin Simulation",
   "/skin-history": "Skin History",
   "/glowup": "GlowUp",
-  "/closet": "Closet",
+  "/closet": "My closet",
+  "/closet/analytics": "Closet analytics",
   "/outfit": "Outfit Builder",
   "/try-on": "Try-On Studio",
 };
@@ -24,7 +25,14 @@ export default function AppLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, signIn } = useAuth();
-  const title = useMemo(() => TITLES[pathname] ?? "Mirra", [pathname]);
+  const title = useMemo(() => {
+    const exact = TITLES[pathname];
+    if (exact) return exact;
+    const prefix = Object.keys(TITLES)
+      .filter((p) => p !== "/" && pathname.startsWith(`${p}/`))
+      .sort((a, b) => b.length - a.length)[0];
+    return prefix ? TITLES[prefix] : "Mirra";
+  }, [pathname]);
 
   if (loading) {
     return (
@@ -81,7 +89,7 @@ export default function AppLayout({
     <div className="min-h-[100dvh]" style={{ background: "var(--bg)", color: "var(--on-surface)" }}>
       <AppHeader title={title} user={user} />
 
-      <main className="bottom-nav-offset px-4 pb-8 pt-4">
+      <main className="bottom-nav-offset pb-8 pt-4">
         <div key={pathname} className="route-transition">
           {children}
         </div>

@@ -1,7 +1,7 @@
 {
-  "name": "Mirra — AI Appearance Operator",
+  "name": "Mirra — Skin, style, closet & try-on",
   "short_name": "Mirra",
-  "description": "Your closet. Your skin. Your context. One operator.",
+  "description": "One guided flow for skin insight, styling, your closet, and try-on previews—with context before you buy.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

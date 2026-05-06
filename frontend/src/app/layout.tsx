@@ -6,8 +6,9 @@ import { AppProvider } from "@/components/providers/AppProvider";
 const configuredApiOrigin = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") ?? "";
 
 export const metadata: Metadata = {
-  title: "Mirra — AI Appearance Operator",
-  description: "Your closet. Your skin. Your context. One operator.",
+  title: "Mirra — Skin, style, closet & try-on",
+  description:
+    "One guided selfie flow for skin analysis, face-aware GlowUp, wardrobe matching, and virtual try-on—with context and proof before you buy.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192.png",
@@ -23,8 +24,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
   themeColor: "#c084fc",
   viewportFit: "cover", // For notched devices
 };

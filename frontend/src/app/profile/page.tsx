@@ -435,32 +435,30 @@ export default function ProfilePage() {
   );
 
   return (
-    <div
-      className="min-h-screen pb-12"
-      style={{ background: "var(--bg)", color: "var(--on-surface)" }}
-    >
-      {/* Header */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
-        style={{ background: "rgba(var(--bg-rgb, 10,10,20),0.85)", backdropFilter: "blur(16px)" }}
-      >
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm"
-          style={{ color: "var(--on-surface-variant)" }}
-        >
-          ← Back
-        </button>
-        <h1 className="text-base font-semibold tracking-tight">Profile</h1>
-        <button
-          onClick={handleLogOut}
-          className="text-sm"
-          style={{ color: "var(--error)" }}
-        >
-          Log Out
-        </button>
-      </div>
+    <div className="min-h-screen pb-12" style={{ background: "var(--bg)", color: "var(--on-surface)" }}>
+      <header className="page-header-shell" style={{ paddingTop: "calc(var(--safe-top) + 0.5rem)" }}>
+        <div className="page-shell flex min-h-[56px] items-center justify-between gap-3 py-3 sm:min-h-[64px] sm:py-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex min-h-11 items-center gap-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            style={{ color: "var(--on-surface-variant)" }}
+          >
+            ← Back
+          </button>
+          <h1 className="section-display text-center text-lg sm:text-xl">Profile</h1>
+          <button
+            type="button"
+            onClick={handleLogOut}
+            className="min-h-11 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--error)]"
+            style={{ color: "var(--error)" }}
+          >
+            Log out
+          </button>
+        </div>
+      </header>
 
-      <div className="max-w-lg mx-auto px-5 space-y-5 pt-4">
+      <div className="page-shell mx-auto max-w-lg space-y-5 pt-4">
 
         {/* ── Identity Card ── */}
         <div className="glass-card flex items-center gap-4">
@@ -498,7 +496,11 @@ export default function ProfilePage() {
             <button onClick={() => setIsEditing(true)} className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">Edit</button>
           )}
         </div>
-        {saveError && <p className="text-xs px-1" style={{ color: "var(--error)" }}>{saveError}</p>}
+        {saveError && (
+          <p className="banner-error text-xs" role="alert">
+            {saveError}
+          </p>
+        )}
 
         {/* ── Edit: currency + budget (only when editing) ── */}
         {isEditing && (

@@ -12,7 +12,7 @@ import ClosetStatistics from "@/components/closet/ClosetStatistics";
 import ItemDetailModal from "@/components/closet/ItemDetailModal";
 import BatchActionToolbar from "@/components/closet/BatchActionToolbar";
 import RecommendationsCard from "@/components/closet/RecommendationsCard";
-import BottomNav from "@/components/navigation/BottomNav";
+import ClosetSubNav from "@/components/navigation/ClosetSubNav";
 
 interface ClosetItem {
   id: string;
@@ -120,7 +120,7 @@ export default function ClosetPage() {
   } = useSWR<ClosetItem[]>(
     userId ? (["closet", userId] as const) : null,
     async ([, currentUserId]: readonly [string, string]) => {
-      const data = await fetchApi<ClosetApiResponse>(`/api/closet/?user_id=${encodeURIComponent(currentUserId)}`);
+      const data = await fetchApi<ClosetApiResponse>(`/api/closet?user_id=${encodeURIComponent(currentUserId)}`);
       return transformClosetItems(data);
     }
   );
@@ -155,7 +155,7 @@ export default function ClosetPage() {
         }
 
         // Create closet item
-        await fetchApi("/api/closet/", {
+        await fetchApi("/api/closet", {
           method: "POST",
           body: JSON.stringify({
             user_id: user.id,
@@ -296,10 +296,15 @@ export default function ClosetPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading your closet...</p>
+      <div className="flex min-h-[50dvh] items-center justify-center px-4">
+        <div className="glass-card max-w-sm text-center">
+          <div
+            className="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-2 border-[var(--outline-variant)] border-t-[var(--primary)]"
+            aria-hidden="true"
+          />
+          <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+            Loading your closet…
+          </p>
         </div>
       </div>
     );
@@ -307,13 +312,19 @@ export default function ClosetPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertCircle size={56} className="mx-auto mb-4 text-red-500" aria-hidden="true" />
-          <p className="text-red-500 mb-4">{error instanceof Error ? error.message : "Failed to load closet items"}</p>
+      <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 px-4">
+        <div className="glass-card max-w-md text-center">
+          <AlertCircle
+            size={48}
+            className="mx-auto mb-3"
+            style={{ color: "var(--error)" }}
+            aria-hidden="true"
+          />
+          <p className="banner-error text-left">{error instanceof Error ? error.message : "Failed to load closet items"}</p>
           <button
+            type="button"
             onClick={() => void fetchClosetItems()}
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+            className="btn-primary mt-4 w-full sm:w-auto"
           >
             Retry
           </button>
@@ -323,39 +334,42 @@ export default function ClosetPage() {
   }
 
   return (
-    <div className="bottom-nav-offset min-h-[100dvh] bg-transparent">
-      <div className="page-header-shell">
-        <div className="page-shell flex items-center justify-between gap-4 px-4 py-4">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl" style={{ fontFamily: "var(--font-serif)" }}>My Closet</h1>
-            <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-              {items.length} {items.length === 1 ? "item" : "items"} in your wardrobe
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] shadow-[0_12px_30px_rgba(139,92,246,0.28)] transition-transform hover:-translate-y-0.5"
-            >
-              <Plus size={16} aria-hidden="true" />
-              Add item
-            </button>
-            <button
-              onClick={toggleSelectionMode}
-              className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
-                selectionMode
-                  ? "bg-[var(--primary)] text-white"
-                  : "glass-panel text-[var(--on-surface)]"
-              }`}
-            >
-              {selectionMode ? <X size={16} aria-hidden="true" /> : <CheckSquare size={16} aria-hidden="true" />}
-              {selectionMode ? "Cancel" : "Select"}
-            </button>
-          </div>
+    <div className="space-y-6">
+      <div className="page-shell">
+        <ClosetSubNav />
+      </div>
+      <div className="page-shell flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <span className="ui-title" style={{ color: "var(--on-surface)" }}>
+            {items.length}
+          </span>{" "}
+          {items.length === 1 ? "item" : "items"} in your wardrobe
+        </p>
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] shadow-[0_12px_30px_rgba(139,92,246,0.28)] transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] active:scale-[0.98]"
+          >
+            <Plus size={16} aria-hidden="true" />
+            Add item
+          </button>
+          <button
+            type="button"
+            onClick={toggleSelectionMode}
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-sm transition-[transform,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] active:scale-[0.98] ${
+              selectionMode
+                ? "bg-[var(--primary)] text-white shadow-[0_10px_28px_rgba(139,92,246,0.35)]"
+                : "glass-panel text-[var(--on-surface)]"
+            }`}
+          >
+            {selectionMode ? <X size={16} aria-hidden="true" /> : <CheckSquare size={16} aria-hidden="true" />}
+            {selectionMode ? "Cancel" : "Select"}
+          </button>
         </div>
       </div>
 
-      <div className="page-shell px-4 py-6 sm:py-8">
+      <div className="page-shell space-y-6 pb-2 sm:pb-4">
 
       {/* Closet Statistics */}
       {items.length > 0 && <ClosetStatistics />}
@@ -416,8 +430,6 @@ export default function ClosetPage() {
         }}
         onUpdate={fetchClosetItems}
       />
-
-      <BottomNav />
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (

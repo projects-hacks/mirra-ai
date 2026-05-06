@@ -396,7 +396,7 @@ export default function SkinHistoryPage() {
     >
       {/* Header */}
       <div className="page-header-shell">
-        <div className="page-shell flex items-center justify-between px-4 py-4">
+        <div className="page-shell flex items-center justify-between py-4">
           <button
             onClick={() => router.back()}
             className="flex min-h-[44px] items-center gap-2 text-sm"
@@ -409,7 +409,7 @@ export default function SkinHistoryPage() {
         </div>
       </div>
 
-      <div className="page-shell grid gap-6 px-4 pt-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
+      <div className="page-shell grid gap-6 pt-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         
         {scans.length === 0 ? (
           <div className="glass-card py-12 text-center lg:col-span-2">

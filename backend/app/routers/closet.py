@@ -11,7 +11,7 @@ from app.models.closet import ExtractedMetadata
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 
 class ClosetItemCreate(BaseModel):
@@ -57,13 +57,13 @@ class ErrorResponse(BaseModel):
     success: bool = False
 
 
-@router.get("/")
+@router.get("")
 async def get_closet(user_id: str):
     result = supabase.table("closet_items").select("*").eq("user_id", user_id).execute()
     return {"items": result.data}
 
 
-@router.post("/")
+@router.post("")
 async def add_item(item: ClosetItemCreate):
     result = supabase.table("closet_items").insert(item.model_dump(exclude={"image"})).execute()
     return result.data[0] if result.data else {"error": "Failed to create"}

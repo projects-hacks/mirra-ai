@@ -28,7 +28,7 @@ export default function SkinPage() {
   return (
     <div className="page-shell space-y-4 sm:space-y-6">
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="banner-error" role="alert">
           {error}
         </div>
       )}

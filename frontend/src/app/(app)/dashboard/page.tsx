@@ -24,7 +24,7 @@ export default function DashboardPage() {
   return (
     <div className="page-shell space-y-4 sm:space-y-6">
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="banner-error" role="alert">
           {error}
         </div>
       )}
@@ -42,14 +42,14 @@ export default function DashboardPage() {
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href="/capture"
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#111827] transition-transform hover:-translate-y-0.5"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#111827] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.98]"
               >
                 <Camera size={16} aria-hidden="true" />
                 Capture scan
               </Link>
               <Link
                 href="/glowup"
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-transform hover:-translate-y-0.5"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-[transform,box-shadow] hover:-translate-y-0.5 hover:bg-white/14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.98]"
               >
                 <ScanFace size={16} aria-hidden="true" />
                 Plan GlowUp

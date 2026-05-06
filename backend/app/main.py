@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.core.config import settings
 from app.core import cache
@@ -44,6 +45,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Outermost: trust X-Forwarded-Proto / Host from the platform load balancer so
+# slash redirects and absolute URLs use https (avoids mixed-content on the frontend).
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
