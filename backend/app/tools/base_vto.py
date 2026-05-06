@@ -43,7 +43,12 @@ async def execute_vto(
     reference image URL (garment, earring, hairstyle, etc.).
     """
     selfie_hash = cache.hash_bytes(selfie_bytes)
-    cache_key = f"{CachePrefix.VTO}:{task_type}:{selfie_hash}:{cache_suffix}"
+    params_hash = cache.hash_json({
+        "ref_image_url": ref_image_url,
+        "extra_params": extra_params or {},
+        "cache_suffix": cache_suffix,
+    })
+    cache_key = f"{CachePrefix.VTO}:{task_type}:{selfie_hash}:{params_hash}"
 
     cached = await cache.get(cache_key)
     if cached:

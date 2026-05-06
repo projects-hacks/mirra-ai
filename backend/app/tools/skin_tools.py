@@ -4,6 +4,7 @@ from app.services.supabase_client import supabase
 from app.services.color_analyzer import _analyze_with_perfectcorp
 from app.core import cache
 from app.core.constants import VTOTaskType, CachePrefix, ALL_SKIN_CONCERNS
+from app.tools.base_vto import extract_result_image_url
 
 
 _OUTPUT_TYPE_ALIASES = {
@@ -276,8 +277,9 @@ async def simulate_skin(
     if not cached:
         await cache.set(cache_key, result, cache.TTL.VTO_RESULT)
 
-    # The simulation API returns a result image URL
-    simulation_url = result.get("url") or result.get("result", {}).get("url", "")
+    # Perfect Corp visual task success usually returns the image at
+    # data.results.url, but existing wrappers may flatten it to url/image_url.
+    simulation_url = extract_result_image_url(result) or ""
 
     return {
         "simulation_url": simulation_url,

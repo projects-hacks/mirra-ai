@@ -71,7 +71,7 @@ export default function StyleProfilePage() {
         }
 
         const response = await fetch(
-          getApiUrl(`/api/style-profile?user_id=${userId}`),
+          getApiUrl(`/api/style-profile/?user_id=${userId}`),
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,

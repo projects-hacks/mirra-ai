@@ -14,7 +14,8 @@ async def try_on_makeup(selfie_bytes: bytes, effects: list[dict[str, Any]]) -> d
     Instead it takes an effects array with category, pattern, palettes.
     """
     selfie_hash = cache.hash_bytes(selfie_bytes)
-    cache_key = f"{CachePrefix.VTO}:{VTOTaskType.MAKEUP}:{selfie_hash}"
+    effects_hash = cache.hash_json({"effects": effects, "version": "1.0"})
+    cache_key = f"{CachePrefix.VTO}:{VTOTaskType.MAKEUP}:{selfie_hash}:{effects_hash}"
 
     cached = await cache.get(cache_key)
     if cached:

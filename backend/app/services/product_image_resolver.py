@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+import ipaddress
 import re
+import socket
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any
@@ -22,6 +24,8 @@ REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; MirraProductResolver/1.0)",
     "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
 }
+MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
+MAX_REDIRECTS = 5
 
 
 class ProductImageResolverError(Exception):
@@ -77,6 +81,58 @@ def _is_http_url(raw_url: str) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def _is_public_ip(address: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    return not (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
+
+def _validate_public_url(raw_url: str) -> str:
+    try:
+        parsed = urlparse(raw_url.strip())
+    except ValueError as exc:
+        raise ProductImageResolverError("product_page_url", "Use a valid product or image URL.") from exc
+
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ProductImageResolverError("product_page_url", "Use a valid product or image URL.")
+
+    hostname = parsed.hostname
+    blocked_hosts = {"localhost", "metadata.google.internal"}
+    if hostname.lower() in blocked_hosts or hostname.lower().endswith(".local"):
+        raise ProductImageResolverError("invalid_input", "This product image host is not allowed.")
+
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if not _is_public_ip(str(ip)):
+            raise ProductImageResolverError("invalid_input", "This product image host is not allowed.")
+        return raw_url.strip()
+    except ValueError:
+        pass
+
+    try:
+        resolved = socket.getaddrinfo(hostname, parsed.port, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise ProductImageResolverError(
+            "expired_image_url",
+            "That image link expired or is blocked. Try another product image.",
+            provider_message=str(exc),
+        ) from exc
+
+    if not resolved or any(not _is_public_ip(address[0]) for *_, address in resolved):
+        raise ProductImageResolverError("invalid_input", "This product image host is not allowed.")
+
+    return raw_url.strip()
+
+
 def _looks_like_direct_image_url(raw_url: str) -> bool:
     try:
         parsed = urlparse(raw_url.strip())
@@ -87,6 +143,50 @@ def _looks_like_direct_image_url(raw_url: str) -> bool:
 
 def _content_type(headers: httpx.Headers) -> str:
     return headers.get("content-type", "").split(";")[0].strip().lower()
+
+
+def _response_bytes(response: httpx.Response) -> bytes:
+    content_length = response.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_DOWNLOAD_BYTES:
+                raise ProductImageResolverError(
+                    "reference_rejected",
+                    "The product image is larger than 10 MB.",
+                )
+        except ValueError:
+            pass
+
+    content = response.content
+    if len(content) > MAX_DOWNLOAD_BYTES:
+        raise ProductImageResolverError(
+            "reference_rejected",
+            "The product image is larger than 10 MB.",
+        )
+    return content
+
+
+async def _get_public_url(client: httpx.AsyncClient, raw_url: str) -> httpx.Response:
+    current_url = _validate_public_url(raw_url)
+    for _ in range(MAX_REDIRECTS + 1):
+        response = await client.get(current_url, follow_redirects=False)
+        if response.is_redirect:
+            location = response.headers.get("location")
+            if not location:
+                raise ProductImageResolverError(
+                    "expired_image_url",
+                    "That image link expired or is blocked. Try another product image.",
+                    provider_message="Redirect without Location header",
+                )
+            current_url = _validate_public_url(urljoin(str(response.url), location))
+            continue
+        return response
+
+    raise ProductImageResolverError(
+        "expired_image_url",
+        "That image link expired or is blocked. Try another product image.",
+        provider_message="Too many redirects",
+    )
 
 
 def _image_dimensions(image_bytes: bytes) -> tuple[int | None, int | None]:
@@ -186,12 +286,7 @@ async def _upload_normalized_image(
 
 async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
     """Resolve a product page or image URL to a direct image URL."""
-    input_url = raw_url.strip()
-    if not _is_http_url(input_url):
-        raise ProductImageResolverError(
-            "product_page_url",
-            "Use a valid product or image URL.",
-        )
+    input_url = _validate_public_url(raw_url)
 
     cache_key = f"{CachePrefix.PRODUCTS}:image:{cache.hash_json({'url': input_url})}"
     cached = await cache.get(cache_key)
@@ -200,10 +295,10 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
 
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(12.0, connect=5.0),
-        follow_redirects=True,
+        follow_redirects=False,
         headers=REQUEST_HEADERS,
     ) as client:
-        response = await client.get(input_url)
+        response = await _get_public_url(client, input_url)
 
         if response.status_code >= 400:
             raise ProductImageResolverError(
@@ -215,7 +310,7 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
         content_type = _content_type(response.headers)
         source = "direct" if _looks_like_direct_image_url(str(response.url)) else "content_type"
         resolved_url = str(response.url)
-        image_bytes = response.content
+        image_bytes = _response_bytes(response)
 
         if content_type.startswith("text/html"):
             image_url, source = _extract_meta_image(response.text, str(response.url))
@@ -225,7 +320,7 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
                     "This product page does not expose a usable product image.",
                 )
 
-            image_response = await client.get(image_url)
+            image_response = await _get_public_url(client, image_url)
             if image_response.status_code >= 400:
                 raise ProductImageResolverError(
                     "expired_image_url",
@@ -234,19 +329,13 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
                 )
             content_type = _content_type(image_response.headers)
             resolved_url = str(image_response.url)
-            image_bytes = image_response.content
+            image_bytes = _response_bytes(image_response)
 
         if not content_type.startswith("image/"):
             raise ProductImageResolverError(
                 "product_page_url",
                 "This URL does not point to a usable product image.",
                 provider_message=f"content-type={content_type or 'unknown'}",
-            )
-
-        if len(image_bytes) > 10 * 1024 * 1024:
-            raise ProductImageResolverError(
-                "reference_rejected",
-                "The product image is larger than 10 MB.",
             )
 
         uploaded_url, normalized_type, width, height = await _upload_normalized_image(

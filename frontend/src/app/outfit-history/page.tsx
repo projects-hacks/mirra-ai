@@ -87,7 +87,7 @@ export default function OutfitHistoryPage() {
 
         // Fetch outfit logs
         const logsResponse = await fetch(
-          getApiUrl(`/api/outfit-history?user_id=${userId}`),
+          getApiUrl(`/api/outfit-history/?user_id=${userId}`),
           {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,
@@ -369,7 +369,7 @@ export default function OutfitHistoryPage() {
                     if (!session) return;
 
                     const logsResponse = await fetch(
-                      getApiUrl(`/api/outfit-history?user_id=${userId}`),
+                      getApiUrl(`/api/outfit-history/?user_id=${userId}`),
                       { headers: { 'Authorization': `Bearer ${session.access_token}` } }
                     );
                     const logsData = await logsResponse.json();

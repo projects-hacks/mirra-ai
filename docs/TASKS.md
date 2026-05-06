@@ -245,6 +245,215 @@ This section documents what was completed across the previous implementation pas
 
 ---
 
+## Codebase Audit Backlog — May 6, 2026
+
+This backlog comes from the technical audit after the Perfect Corp + Gemini integration work. The Perfect Corp source of truth for API payloads, result shapes, polling behavior, image requirements, and error taxonomy is [`docs/PERFECT_CORP_API_SOURCE_OF_TRUTH.md`](./PERFECT_CORP_API_SOURCE_OF_TRUTH.md).
+
+### P0 Correctness And Cost Controls
+
+- [x] Fix VTO cache-key correctness.
+  - Files:
+    - `backend/app/tools/base_vto.py`
+    - `backend/app/tools/beauty_tools.py`
+  - Problem:
+    - Makeup VTO was cached only by selfie hash, so changing makeup effects on the same selfie could return the first cached makeup render.
+    - Shared VTO cache keys used a manually supplied suffix and did not consistently include the full reference URL and params.
+  - Implementation:
+    - Include `task_type`, selfie hash, full reference URL hash, `extra_params`, and makeup effects/version in cache keys.
+  - Acceptance:
+    - Same selfie + different makeup effects returns different cache keys.
+    - Same selfie + same product + same params still reuses cache.
+    - Covered by `backend/app/tools/test_vto_contracts.py`.
+
+- [x] Fix skin simulation image URL extraction.
+  - Files:
+    - `backend/app/tools/skin_tools.py`
+    - `backend/app/tools/base_vto.py`
+  - Perfect Corp reference:
+    - Visual task success responses usually return the rendered image at `data.results.url`.
+  - Problem:
+    - Skin simulation only checked `url` and `result.url`, so a valid provider result in `results.url` could surface as an empty simulation URL.
+  - Implementation:
+    - Reuse the shared nested image extractor used by VTO.
+  - Acceptance:
+    - `url`, `image_url`, `result_image_url`, `result.url`, `results.url`, and `data.url` are accepted.
+    - Covered by `backend/app/tools/test_vto_contracts.py`.
+
+- [x] Remove remaining same-origin collection-route redirects.
+  - Files:
+    - `frontend/src/app/style-profile/page.tsx`
+    - `frontend/src/app/outfit-history/page.tsx`
+  - Problem:
+    - Backend routes defined as `@router.get("/")` can redirect slashless `/api/...` calls to `/api/.../`.
+    - In production behind Vercel rewrites, this can expose an absolute backend `Location` header and reintroduce mixed-content failures.
+  - Implementation:
+    - Call slash-normalized collection routes directly.
+  - Acceptance:
+    - No 307 redirect for style profile or outfit history reads.
+
+- [ ] Lock down expensive public routes.
+  - Files:
+    - `backend/app/core/auth_middleware.py`
+    - route-specific callers in `frontend/src/lib/api.ts`
+  - Problem:
+    - Public routes currently include skin analysis, skin simulation, VTO, products, and GlowUp, which can trigger Perfect Corp, Serper, Gemini, and resolver cost without an authenticated user.
+  - Implementation options:
+    - Require Supabase JWT for all post-onboarding expensive routes.
+    - Keep only `/api/onboarding/init` and the minimum first-scan onboarding endpoints public.
+    - If unauthenticated onboarding calls must remain, issue a short-lived signed onboarding token and rate-limit it.
+  - Acceptance:
+    - Anonymous users cannot call paid Perfect Corp / Gemini / Serper endpoints outside the intended onboarding path.
+    - Authenticated app pages still work through `fetchApi`.
+
+- [ ] Harden product image resolver against SSRF and oversized downloads.
+  - Files:
+    - `backend/app/services/product_image_resolver.py`
+    - `backend/app/routers/products.py`
+  - Problem:
+    - Resolver follows arbitrary user-supplied URLs and redirects. It should not fetch localhost, private IPs, metadata IPs, link-local addresses, or non-public hosts.
+  - Implementation:
+    - [x] Validate URL scheme and host before fetch.
+    - [x] Resolve DNS and block private/link-local/loopback/multicast/reserved IPs.
+    - [x] Revalidate every redirect target.
+    - [x] Reject oversized responses by `Content-Length` and post-read byte count.
+    - [ ] Stream downloads with a hard byte ceiling instead of reading unknown-size responses into memory.
+  - Acceptance:
+    - Private and metadata URLs return `product_page_url` / `invalid_input` without network fetch.
+    - Large files fail before memory pressure.
+    - First hardening pass covered by `backend/app/services/test_product_image_resolver.py`.
+
+### P1 API Contract And Error Consistency
+
+- [ ] Add Pydantic response contracts for skin and VTO.
+  - Files:
+    - `backend/app/routers/skin.py`
+    - `backend/app/routers/vto.py`
+    - `backend/app/models/perfectcorp_types.py`
+  - Problem:
+    - Most routes return `dict[str, Any]`, so response regressions are not caught by backend typing or tests.
+  - Implementation:
+    - Define normalized success models for skin analysis, skin simulation, clothes, makeup, hair, earrings, and necklace.
+    - Define a common error detail model matching the user-facing taxonomy.
+  - Acceptance:
+    - Every frontend VTO consumer can rely on `image_url`.
+    - Every provider failure returns structured `detail.category`, `detail.message`, `detail.source`, and provider fields when available.
+
+- [ ] Finish moving direct frontend `fetch` calls to typed API clients.
+  - Files:
+    - `frontend/src/lib/api.ts`
+    - `frontend/src/app/style-profile/page.tsx`
+    - `frontend/src/app/outfit-history/page.tsx`
+    - `frontend/src/components/closet/*.tsx`
+  - Problem:
+    - Direct `fetch` calls bypass central auth, 401 handling, same-origin normalization, and `formatApiError`.
+  - Implementation:
+    - Add typed clients for style profile, outfit history, closet analytics, recommendations, metadata extraction, and item detail mutations.
+    - Replace ad hoc fetch calls.
+  - Acceptance:
+    - API calls use `fetchApi`, `apiPost`, or `fetchWithFormData` unless fetching a non-API image/blob.
+
+- [ ] Validate Gemini JSON with Pydantic before returning to frontend.
+  - Files:
+    - `backend/app/services/agent.py`
+  - Problem:
+    - Gemini is instructed to return structured JSON, but backend currently trusts the parsed object shape.
+  - Implementation:
+    - Add models for skin insights, GlowUp plans, and outfit reasoning.
+    - Normalize or fallback when required fields are missing.
+  - Acceptance:
+    - Frontend never receives malformed Gemini objects.
+    - Fallbacks are explicit and typed.
+
+### P1 Persistence And Privacy
+
+- [ ] Replace large personal-image `localStorage` persistence.
+  - Files:
+    - `frontend/src/components/providers/AppProvider.tsx`
+    - `frontend/src/app/(app)/try-on/page.tsx`
+    - `frontend/src/app/(app)/outfit/page.tsx`
+  - Problem:
+    - Portrait selfie and full-body images are stored as large data URLs in `localStorage`.
+    - This can hit quota, leave stale personal images on shared devices, and is not cleared consistently.
+  - Implementation options:
+    - Store images in Supabase storage and persist only URLs.
+    - Or use IndexedDB with explicit expiration and user-facing delete controls.
+    - Ensure global reset clears body image storage.
+  - Acceptance:
+    - No long-lived base64 body/selfie data in localStorage.
+    - Users can clear captured images from one place.
+
+- [ ] Make proof-card and diary persistence end-to-end typed.
+  - Files:
+    - `backend/app/routers/outfit.py`
+    - `backend/app/routers/proof_cards.py`
+    - `frontend/src/lib/api.ts`
+    - `frontend/src/app/look-diary/page.tsx`
+  - Problem:
+    - Proof-card creation and listing work, but response payloads are still partially loose.
+  - Acceptance:
+    - Proof cards have a shared backend/frontend type and all save flows use it.
+
+### P2 Feature Completion
+
+- [ ] Add explicit image-quality validation beyond lightweight frontend checks.
+  - Scope:
+    - full-body clothes source image
+    - portrait selfie for face, makeup, earrings, necklace, hair
+  - Perfect Corp reference:
+    - Body/clothes VTO expects full-body visibility, neutral pose, even lighting, plain background, form-fitting clothing, JPG/PNG under 10MB, long side <= 4096.
+    - Face APIs expect centered, forward-facing, unobstructed face and adequate lighting.
+  - Implementation:
+    - Add server-side image dimension checks.
+    - Add category-specific preflight messages before spending provider units.
+  - Acceptance:
+    - Unsupported image size/type fails locally before Perfect Corp.
+
+- [ ] Add product/reference-specific accessory controls.
+  - Scope:
+    - earrings: side/front guidance, single/both earring behavior, optional side selection
+    - necklace: neck visibility guidance, optional length/placement controls
+  - Perfect Corp reference:
+    - Earring and necklace APIs support placement, shadow, ambient light, and optional anchor/mask parameters.
+  - Acceptance:
+    - UI exposes safe default controls without overwhelming the main flow.
+
+- [ ] Expand tests.
+  - Backend tests:
+    - VTO cache-key uniqueness.
+    - skin simulation URL extraction from nested `results.url`.
+    - product resolver SSRF blocking and error taxonomy.
+    - auth middleware paid-route behavior.
+    - slash route no-redirect coverage.
+  - Frontend tests:
+    - `formatApiError` taxonomy messages.
+    - typed API clients build slash-normalized URLs.
+    - Try-On save requires an applied result.
+    - GlowUp partial product failures render visible states.
+
+### P2 Operational Hardening
+
+- [ ] Add rate limiting and request budgeting.
+  - Scope:
+    - Perfect Corp routes
+    - Gemini routes
+    - Serper search
+    - product image resolver
+  - Acceptance:
+    - Per-user and per-IP limits exist.
+    - Error responses use taxonomy category `service_unavailable` or `api_timeout` as appropriate.
+
+- [ ] Add provider observability.
+  - Scope:
+    - task type
+    - provider task id
+    - duration
+    - cache hit/miss
+    - unit-affecting success/failure
+  - Acceptance:
+    - Debugging production provider failures does not require reproducing blindly.
+
+---
+
 ## ⭐ CORE CONCEPT: The Agent Reasoning Layer
 
 **This is what wins the hackathon.** Perfect Corp APIs are the "eyes" (raw data). Our AI agent (Gemini) is the "brain" that connects the dots and shows its thinking.
