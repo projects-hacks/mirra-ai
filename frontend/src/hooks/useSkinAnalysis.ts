@@ -6,9 +6,8 @@ import { productsApi, skinApi, weatherApi, type SkinHistoryRow } from "@/lib/api
 import {
   CONCERN_PRODUCT_QUERIES,
   deriveSimulationIntensities,
-  normalizeSkinConcerns,
 } from "@/lib/skinScoring";
-import { summarizeSkinHistory } from "@/lib/skinSummary";
+import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
 import { resolveUserLocation } from "@/lib/userContext";
 import type { AgentInsight, Product, SkinConcern, SkinToneData, WeatherInfo } from "@/types";
 
@@ -94,7 +93,7 @@ export function useSkinAnalysis() {
       if (cancelled) return;
 
       const skinHistory = historyResult.status === "fulfilled" ? historyResult.value : [];
-      const concerns = normalizeSkinConcerns(skinHistory[0]?.scores);
+      const { concerns } = buildSkinSummaryFromHistory(skinHistory);
       const topConcerns = concerns.slice(0, 3);
 
       setHistory(skinHistory);
@@ -146,8 +145,7 @@ export function useSkinAnalysis() {
     };
   }, []);
 
-  const concerns = useMemo(() => normalizeSkinConcerns(history[0]?.scores), [history]);
-  const summary = useMemo(() => summarizeSkinHistory(history, concerns), [history, concerns]);
+  const { concerns, summary } = useMemo(() => buildSkinSummaryFromHistory(history), [history]);
   const intensities = useMemo(() => deriveSimulationIntensities(history[0]?.scores), [history]);
 
   return {

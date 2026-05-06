@@ -103,34 +103,63 @@ function extractCapturedImages(value: unknown): CapturedImage[] {
   return [];
 }
 
-function pinVendorCameraOverlay() {
-  const selectors = [
-    "#YMK-wrapper",
-    "#ymk-wrapper",
-    "#YMK-container",
-    "#ymk-container",
-    "#YMK-cameraKit",
-    "#ymk-cameraKit",
-    ".YMK-wrapper",
-    ".ymk-wrapper",
-    ".YMK-container",
-    ".ymk-container",
-    ".YMK-cameraKit",
-    ".ymk-cameraKit",
-  ];
+const CAMERA_KIT_ROOT_SELECTORS = [
+  "#YMK-wrapper",
+  "#ymk-wrapper",
+  "#YMK-container",
+  "#ymk-container",
+  "#YMK-cameraKit",
+  "#ymk-cameraKit",
+  ".YMK-wrapper",
+  ".ymk-wrapper",
+  ".YMK-container",
+  ".ymk-container",
+  ".YMK-cameraKit",
+  ".ymk-cameraKit",
+  "[id*='YMK']",
+  "[id*='ymk']",
+  "[class*='YMK']",
+  "[class*='ymk']",
+];
 
-  selectors.forEach((selector) => {
-    document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
-      element.style.position = "fixed";
-      element.style.inset = "0";
-      element.style.width = "100vw";
-      element.style.height = "100dvh";
-      element.style.maxWidth = "none";
-      element.style.maxHeight = "none";
-      element.style.margin = "0";
-      element.style.zIndex = "80";
-      element.style.background = "#050712";
-    });
+function isIgnoredBodyChild(element: Element) {
+  const tagName = element.tagName.toLowerCase();
+  if (["script", "style", "link", "meta"].includes(tagName)) return true;
+  if (element.id === "__next") return true;
+  if (element.id === "YMK-module") return true;
+  if (element.getAttribute("data-nextjs-toast") !== null) return true;
+  if (element.tagName.toLowerCase() === "next-route-announcer") return true;
+  return false;
+}
+
+function applyImportantStyle(element: HTMLElement, property: string, value: string) {
+  element.style.setProperty(property, value, "important");
+}
+
+function styleCameraKitRoot(element: HTMLElement) {
+  element.dataset.mirraCameraKitRoot = "true";
+  applyImportantStyle(element, "position", "fixed");
+  applyImportantStyle(element, "inset", "0");
+  applyImportantStyle(element, "width", "100vw");
+  applyImportantStyle(element, "height", "100dvh");
+  applyImportantStyle(element, "max-width", "none");
+  applyImportantStyle(element, "max-height", "none");
+  applyImportantStyle(element, "margin", "0");
+  applyImportantStyle(element, "z-index", "80");
+  applyImportantStyle(element, "background", "#050712");
+  applyImportantStyle(element, "overflow", "hidden");
+
+  element.querySelectorAll<HTMLElement>("iframe, video, canvas").forEach((child) => {
+    applyImportantStyle(child, "width", "100%");
+    applyImportantStyle(child, "height", "100%");
+    applyImportantStyle(child, "max-width", "none");
+    applyImportantStyle(child, "max-height", "none");
+  });
+}
+
+function styleKnownCameraKitRoots() {
+  CAMERA_KIT_ROOT_SELECTORS.forEach((selector) => {
+    document.querySelectorAll<HTMLElement>(selector).forEach(styleCameraKitRoot);
   });
 }
 
@@ -149,12 +178,55 @@ export function useCameraKit(events: CameraKitEvents = {}) {
   const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCameraOpenRef = useRef(false);
   const isOpeningRef = useRef(false);
+  const bodyChildrenBeforeOpenRef = useRef<Set<Element>>(new Set());
+  const cameraDomObserverRef = useRef<MutationObserver | null>(null);
 
   // Load SDK script
   const eventsRef = useRef(events);
   useEffect(() => {
     eventsRef.current = events;
   }, [events]);
+
+  const pinVendorCameraOverlay = useCallback(() => {
+    styleKnownCameraKitRoots();
+
+    Array.from(document.body.children).forEach((child) => {
+      if (bodyChildrenBeforeOpenRef.current.has(child)) return;
+      if (isIgnoredBodyChild(child)) return;
+      if (child instanceof HTMLElement) {
+        styleCameraKitRoot(child);
+      }
+    });
+  }, []);
+
+  const stopCameraKitDomGuard = useCallback(() => {
+    cameraDomObserverRef.current?.disconnect();
+    cameraDomObserverRef.current = null;
+    document.body.dataset.mirraCameraKitOpen = "false";
+    document.body.style.removeProperty("overflow");
+  }, []);
+
+  const startCameraKitDomGuard = useCallback(() => {
+    bodyChildrenBeforeOpenRef.current = new Set(Array.from(document.body.children));
+    document.body.dataset.mirraCameraKitOpen = "true";
+    document.body.style.setProperty("overflow", "hidden", "important");
+    cameraDomObserverRef.current?.disconnect();
+    cameraDomObserverRef.current = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (bodyChildrenBeforeOpenRef.current.has(node)) return;
+          if (isIgnoredBodyChild(node)) return;
+          styleCameraKitRoot(node);
+        });
+      });
+      pinVendorCameraOverlay();
+    });
+    cameraDomObserverRef.current.observe(document.body, { childList: true });
+    window.setTimeout(pinVendorCameraOverlay, 0);
+    window.setTimeout(pinVendorCameraOverlay, 250);
+    window.setTimeout(pinVendorCameraOverlay, 750);
+  }, [pinVendorCameraOverlay]);
 
   const registerEventHandlers = useCallback(() => {
     if (!window.YMK || eventHandlersRef.current.size > 0) return;
@@ -200,6 +272,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         debugFlow("camera-kit", "event:closed");
         isOpeningRef.current = false;
         isCameraOpenRef.current = false;
+        stopCameraKitDomGuard();
         setIsCameraOpen(false);
         setLoadingProgress(0);
         eventsRef.current.onClosed?.();
@@ -211,7 +284,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       window.YMK!.addEventListener(event, handler);
     });
     debugFlow("camera-kit", "registered event handlers", { events: Object.keys(handlers) });
-  }, []);
+  }, [pinVendorCameraOverlay, stopCameraKitDomGuard]);
 
   const loadSDK = useCallback(() => {
     debugFlow("camera-kit", "loadSDK called", {
@@ -274,7 +347,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     loadTimeoutRef.current = setTimeout(() => {
       if (!window.YMK) {
-        const err = new Error("Camera Kit did not finish loading. Falling back to device camera is recommended.");
+        const err = new Error("Camera Kit did not finish loading. Please retry the Perfect Corp camera scan.");
         debugFlow("camera-kit", "SDK load timeout", err);
         setError(err);
         setIsSDKLoading(false);
@@ -341,6 +414,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
 
     try {
       isOpeningRef.current = true;
+      startCameraKitDomGuard();
       const defaultConfig: CameraKitConfig = {
         faceDetectionMode: 'skincare',
         imageFormat: 'base64',
@@ -351,8 +425,6 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       window.YMK.init(defaultConfig);
       debugFlow("camera-kit", "YMK.init called", defaultConfig);
       window.YMK.openCameraKit();
-      window.setTimeout(pinVendorCameraOverlay, 0);
-      window.setTimeout(pinVendorCameraOverlay, 250);
       debugFlow("camera-kit", "YMK.openCameraKit called");
 
       if (openTimeoutRef.current) {
@@ -369,13 +441,14 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       return true;
     } catch (err) {
       isOpeningRef.current = false;
+      stopCameraKitDomGuard();
       const error = err instanceof Error ? err : new Error('Failed to open camera');
       debugFlow("camera-kit", "openCamera threw", error);
       setError(error);
       eventsRef.current.onError?.(error);
       return false;
     }
-  }, [closeVendorCamera, resetOpenState]);
+  }, [closeVendorCamera, resetOpenState, startCameraKitDomGuard, stopCameraKitDomGuard]);
 
   // Close camera
   const closeCamera = useCallback(() => {
@@ -392,6 +465,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
     try {
       closeVendorCamera();
       resetOpenState();
+      stopCameraKitDomGuard();
     } catch (err) {
       console.error('Error closing camera:', err);
       const error = err instanceof Error ? err : new Error('Failed to close camera');
@@ -399,7 +473,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       setError(error);
       eventsRef.current.onError?.(error);
     }
-  }, [closeVendorCamera, resetOpenState]);
+  }, [closeVendorCamera, resetOpenState, stopCameraKitDomGuard]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -428,10 +502,13 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         try {
           closeVendorCamera();
           resetOpenState();
+          stopCameraKitDomGuard();
         } catch (err) {
           console.error('Error closing camera on unmount:', err);
         }
       }
+
+      stopCameraKitDomGuard();
 
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current);
@@ -443,7 +520,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         openTimeoutRef.current = null;
       }
     };
-  }, [closeVendorCamera, resetOpenState]);
+  }, [closeVendorCamera, resetOpenState, stopCameraKitDomGuard]);
 
   return {
     isSDKLoaded,

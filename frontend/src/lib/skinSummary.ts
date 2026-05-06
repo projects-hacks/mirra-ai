@@ -1,6 +1,6 @@
 import type { AgentInsight, SkinConcern, SkinSummary, WeatherInfo } from "@/types";
 import type { SkinHistoryRow } from "@/lib/api";
-import { normalizeSkinConcerns } from "@/lib/skinScoring";
+import { extractOverallSkinScore, normalizeSkinConcerns } from "@/lib/skinScoring";
 
 function summarizeTrend(
   currentOverallScore: number,
@@ -34,9 +34,7 @@ export function summarizeSkinHistory(
     };
   }
 
-  const overallScore = concerns.length
-    ? Math.round(concerns.reduce((sum, concern) => sum + concern.score, 0) / concerns.length)
-    : 0;
+  const overallScore = extractOverallSkinScore(latest.scores, concerns);
 
   return {
     overallScore,
@@ -44,6 +42,14 @@ export function summarizeSkinHistory(
     lastScanDate: latest.created_at ?? null,
     trend: summarizeTrend(overallScore, history.length > 1 ? normalizeSkinConcerns(history[1]?.scores) : []),
     topConcerns: concerns.slice(0, 3).map((concern) => ({ name: concern.label, score: concern.score })),
+  };
+}
+
+export function buildSkinSummaryFromHistory(history: SkinHistoryRow[]) {
+  const concerns = normalizeSkinConcerns(history[0]?.scores);
+  return {
+    concerns,
+    summary: summarizeSkinHistory(history, concerns),
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Camera, CheckCircle2, TriangleAlert } from "lucide-react";
 import { useCameraKit } from "@/hooks/useCameraKit";
 import { useCamera } from "@/hooks/useCamera";
@@ -14,11 +14,7 @@ interface SelfieCaptureScreenProps {
 export function SelfieCaptureScreen({
   onCapture,
 }: Readonly<SelfieCaptureScreenProps>) {
-  const [preferNativeFallback, setPreferNativeFallback] = useState(false);
-  const useNativeCamera = useMemo(
-    () => !ENABLE_CAMERA_KIT || preferNativeFallback,
-    [preferNativeFallback]
-  );
+  const useNativeCamera = !ENABLE_CAMERA_KIT;
   const { videoRef, capture, isReady, error: nativeCameraError } = useCamera({
     enabled: useNativeCamera,
   });
@@ -42,11 +38,11 @@ export function SelfieCaptureScreen({
 
   // Load SDK on mount
   useEffect(() => {
-    if (!ENABLE_CAMERA_KIT || preferNativeFallback) {
+    if (!ENABLE_CAMERA_KIT) {
       return;
     }
     loadSDK();
-  }, [loadSDK, preferNativeFallback]);
+  }, [loadSDK]);
 
   const handleStartScan = () => {
     if (!ENABLE_CAMERA_KIT) {
@@ -100,7 +96,7 @@ export function SelfieCaptureScreen({
           <h2 className="text-center text-2xl font-bold text-white">Let&apos;s setup your profile</h2>
           <p className="mx-auto max-w-xl text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
             {useNativeCamera
-              ? "Center your face and capture when you're ready. Perfect Corp Camera Kit is paused while using the device camera fallback."
+              ? "Center your face and capture when you're ready. This mode is only used when Perfect Corp Camera Kit is disabled for local development."
               : "We'll use the Perfect Corp Face SDK to perform a detailed scan of your skin health. Please ensure you are in a well-lit room."}
           </p>
         </div>
@@ -128,28 +124,6 @@ export function SelfieCaptureScreen({
             ? (isReady ? "Capture Selfie" : "Preparing Camera...")
             : (isSDKLoading ? "Loading Camera Kit..." : isSDKLoaded ? "Start Face Scan" : "Retry Camera Kit")}
         </button>
-
-        {ENABLE_CAMERA_KIT && !useNativeCamera && (
-          <button
-            type="button"
-            onClick={() => setPreferNativeFallback(true)}
-            className="text-sm font-medium underline"
-            style={{ color: "var(--on-surface-variant)" }}
-          >
-            Use device camera instead
-          </button>
-        )}
-
-        {ENABLE_CAMERA_KIT && useNativeCamera && (
-          <button
-            type="button"
-            onClick={() => setPreferNativeFallback(false)}
-            className="text-sm font-medium underline"
-            style={{ color: "var(--on-surface-variant)" }}
-          >
-            Try Perfect Corp Camera Kit again
-          </button>
-        )}
       </div>
 
       {(error || nativeCameraError) && !useNativeCamera && (
@@ -167,9 +141,28 @@ export function SelfieCaptureScreen({
                 {error?.message || nativeCameraError || "Failed to load Perfect Corp SDK"}
               </p>
             </div>
-            <button onClick={() => setPreferNativeFallback(true)} className="btn-primary w-full">
-              Continue With Device Camera
+            <button onClick={loadSDK} className="btn-primary w-full">
+              Retry Camera Kit
             </button>
+          </div>
+        </div>
+      )}
+
+      {nativeCameraError && useNativeCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="glass-card flex w-full max-w-md flex-col items-center gap-4 p-6 text-center">
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-full"
+              style={{ background: "var(--error)", color: "white" }}
+            >
+              <TriangleAlert size={28} aria-hidden="true" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white">Camera Unavailable</h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+                {nativeCameraError}
+              </p>
+            </div>
           </div>
         </div>
       )}

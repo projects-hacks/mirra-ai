@@ -61,7 +61,7 @@ export default function DashboardPage() {
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <Sparkles size={16} className="text-white/65" aria-hidden="true" />
               <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : skinSummary?.overallScore ?? "--"}</p>
-              <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Skin</p>
+              <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Skin Score</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <ScanFace size={16} className="text-white/65" aria-hidden="true" />

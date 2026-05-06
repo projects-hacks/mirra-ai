@@ -186,6 +186,17 @@ export function normalizeSkinConcerns(scores?: Record<string, unknown> | null): 
     .sort((a, b) => a.score - b.score);
 }
 
+export function extractOverallSkinScore(
+  scores: Record<string, unknown> | null | undefined,
+  concerns: NormalizedSkinConcern[]
+): number {
+  const providerOverall = extractSkinScore(scores?.all);
+  if (providerOverall !== null) return providerOverall;
+
+  if (!concerns.length) return 0;
+  return Math.round(concerns.reduce((sum, concern) => sum + concern.score, 0) / concerns.length);
+}
+
 export function deriveSimulationIntensities(
   scores?: Record<string, unknown> | null,
   concernKeys = ['wrinkle', 'radiance', 'acne', 'pore', 'texture', 'dark_circle_v2', 'redness', 'oiliness', 'eye_bag', 'age_spot']

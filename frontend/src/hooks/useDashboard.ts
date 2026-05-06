@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
 import { proofCardsApi, skinApi, weatherApi } from "@/lib/api";
-import { normalizeSkinConcerns } from "@/lib/skinScoring";
-import { buildDashboardInsight, summarizeSkinHistory } from "@/lib/skinSummary";
+import { buildDashboardInsight, buildSkinSummaryFromHistory } from "@/lib/skinSummary";
 import { resolveUserLocation } from "@/lib/userContext";
 import type { AgentInsight, SkinSummary, VTOResult, WeatherInfo } from "@/types";
 
@@ -37,9 +36,8 @@ export function useDashboard() {
       if (cancelled) return;
 
       const history = historyResult.status === "fulfilled" ? historyResult.value : [];
-      const concerns = normalizeSkinConcerns(history[0]?.scores);
       const weatherInfo = weatherResult.status === "fulfilled" ? weatherResult.value : null;
-      const summary = summarizeSkinHistory(history, concerns);
+      const { summary } = buildSkinSummaryFromHistory(history);
 
       setSkinSummary(summary);
       setWeather(weatherInfo);
