@@ -3,6 +3,8 @@ import Script from "next/script";
 import "./globals.css";
 import { AppProvider } from "@/components/providers/AppProvider";
 
+const configuredApiOrigin = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") ?? "";
+
 export const metadata: Metadata = {
   title: "Mirra — AI Appearance Operator",
   description: "Your closet. Your skin. Your context. One operator.",
@@ -35,6 +37,69 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="h-full overflow-x-hidden font-ui">
+        <Script id="api-origin-guard" strategy="beforeInteractive">
+          {`
+            (() => {
+              const configuredApiOrigin = ${JSON.stringify(configuredApiOrigin)};
+              if (!configuredApiOrigin || !window.fetch) return;
+
+              let backendUrl;
+              try {
+                backendUrl = new URL(configuredApiOrigin);
+              } catch {
+                return;
+              }
+
+              const backendHosts = new Set([backendUrl.host]);
+              const originalFetch = window.fetch.bind(window);
+
+              window.fetch = (input, init) => {
+                const rawUrl =
+                  typeof input === 'string'
+                    ? input
+                    : input instanceof URL
+                      ? input.toString()
+                      : input && typeof input === 'object' && 'url' in input
+                        ? input.url
+                        : null;
+
+                if (!rawUrl) return originalFetch(input, init);
+
+                try {
+                  const url = new URL(rawUrl, window.location.origin);
+                  if (backendHosts.has(url.host) && url.pathname.startsWith('/api/')) {
+                    const sameOriginPath = url.pathname + url.search + url.hash;
+                    if (typeof input === 'string' || input instanceof URL) {
+                      return originalFetch(sameOriginPath, init);
+                    }
+                    if (input instanceof Request) {
+                      const requestInit = {
+                        method: input.method,
+                        headers: input.headers,
+                        body: input.method === 'GET' || input.method === 'HEAD' ? undefined : input.clone().body,
+                        mode: 'same-origin',
+                        credentials: input.credentials,
+                        cache: input.cache,
+                        redirect: input.redirect,
+                        referrer: input.referrer,
+                        integrity: input.integrity,
+                        keepalive: input.keepalive,
+                        signal: input.signal,
+                        ...init,
+                      };
+                      return originalFetch(new Request(sameOriginPath, requestInit));
+                    }
+                  }
+                } catch {
+                  return originalFetch(input, init);
+                }
+
+                return originalFetch(input, init);
+              };
+            })();
+          `}
+        </Script>
+
         <AppProvider>{children}</AppProvider>
 
         {/* Perfect Corp JS Camera Kit is dynamically injected by useCameraKit to ensure ymkAsyncInit is ready */}

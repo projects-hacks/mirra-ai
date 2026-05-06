@@ -29,7 +29,7 @@ export function getApiBaseUrl(): string {
 
 export function getApiUrl(path = ""): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  if (typeof window !== "undefined" && normalizedPath.startsWith("/api/")) {
+  if (normalizedPath.startsWith("/api/")) {
     return normalizedPath;
   }
   return `${getApiBaseUrl()}${normalizedPath}`;
