@@ -102,6 +102,43 @@ export interface ProofCardRecord {
   created_at?: string;
 }
 
+export interface StyleProfileResponse {
+  user_id: string;
+  period_start: string;
+  period_end: string;
+  top_colors: string[];
+  top_categories: Record<string, number>;
+  top_brands: string[];
+  formality_avg: number;
+  outfit_success_rate: number;
+  avg_cost_per_wear: number;
+  total_outfits: number;
+  drift_insights?: {
+    drift_detected: boolean;
+    insights: Array<{
+      type: string;
+      message: string;
+      change?: number;
+      new_colors?: string[];
+      category?: string;
+      change_percent?: number;
+    }>;
+  };
+}
+
+export interface OutfitHistoryResponse<T = unknown> {
+  outfit_logs: T[];
+}
+
+export interface OutfitHistorySummaryResponse {
+  wore: number;
+  skipped: number;
+  returned: number;
+  loved: number;
+  pending: number;
+  total: number;
+}
+
 interface BackendWeatherResponse {
   location?: string;
   temp_f?: number;
@@ -204,6 +241,7 @@ export function formatApiError(error: unknown, fallback: string): string {
     if (category === "provider_response_invalid") return "The visual engine returned an incomplete result. Retry with another image.";
     if (category === "safety_blocked") return "This image could not be processed because it triggered a safety filter.";
     if (category === "missing_scan") return "Capture a fresh scan before opening this view.";
+    if (category === "rate_limited") return detail.message ?? "Too many requests. Please wait a moment and retry.";
     if (category === "service_unavailable") return detail.message ?? fallback;
     if (category === "invalid_input") return detail.message ?? fallback;
     if (detail.message) return detail.message;
@@ -475,6 +513,70 @@ export const proofCardsApi = {
         timestamp: card.created_at ? new Date(card.created_at).getTime() : Date.now(),
       }));
   },
+};
+
+export const styleProfileApi = {
+  get: (userId: string) => {
+    const params = new URLSearchParams({ user_id: userId });
+    return fetchApi<StyleProfileResponse>(`${ApiRoutes.STYLE_PROFILE}?${params.toString()}`);
+  },
+};
+
+export const outfitHistoryApi = {
+  list: <T = unknown>(userId: string) => {
+    const params = new URLSearchParams({ user_id: userId });
+    return fetchApi<OutfitHistoryResponse<T>>(`${ApiRoutes.OUTFIT_HISTORY}?${params.toString()}`);
+  },
+
+  summary: (userId: string) => {
+    const params = new URLSearchParams({ user_id: userId });
+    return fetchApi<OutfitHistorySummaryResponse>(`${ApiRoutes.OUTFIT_HISTORY_SUMMARY}?${params.toString()}`);
+  },
+
+  updateOutcome: (
+    logId: string,
+    body: { outcome: string; rating: number | null; feedback: string | null; compliments: boolean }
+  ) =>
+    fetchApi<{ success?: boolean }>(`/api/outfit-history/${logId}/outcome`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const closetApi = {
+  quickRecommendations: <T = unknown>(params: {
+    userId: string;
+    occasion: string;
+    temperature?: number;
+  }) => {
+    const query = new URLSearchParams({
+      user_id: params.userId,
+      occasion: params.occasion,
+    });
+    if (typeof params.temperature === "number") query.set("temperature", String(params.temperature));
+    return fetchApi<{ recommendations: T[] }>(`/api/closet/recommendations/quick?${query.toString()}`);
+  },
+
+  outfitRecommendation: <T = unknown>(body: {
+    user_id: string;
+    context: Record<string, unknown>;
+  }) => apiPost<T>("/api/closet/recommendations/outfit", body),
+
+  analytics: <T = unknown>() => fetchApi<T>("/api/closet/analytics"),
+
+  extractMetadata: <T = unknown>(imageUrl: string) =>
+    apiPost<{ metadata?: T }>("/api/closet/extract-metadata", { imageUrl }),
+
+  updateItem: <T = unknown>(itemId: string, patch: Record<string, unknown>) =>
+    fetchApi<T>(`/api/closet/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+
+  deleteItem: (itemId: string) =>
+    fetchApi<{ ok?: boolean }>(`/api/closet/${itemId}`, {
+      method: "DELETE",
+    }),
 };
 
 export const glowupApi = {

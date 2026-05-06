@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import httpx
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.core import cache
 from app.core.config import settings
@@ -41,6 +42,33 @@ class AgentServiceError(Exception):
     """Raised when the agent service cannot generate a structured response."""
 
 
+class AgentStepModel(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    icon: str
+    text: str
+    status: str = "complete"
+
+
+class AgentRecommendationModel(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    title: str
+    description: str | None = None
+    action: str | None = None
+    category: str | None = None
+    why: str | None = None
+
+
+class AgentStructuredResponseModel(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    steps: list[AgentStepModel] = Field(default_factory=list)
+    insight: str
+    recommendations: list[AgentRecommendationModel] = Field(default_factory=list)
+    tool_calls_made: list[str] = Field(default_factory=list)
+
+
 def _extract_text(response_json: dict[str, Any]) -> str:
     candidates = response_json.get("candidates") or []
     if not candidates:
@@ -68,6 +96,13 @@ def _filter_skin_concern_scores(scores: dict[str, Any]) -> dict[str, Any]:
     return {key: scores[key] for key in SKIN_CONCERN_LABELS if key in scores}
 
 
+def _validate_agent_response(payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return AgentStructuredResponseModel.model_validate(payload).model_dump(exclude_none=True)
+    except ValidationError as exc:
+        raise AgentServiceError(f"Gemini response did not match the agent schema: {exc}") from exc
+
+
 class AgentService:
     """Generate structured, explainable responses from upstream tool outputs."""
 
@@ -76,7 +111,14 @@ class AgentService:
 
     async def _get_cached_response(self, name: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         cache_key = f"{CachePrefix.AGENT}:{name}:{cache.hash_json(payload)}"
-        return await cache.get(cache_key)
+        cached = await cache.get(cache_key)
+        if not cached:
+            return None
+        try:
+            return _validate_agent_response(cached)
+        except AgentServiceError:
+            await cache.delete(cache_key)
+            return None
 
     async def _set_cached_response(self, name: str, payload: dict[str, Any], value: dict[str, Any]) -> None:
         cache_key = f"{CachePrefix.AGENT}:{name}:{cache.hash_json(payload)}"
@@ -153,7 +195,7 @@ Requirements:
                 )
                 response.raise_for_status()
                 content = _extract_text(response.json())
-                result = _safe_json_loads(content)
+                result = _validate_agent_response(_safe_json_loads(content))
                 await self._set_cached_response("glowup", cache_payload, result)
                 return result
         except Exception as exc:
@@ -248,7 +290,7 @@ Requirements:
                 )
                 response.raise_for_status()
                 content = _extract_text(response.json())
-                result = _safe_json_loads(content)
+                result = _validate_agent_response(_safe_json_loads(content))
                 await self._set_cached_response("skin_insights", cache_payload, result)
                 return result
         except Exception as exc:
@@ -336,7 +378,7 @@ Requirements:
                 )
                 response.raise_for_status()
                 content = _extract_text(response.json())
-                result = _safe_json_loads(content)
+                result = _validate_agent_response(_safe_json_loads(content))
                 await self._set_cached_response("outfit_reasoning", cache_payload, result)
                 return result
         except Exception as exc:

@@ -166,21 +166,52 @@ def _response_bytes(response: httpx.Response) -> bytes:
     return content
 
 
+async def _read_limited_response(response: httpx.Response) -> bytes:
+    content_length = response.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_DOWNLOAD_BYTES:
+                raise ProductImageResolverError(
+                    "reference_rejected",
+                    "The product image is larger than 10 MB.",
+                )
+        except ValueError:
+            pass
+
+    body = bytearray()
+    async for chunk in response.aiter_bytes():
+        body.extend(chunk)
+        if len(body) > MAX_DOWNLOAD_BYTES:
+            raise ProductImageResolverError(
+                "reference_rejected",
+                "The product image is larger than 10 MB.",
+            )
+    return bytes(body)
+
+
 async def _get_public_url(client: httpx.AsyncClient, raw_url: str) -> httpx.Response:
     current_url = _validate_public_url(raw_url)
     for _ in range(MAX_REDIRECTS + 1):
-        response = await client.get(current_url, follow_redirects=False)
-        if response.is_redirect:
-            location = response.headers.get("location")
-            if not location:
-                raise ProductImageResolverError(
-                    "expired_image_url",
-                    "That image link expired or is blocked. Try another product image.",
-                    provider_message="Redirect without Location header",
-                )
-            current_url = _validate_public_url(urljoin(str(response.url), location))
-            continue
-        return response
+        async with client.stream("GET", current_url, follow_redirects=False) as response:
+            if response.is_redirect:
+                location = response.headers.get("location")
+                if not location:
+                    raise ProductImageResolverError(
+                        "expired_image_url",
+                        "That image link expired or is blocked. Try another product image.",
+                        provider_message="Redirect without Location header",
+                    )
+                current_url = _validate_public_url(urljoin(str(response.url), location))
+                continue
+
+            content = await _read_limited_response(response)
+            return httpx.Response(
+                status_code=response.status_code,
+                headers=response.headers,
+                content=content,
+                request=response.request,
+                extensions=response.extensions,
+            )
 
     raise ProductImageResolverError(
         "expired_image_url",

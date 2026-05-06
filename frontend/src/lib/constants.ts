@@ -59,6 +59,9 @@ export const ApiRoutes = {
   PRODUCTS_SEARCH: "/api/products/search",
   PRODUCTS_RESOLVE_IMAGE: "/api/products/resolve-image",
   WEATHER: "/api/context/weather",
+  STYLE_PROFILE: "/api/style-profile/",
+  OUTFIT_HISTORY: "/api/outfit-history/",
+  OUTFIT_HISTORY_SUMMARY: "/api/outfit-history/summary",
 } as const;
 
 // ── Tool Names (mirrors backend ToolName enum) ──────

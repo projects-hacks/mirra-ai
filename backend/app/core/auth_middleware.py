@@ -7,13 +7,16 @@ Public routes (/health, /api/onboarding/init) are also excluded.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Set
 
 import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.core import cache
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -40,21 +43,47 @@ PUBLIC_PATHS: Set[str] = {
     "/api/onboarding/analyze",      # called during onboarding before api.ts is wired
     "/api/onboarding/seed-closet",  # called from CompletionScreen inline
     "/api/onboarding/complete",     # called from CompletionScreen inline
-    "/api/skin/analyze",
-    "/api/skin/simulate",
-    "/api/vto/clothes",
-    "/api/vto/makeup",
-    "/api/vto/earrings",
-    "/api/vto/necklace",
-    "/api/vto/hair",
-    "/api/products/search",
-    "/api/products/resolve-image",
-    "/api/glowup/analyze",
-    "/api/glowup/recommend",
 }
 
 # Prefixes that bypass auth entirely (WebSocket handled separately)
 PUBLIC_PREFIXES = ("/ws/",)
+
+PAID_ROUTE_PREFIXES = (
+    "/api/skin/",
+    "/api/vto/",
+    "/api/products/",
+    "/api/glowup/",
+)
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_REQUESTS = 60
+
+
+def _is_paid_route(path: str) -> bool:
+    return any(path.startswith(prefix) for prefix in PAID_ROUTE_PREFIXES)
+
+
+async def _is_rate_limited(request: Request, user_id: str) -> bool:
+    """Return True when a paid route exceeds the per-user minute budget.
+
+    Redis failures must not take the product down, so rate limiting is fail-open
+    and logged. Auth remains the primary cost-control boundary.
+    """
+    path = request.url.path
+    if not _is_paid_route(path):
+        return False
+
+    route_family = next((prefix.strip("/").replace("/", ":") for prefix in PAID_ROUTE_PREFIXES if path.startswith(prefix)), "api")
+    key = f"rate:{route_family}:{user_id}:{int(time.time() // RATE_LIMIT_WINDOW_SECONDS)}"
+
+    try:
+        r = cache.get_pool()
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, RATE_LIMIT_WINDOW_SECONDS)
+        return count > RATE_LIMIT_MAX_REQUESTS
+    except RedisError as exc:
+        logger.warning("Rate limit check failed for %s: %s", path, exc)
+        return False
 
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
@@ -99,6 +128,18 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
         # ── Attach verified user_id to request state ──
         request.state.user_id = verified_user_id
+
+        if await _is_rate_limited(request, verified_user_id):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": {
+                        "category": "rate_limited",
+                        "message": "Too many visual or AI requests. Please wait a moment and retry.",
+                        "source": "rate_limit",
+                    }
+                },
+            )
 
         return await call_next(request)
 

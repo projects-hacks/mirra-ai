@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getApiUrl } from '@/lib/constants';
+import { closetApi, formatApiError } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
 
 interface ItemDetailModalProps {
@@ -135,30 +135,14 @@ export default function ItemDetailModal({
     if (!item) return;
 
     try {
-      const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          is_favorite: !item.is_favorite,
-        }),
+      const updatedItem = await closetApi.updateItem<ClosetItem>(item.id, {
+        is_favorite: !item.is_favorite,
       });
-
-      if (!response.ok) throw new Error('Failed to update favorite status');
-
-      const updatedItem = await response.json();
       setItem(updatedItem);
       onUpdate();
     } catch (err) {
       console.error('Error toggling favorite:', err);
-      alert('Failed to update favorite status');
+      alert(formatApiError(err, 'Failed to update favorite status'));
     }
   };
 
@@ -167,30 +151,14 @@ export default function ItemDetailModal({
     if (!item) return;
 
     try {
-      const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          is_archived: !item.is_archived,
-        }),
+      const updatedItem = await closetApi.updateItem<ClosetItem>(item.id, {
+        is_archived: !item.is_archived,
       });
-
-      if (!response.ok) throw new Error('Failed to update archive status');
-
-      const updatedItem = await response.json();
       setItem(updatedItem);
       onUpdate();
     } catch (err) {
       console.error('Error toggling archive:', err);
-      alert('Failed to update archive status');
+      alert(formatApiError(err, 'Failed to update archive status'));
     }
   };
 
@@ -199,25 +167,13 @@ export default function ItemDetailModal({
     if (!item) return;
 
     try {
-      const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to delete item');
+      await closetApi.deleteItem(item.id);
 
       onUpdate();
       onClose();
     } catch (err) {
       console.error('Error deleting item:', err);
-      alert('Failed to delete item');
+      alert(formatApiError(err, 'Failed to delete item'));
     }
   };
 
@@ -226,29 +182,13 @@ export default function ItemDetailModal({
     if (!item) return;
 
     try {
-      const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(getApiUrl(`/api/closet/${item.id}`), {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(editedItem),
-      });
-
-      if (!response.ok) throw new Error('Failed to update item');
-
-      const updatedItem = await response.json();
+      const updatedItem = await closetApi.updateItem<ClosetItem>(item.id, editedItem);
       setItem(updatedItem);
       setIsEditing(false);
       onUpdate();
     } catch (err) {
       console.error('Error updating item:', err);
-      alert('Failed to update item');
+      alert(formatApiError(err, 'Failed to update item'));
     }
   };
 

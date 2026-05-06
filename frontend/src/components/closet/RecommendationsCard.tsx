@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { getSession } from "@/lib/auth";
-import { getApiUrl } from "@/lib/constants";
+import { closetApi, formatApiError } from "@/lib/api";
 
 interface RecommendedItem {
   id: string;
@@ -39,35 +38,15 @@ export default function RecommendationsCard({
         setIsLoading(true);
         setError(null);
 
-        const params = new URLSearchParams({
-          user_id: userId,
+        const data = await closetApi.quickRecommendations<RecommendedItem>({
+          userId,
           occasion,
+          temperature,
         });
-
-        if (temperature !== undefined) {
-          params.append("temperature", temperature.toString());
-        }
-
-        const { data: { session } } = await getSession();
-        const headers: HeadersInit = {};
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
-        }
-
-        const response = await fetch(
-          getApiUrl(`/api/closet/recommendations/quick?${params}`),
-          { headers }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch recommendations");
-        }
-
-        const data = await response.json();
         setRecommendations(data.recommendations || []);
       } catch (err) {
         console.error("Error fetching recommendations:", err);
-        setError(err instanceof Error ? err.message : "Failed to load recommendations");
+        setError(formatApiError(err, "Failed to load recommendations"));
       } finally {
         setIsLoading(false);
       }

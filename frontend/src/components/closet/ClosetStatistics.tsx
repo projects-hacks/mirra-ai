@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { getApiUrl } from "@/lib/constants";
-import { getSupabase } from "@/lib/supabase";
+import { closetApi } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────
 interface StatisticsData {
@@ -42,24 +41,7 @@ export default function ClosetStatistics() {
   useEffect(() => {
     async function loadStatistics() {
       try {
-        const supabase = getSupabase();
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          return;
-        }
-
-        const response = await fetch(getApiUrl("/api/closet/analytics"), {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch statistics");
-        }
-
-        const data = await response.json();
+        const data = await closetApi.analytics<StatisticsData>();
         setStats(data);
       } catch (err) {
         console.error("Failed to load statistics:", err);

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AlertCircle, Camera, ImageIcon, Upload, X } from "lucide-react";
-import { getApiUrl } from "@/lib/constants";
+import { closetApi } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { uploadToStorage as uploadFile } from "@/lib/storage";
 
@@ -257,17 +257,7 @@ export default function PhotoUploadModal({
   // Extract metadata using AI
   const extractMetadata = useCallback(async (imageUrl: string): Promise<ExtractedMetadata> => {
     try {
-      const response = await fetch(getApiUrl("/api/closet/extract-metadata"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to extract metadata");
-      }
-
-      const data = await response.json();
+      const data = await closetApi.extractMetadata<ExtractedMetadata>(imageUrl);
       return data.metadata || {
         category: '',
         primary_color: '',

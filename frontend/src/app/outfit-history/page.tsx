@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '@/lib/constants';
+import { formatApiError, outfitHistoryApi } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
 import ClosetNav from '@/components/navigation/ClosetNav';
 import OutfitHistoryCard from '@/components/closet/OutfitHistoryCard';
@@ -54,6 +54,15 @@ export default function OutfitHistoryPage() {
   const [outcomeFilter, setOutcomeFilter] = useState<string>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<string>('all');
 
+  const refreshOutfitHistory = useCallback(async (targetUserId: string) => {
+    const [logsData, summaryData] = await Promise.all([
+      outfitHistoryApi.list<OutfitLog>(targetUserId),
+      outfitHistoryApi.summary(targetUserId),
+    ]);
+    setOutfitLogs(logsData.outfit_logs || []);
+    setSummary(summaryData);
+  }, []);
+
   // Fetch user ID
   useEffect(() => {
     const fetchUser = async () => {
@@ -77,58 +86,18 @@ export default function OutfitHistoryPage() {
         setLoading(true);
         setError(null);
 
-        const supabase = getSupabase();
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          router.push('/');
-          return;
-        }
-
-        // Fetch outfit logs
-        const logsResponse = await fetch(
-          getApiUrl(`/api/outfit-history/?user_id=${userId}`),
-          {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-          }
-        );
-
-        if (!logsResponse.ok) {
-          throw new Error('Failed to fetch outfit history');
-        }
-
-        const logsData = await logsResponse.json();
-        setOutfitLogs(logsData.outfit_logs || []);
-
-        // Fetch summary
-        const summaryResponse = await fetch(
-          getApiUrl(`/api/outfit-history/summary?user_id=${userId}`),
-          {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-          }
-        );
-
-        if (!summaryResponse.ok) {
-          throw new Error('Failed to fetch outfit summary');
-        }
-
-        const summaryData = await summaryResponse.json();
-        setSummary(summaryData);
+        await refreshOutfitHistory(userId);
 
       } catch (err) {
         console.error('Error fetching outfit history:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load outfit history');
+        setError(formatApiError(err, 'Failed to load outfit history'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [userId, router]);
+  }, [userId, refreshOutfitHistory]);
 
   // Calculate date range
   const getDateRange = (range: string): { start: string | null; end: string | null } => {
@@ -364,23 +333,8 @@ export default function OutfitHistoryPage() {
                 onUpdate={() => {
                   // Refresh data after update
                   const fetchData = async () => {
-                    const supabase = getSupabase();
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (!session) return;
-
-                    const logsResponse = await fetch(
-                      getApiUrl(`/api/outfit-history/?user_id=${userId}`),
-                      { headers: { 'Authorization': `Bearer ${session.access_token}` } }
-                    );
-                    const logsData = await logsResponse.json();
-                    setOutfitLogs(logsData.outfit_logs || []);
-
-                    const summaryResponse = await fetch(
-                      getApiUrl(`/api/outfit-history/summary?user_id=${userId}`),
-                      { headers: { 'Authorization': `Bearer ${session.access_token}` } }
-                    );
-                    const summaryData = await summaryResponse.json();
-                    setSummary(summaryData);
+                    if (!userId) return;
+                    await refreshOutfitHistory(userId);
                   };
                   fetchData();
                 }}

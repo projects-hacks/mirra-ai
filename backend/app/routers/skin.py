@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile, status
 
 from app.core.deps import read_image, resolve_user_id
+from app.models.perfectcorp_types import SkinAnalyzeResponseModel, SkinSimulateResponseModel
 from app.services.agent import agent_service
 from app.services.perfectcorp import PerfectCorpAPIError
 from app.services.supabase_client import supabase
@@ -47,7 +48,7 @@ def _provider_error_to_http(exc: PerfectCorpAPIError, source: str) -> HTTPExcept
     )
 
 
-@router.post("/analyze")
+@router.post("/analyze", response_model=SkinAnalyzeResponseModel)
 async def analyze_skin(
     request: Request,
     selfie: UploadFile = File(...),
@@ -67,7 +68,7 @@ async def analyze_skin(
         raise _provider_error_to_http(exc, "skin_analysis") from exc
 
 
-@router.post("/simulate")
+@router.post("/simulate", response_model=SkinSimulateResponseModel)
 async def simulate_skin(
     request: Request,
     selfie: UploadFile = File(...),

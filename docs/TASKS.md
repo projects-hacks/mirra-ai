@@ -291,7 +291,7 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
   - Acceptance:
     - No 307 redirect for style profile or outfit history reads.
 
-- [ ] Lock down expensive public routes.
+- [x] Lock down expensive public routes.
   - Files:
     - `backend/app/core/auth_middleware.py`
     - route-specific callers in `frontend/src/lib/api.ts`
@@ -304,8 +304,13 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
   - Acceptance:
     - Anonymous users cannot call paid Perfect Corp / Gemini / Serper endpoints outside the intended onboarding path.
     - Authenticated app pages still work through `fetchApi`.
+  - Completed:
+    - Removed skin, VTO, product, and GlowUp paid routes from `PUBLIC_PATHS`.
+    - Kept only the explicit onboarding path public.
+    - Added Redis-backed per-user rate limiting for paid route prefixes.
+    - Covered by `backend/app/core/test_auth_middleware.py`.
 
-- [ ] Harden product image resolver against SSRF and oversized downloads.
+- [x] Harden product image resolver against SSRF and oversized downloads.
   - Files:
     - `backend/app/services/product_image_resolver.py`
     - `backend/app/routers/products.py`
@@ -316,15 +321,15 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
     - [x] Resolve DNS and block private/link-local/loopback/multicast/reserved IPs.
     - [x] Revalidate every redirect target.
     - [x] Reject oversized responses by `Content-Length` and post-read byte count.
-    - [ ] Stream downloads with a hard byte ceiling instead of reading unknown-size responses into memory.
+    - [x] Stream downloads with a hard byte ceiling instead of reading unknown-size responses into memory.
   - Acceptance:
     - Private and metadata URLs return `product_page_url` / `invalid_input` without network fetch.
     - Large files fail before memory pressure.
-    - First hardening pass covered by `backend/app/services/test_product_image_resolver.py`.
+    - Covered by `backend/app/services/test_product_image_resolver.py`.
 
 ### P1 API Contract And Error Consistency
 
-- [ ] Add Pydantic response contracts for skin and VTO.
+- [x] Add Pydantic response contracts for skin and VTO.
   - Files:
     - `backend/app/routers/skin.py`
     - `backend/app/routers/vto.py`
@@ -337,8 +342,13 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
   - Acceptance:
     - Every frontend VTO consumer can rely on `image_url`.
     - Every provider failure returns structured `detail.category`, `detail.message`, `detail.source`, and provider fields when available.
+  - Completed:
+    - Added normalized Pydantic success models for skin analysis, skin simulation, and VTO image responses.
+    - Added a shared normalized error detail model.
+    - Added `response_model` coverage to core skin and VTO endpoints.
+    - Reused the shared Perfect Corp nested image extractor in the VTO router.
 
-- [ ] Finish moving direct frontend `fetch` calls to typed API clients.
+- [x] Finish moving direct frontend `fetch` calls to typed API clients.
   - Files:
     - `frontend/src/lib/api.ts`
     - `frontend/src/app/style-profile/page.tsx`
@@ -351,8 +361,12 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
     - Replace ad hoc fetch calls.
   - Acceptance:
     - API calls use `fetchApi`, `apiPost`, or `fetchWithFormData` unless fetching a non-API image/blob.
+  - Completed:
+    - Added typed clients for style profile, outfit history, closet recommendations, closet outfit recommendations, closet analytics, metadata extraction, and closet item mutations.
+    - Replaced known ad hoc authenticated API fetches in style profile, outfit history, closet analytics, and closet subcomponents.
+    - Remaining direct fetches are image/blob reads, public onboarding calls, or example/demo code.
 
-- [ ] Validate Gemini JSON with Pydantic before returning to frontend.
+- [x] Validate Gemini JSON with Pydantic before returning to frontend.
   - Files:
     - `backend/app/services/agent.py`
   - Problem:
@@ -363,6 +377,11 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
   - Acceptance:
     - Frontend never receives malformed Gemini objects.
     - Fallbacks are explicit and typed.
+  - Completed:
+    - Added backend Pydantic validation for shared agent reasoning responses.
+    - Cached Gemini responses are validated on read and discarded if malformed.
+    - Invalid Gemini JSON shape now falls back to deterministic typed fallback output.
+    - Covered by `backend/app/services/test_agent_contracts.py`.
 
 ### P1 Persistence And Privacy
 
@@ -381,6 +400,12 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
   - Acceptance:
     - No long-lived base64 body/selfie data in localStorage.
     - Users can clear captured images from one place.
+  - Current mitigation:
+    - Global app reset now clears the full-body try-on image key.
+    - Portrait and full-body image persistence now avoids storing oversized data URLs where the shared persistence path is used.
+    - Try-On body-image writes are guarded for quota / blocked storage.
+  - Remaining:
+    - Full replacement should move personal image persistence to Supabase storage or IndexedDB with explicit expiration.
 
 - [ ] Make proof-card and diary persistence end-to-end typed.
   - Files:
@@ -432,15 +457,19 @@ This backlog comes from the technical audit after the Perfect Corp + Gemini inte
 
 ### P2 Operational Hardening
 
-- [ ] Add rate limiting and request budgeting.
+- [x] Add rate limiting and request budgeting.
   - Scope:
     - Perfect Corp routes
     - Gemini routes
     - Serper search
     - product image resolver
   - Acceptance:
-    - Per-user and per-IP limits exist.
-    - Error responses use taxonomy category `service_unavailable` or `api_timeout` as appropriate.
+    - Per-user limits exist for authenticated paid routes.
+    - Error responses use taxonomy category `rate_limited`.
+  - Completed:
+    - Added Redis-backed per-user minute budget for authenticated paid route prefixes.
+  - Remaining enhancement:
+    - Add separate per-IP budgets for unauthenticated onboarding endpoints if onboarding abuse appears in production logs.
 
 - [ ] Add provider observability.
   - Scope:

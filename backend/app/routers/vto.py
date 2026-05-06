@@ -6,10 +6,12 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.models.perfectcorp_types import VTOImageResponseModel
 from app.services import perfectcorp
 from app.core.deps import read_image
 from app.services.product_image_resolver import ProductImageResolverError, resolve_product_image
 from app.tools import fashion_tools, beauty_tools, accessory_tools, hair_tools
+from app.tools.base_vto import extract_result_image_url
 
 router = APIRouter()
 CLOTHES_CATEGORY_MAP = {
@@ -79,9 +81,9 @@ def _normalize_image_response(payload: Any, source: str) -> dict[str, Any]:
     provider_payload: dict[str, Any] | None = payload if isinstance(payload, dict) else None
 
     if isinstance(payload, dict):
-      image_url = payload.get("image_url") or payload.get("result_image_url") or payload.get("url")
+        image_url = extract_result_image_url(payload)
     elif isinstance(payload, str):
-      image_url = payload
+        image_url = payload
 
     if not isinstance(image_url, str) or not image_url:
         raise HTTPException(
@@ -126,7 +128,7 @@ async def try_on(req: TryOnRequest):
     return result
 
 
-@router.post("/clothes")
+@router.post("/clothes", response_model=VTOImageResponseModel)
 async def try_on_clothes(
     selfie: UploadFile = File(...),
     garment_url: str = Form(...),
@@ -155,7 +157,7 @@ async def try_on_clothes(
         raise _provider_error_to_http(exc) from exc
 
 
-@router.post("/makeup")
+@router.post("/makeup", response_model=VTOImageResponseModel)
 async def try_on_makeup(
     selfie: UploadFile = File(...),
     effects: str = Form(...),
@@ -192,7 +194,7 @@ async def try_on_makeup(
         raise _provider_error_to_http(exc) from exc
 
 
-@router.post("/earrings")
+@router.post("/earrings", response_model=VTOImageResponseModel)
 async def try_on_earrings(
     selfie: UploadFile = File(...),
     earring_url: str = Form(...),
@@ -208,7 +210,7 @@ async def try_on_earrings(
         raise _provider_error_to_http(exc) from exc
 
 
-@router.post("/necklace")
+@router.post("/necklace", response_model=VTOImageResponseModel)
 async def try_on_necklace(
     selfie: UploadFile = File(...),
     necklace_url: str = Form(...),
@@ -224,7 +226,7 @@ async def try_on_necklace(
         raise _provider_error_to_http(exc) from exc
 
 
-@router.post("/hair")
+@router.post("/hair", response_model=VTOImageResponseModel)
 async def try_on_hair(
     selfie: UploadFile = File(...),
     ref_hair_url: str = Form(...),

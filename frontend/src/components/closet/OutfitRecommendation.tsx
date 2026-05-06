@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { getApiUrl } from "@/lib/constants";
+import { closetApi, formatApiError } from "@/lib/api";
 
 interface OutfitItem {
   id: string;
@@ -49,26 +49,14 @@ export default function OutfitRecommendation({
         },
       };
 
-      const response = await fetch(
-        getApiUrl("/api/closet/recommendations/outfit"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to generate outfit");
-      }
-
-      const data = await response.json();
+      const data = await closetApi.outfitRecommendation<{
+        items: OutfitItem[];
+        total_score: number;
+      }>(requestBody);
       setOutfit(data);
     } catch (err) {
       console.error("Error generating outfit:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate outfit");
+      setError(formatApiError(err, "Failed to generate outfit"));
     } finally {
       setIsLoading(false);
     }

@@ -20,9 +20,11 @@ const STORAGE_KEYS = {
   MESSAGES: "mirra:messages",
   SELFIE: "mirra:selfie",
   VTO_RESULT: "mirra:vto_result",
+  BODY_IMAGE: "mirra:body_tryon_image",
 } as const;
 
 const MAX_MESSAGES = 50;
+const MAX_PERSISTED_IMAGE_CHARS = 4_500_000;
 
 // ── Persistence helpers ──────────────────────────────
 function loadFromStorage<T>(key: string): T | null {
@@ -36,6 +38,14 @@ function loadFromStorage<T>(key: string): T | null {
 
 function saveToStorage<T>(key: string, value: T): void {
   try {
+    if (
+      (key === STORAGE_KEYS.SELFIE || key === STORAGE_KEYS.BODY_IMAGE)
+      && typeof value === "string"
+      && value.length > MAX_PERSISTED_IMAGE_CHARS
+    ) {
+      localStorage.removeItem(key);
+      return;
+    }
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Quota exceeded or private mode — silently ignore

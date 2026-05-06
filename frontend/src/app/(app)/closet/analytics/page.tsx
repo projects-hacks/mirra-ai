@@ -2,9 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getApiUrl } from "@/lib/constants";
-import { getSupabase } from "@/lib/supabase";
+import { closetApi, formatApiError } from "@/lib/api";
 import ClosetNav from "@/components/navigation/ClosetNav";
 import { SkeletonAnalyticsCard } from "@/components/common/SkeletonLoader";
 import { EmptyAnalytics } from "@/components/common/EmptyState";
@@ -70,7 +68,6 @@ function getCPWColor(cpw: number): string {
 
 // ── Main Component ───────────────────────────────────
 export default function ClosetAnalyticsPage() {
-  const router = useRouter();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,35 +75,17 @@ export default function ClosetAnalyticsPage() {
   useEffect(() => {
     async function loadAnalytics() {
       try {
-        const supabase = getSupabase();
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.replace("/");
-          return;
-        }
-
-        const response = await fetch(getApiUrl("/api/closet/analytics"), {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch analytics");
-        }
-
-        const data = await response.json();
+        const data = await closetApi.analytics<AnalyticsData>();
         setAnalytics(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load analytics");
+        setError(formatApiError(err, "Failed to load analytics"));
       } finally {
         setIsLoading(false);
       }
     }
 
     loadAnalytics();
-  }, [router]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -123,7 +102,7 @@ export default function ClosetAnalyticsPage() {
           }}
         >
           <button
-            onClick={() => router.back()}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2 text-sm"
             style={{ color: "var(--on-surface-variant)" }}
           >
@@ -172,7 +151,7 @@ export default function ClosetAnalyticsPage() {
           }}
         >
           <button
-            onClick={() => router.back()}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2 text-sm"
             style={{ color: "var(--on-surface-variant)" }}
           >
@@ -225,7 +204,7 @@ export default function ClosetAnalyticsPage() {
         }}
       >
         <button
-          onClick={() => router.back()}
+          onClick={() => window.history.back()}
           className="flex items-center gap-2 text-sm"
           style={{ color: "var(--on-surface-variant)" }}
         >

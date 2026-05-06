@@ -17,6 +17,19 @@ import type { GlowupAnalysis, GlowupHairstyle, GlowupMakeupPreset, GlowupPlan, P
 type TryOnTab = "clothes" | "makeup" | "hair" | "accessories";
 type AccessoryKind = "earrings" | "necklace";
 const BODY_IMAGE_STORAGE_KEY = "mirra:body_tryon_image";
+const MAX_PERSISTED_IMAGE_CHARS = 4_500_000;
+
+function persistBodyImage(dataUrl: string): void {
+  try {
+    if (dataUrl.length > MAX_PERSISTED_IMAGE_CHARS) {
+      localStorage.removeItem(BODY_IMAGE_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(BODY_IMAGE_STORAGE_KEY, dataUrl);
+  } catch {
+    // Storage can be blocked or full; the in-memory image still works.
+  }
+}
 
 const FALLBACK_MAKEUP_PRESETS: GlowupMakeupPreset[] = [
   {
@@ -531,7 +544,7 @@ export default function TryOnPage() {
       setBodyImage(nextDataUrl);
       setBodyBlob(nextBlob);
       setBodyImageStatus("Full-body image ready for clothes try-on.");
-      localStorage.setItem(BODY_IMAGE_STORAGE_KEY, nextDataUrl);
+      persistBodyImage(nextDataUrl);
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
       if (activeTab === "clothes") {
@@ -560,7 +573,7 @@ export default function TryOnPage() {
       setBodyImage(captured);
       setBodyBlob(nextBlob);
       setBodyImageStatus("Full-body capture is ready for clothes try-on.");
-      localStorage.setItem(BODY_IMAGE_STORAGE_KEY, captured);
+      persistBodyImage(captured);
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
       setIsResetToOriginal(true);

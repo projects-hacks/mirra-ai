@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '@/lib/constants';
+import { formatApiError, styleProfileApi } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
 import StyleInsightsChart from '@/components/closet/StyleInsightsChart';
 import { SkeletonAnalyticsCard } from '@/components/common/SkeletonLoader';
@@ -62,32 +62,11 @@ export default function StyleProfilePage() {
         setLoading(true);
         setError(null);
 
-        const supabase = getSupabase();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) {
-          router.push('/');
-          return;
-        }
-
-        const response = await fetch(
-          getApiUrl(`/api/style-profile/?user_id=${userId}`),
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch style profile');
-        }
-
-        const data = await response.json();
+        const data = await styleProfileApi.get(userId);
         setProfile(data);
       } catch (err) {
         console.error('Error fetching style profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load style profile');
+        setError(formatApiError(err, 'Failed to load style profile'));
       } finally {
         setLoading(false);
       }

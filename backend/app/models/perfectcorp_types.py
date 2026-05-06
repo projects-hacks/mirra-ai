@@ -6,7 +6,9 @@ to ensure type safety and prevent parameter mismatches.
 Based on Perfect Corp API v2.0 documentation.
 """
 
-from typing import TypedDict, List, Optional, Literal
+from typing import Any, TypedDict, List, Optional, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ============================================================
@@ -179,6 +181,52 @@ class PerfectCorpFileUpload(TypedDict):
     """File upload response."""
     file_id: str
     requests: List[dict]  # Pre-signed upload URLs
+
+
+class MirraErrorDetail(BaseModel):
+    """Normalized user-facing error payload returned by Mirra API routes."""
+
+    category: str
+    message: str
+    provider_message: str | None = None
+    provider_code: str | None = None
+    source: str | None = None
+    task_type: str | None = None
+
+
+class VTOImageResponseModel(BaseModel):
+    """Normalized VTO success payload consumed by the frontend."""
+
+    model_config = ConfigDict(extra="allow")
+
+    image_url: str
+    result_image_url: str | None = None
+    url: str | None = None
+    provider_payload: dict[str, Any] | None = None
+
+
+class SkinAnalyzeResponseModel(BaseModel):
+    """Normalized skin-analysis response.
+
+    Perfect Corp skin analysis returns the provider-specific score map under
+    `scores`; UI consumers should not depend on the raw provider envelope.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    scores: dict[str, Any]
+    skin_age: int | None = None
+    suggestions: list[Any] = Field(default_factory=list)
+
+
+class SkinSimulateResponseModel(BaseModel):
+    """Normalized skin-simulation response."""
+
+    model_config = ConfigDict(extra="allow")
+
+    simulation_url: str
+    image_url: str | None = None
+    intensities_used: dict[str, float] = Field(default_factory=dict)
 
 
 # ============================================================

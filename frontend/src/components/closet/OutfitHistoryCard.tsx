@@ -4,7 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState } from 'react';
-import { getApiUrl } from '@/lib/constants';
+import { formatApiError, outfitHistoryApi } from '@/lib/api';
 
 interface OutfitWeather {
   temperature?: number;
@@ -98,28 +98,18 @@ export default function OutfitHistoryCard({ log, onUpdate }: OutfitHistoryCardPr
     try {
       setIsUpdating(true);
 
-      const response = await fetch(getApiUrl(`/api/outfit-history/${log.id}/outcome`), {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          outcome,
-          rating: rating > 0 ? rating : null,
-          feedback: feedback.trim() || null,
-          compliments,
-        }),
+      await outfitHistoryApi.updateOutcome(log.id, {
+        outcome,
+        rating: rating > 0 ? rating : null,
+        feedback: feedback.trim() || null,
+        compliments,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to update outcome');
-      }
 
       setShowFeedbackForm(false);
       if (onUpdate) onUpdate();
     } catch (err) {
       console.error('Error updating outcome:', err);
-      alert('Failed to update outfit outcome');
+      alert(formatApiError(err, 'Failed to update outfit outcome'));
     } finally {
       setIsUpdating(false);
     }
