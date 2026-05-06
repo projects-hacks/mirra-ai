@@ -103,6 +103,37 @@ function extractCapturedImages(value: unknown): CapturedImage[] {
   return [];
 }
 
+function pinVendorCameraOverlay() {
+  const selectors = [
+    "#YMK-wrapper",
+    "#ymk-wrapper",
+    "#YMK-container",
+    "#ymk-container",
+    "#YMK-cameraKit",
+    "#ymk-cameraKit",
+    ".YMK-wrapper",
+    ".ymk-wrapper",
+    ".YMK-container",
+    ".ymk-container",
+    ".YMK-cameraKit",
+    ".ymk-cameraKit",
+  ];
+
+  selectors.forEach((selector) => {
+    document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+      element.style.position = "fixed";
+      element.style.inset = "0";
+      element.style.width = "100vw";
+      element.style.height = "100dvh";
+      element.style.maxWidth = "none";
+      element.style.maxHeight = "none";
+      element.style.margin = "0";
+      element.style.zIndex = "80";
+      element.style.background = "#050712";
+    });
+  });
+}
+
 // ── Hook ────────────────────────────────────────────
 
 export function useCameraKit(events: CameraKitEvents = {}) {
@@ -133,6 +164,7 @@ export function useCameraKit(events: CameraKitEvents = {}) {
         debugFlow("camera-kit", "event:opened");
         isOpeningRef.current = false;
         isCameraOpenRef.current = true;
+        pinVendorCameraOverlay();
         setIsCameraOpen(true);
         eventsRef.current.onOpened?.();
       },
@@ -319,6 +351,8 @@ export function useCameraKit(events: CameraKitEvents = {}) {
       window.YMK.init(defaultConfig);
       debugFlow("camera-kit", "YMK.init called", defaultConfig);
       window.YMK.openCameraKit();
+      window.setTimeout(pinVendorCameraOverlay, 0);
+      window.setTimeout(pinVendorCameraOverlay, 250);
       debugFlow("camera-kit", "YMK.openCameraKit called");
 
       if (openTimeoutRef.current) {

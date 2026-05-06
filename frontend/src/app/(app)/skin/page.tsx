@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, History, Sparkles } from "lucide-react";
+import { Camera, CheckCircle2, History, Sparkles } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import SkinSummaryCard from "@/components/dashboard/SkinSummaryCard";
 import ProductRecommendations from "@/components/skin/ProductRecommendations";
@@ -21,6 +21,7 @@ export default function SkinPage() {
     isLoading,
     error,
   } = useSkinAnalysis();
+  const hasScan = concerns.length > 0 || Boolean(summary?.lastScanDate);
 
   return (
     <div className="page-shell space-y-4 sm:space-y-6">
@@ -53,6 +54,37 @@ export default function SkinPage() {
           </div>
         </div>
       </section>
+
+      {!hasScan && !isLoading && (
+        <section className="surface-card rounded-[1.25rem] border border-black/8 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] sm:p-6">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div>
+              <p className="label-caps">First Scan</p>
+              <h2 className="section-display mt-2 text-2xl">Capture a quality-gated selfie</h2>
+              <p className="body-copy mt-2 max-w-2xl text-sm" style={{ color: "var(--on-card-variant)" }}>
+                Perfect Corp needs a centered, front-facing photo with your face large enough in frame. The Camera Kit flow checks the capture before analysis.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {[
+                  "Bright, even lighting",
+                  "Face centered and forward",
+                  "Forehead and cheeks visible",
+                  "No glasses, hair, or hands covering features",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-sm" style={{ color: "var(--on-card)" }}>
+                    <CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Link href="/capture" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white">
+              <Camera size={16} aria-hidden="true" />
+              Start Scan
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <SkinSummaryCard summary={summary} isLoading={isLoading} />

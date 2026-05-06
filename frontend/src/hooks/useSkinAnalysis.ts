@@ -25,6 +25,8 @@ export interface ProductRecommendationGroup {
   concern: SkinConcern;
   query: string;
   products: Product[];
+  status: "loaded" | "empty" | "error";
+  error?: string;
 }
 
 function parseMaybeJson<T>(value: T | string | null | undefined): T | null {
@@ -108,8 +110,24 @@ export function useSkinAnalysis() {
       const productResults = await Promise.allSettled(
         topConcerns.map(async (concern) => {
           const query = CONCERN_PRODUCT_QUERIES[concern.key] ?? `${concern.label} skincare product`;
-          const result = await productsApi.search(query);
-          return { concern, query, products: result.products };
+          try {
+            const result = await productsApi.search(query);
+            const products = result.products ?? [];
+            return {
+              concern,
+              query,
+              products,
+              status: products.length ? "loaded" : "empty",
+            } satisfies ProductRecommendationGroup;
+          } catch (productError) {
+            return {
+              concern,
+              query,
+              products: [],
+              status: "error",
+              error: productError instanceof Error ? productError.message : "Product search failed.",
+            } satisfies ProductRecommendationGroup;
+          }
         })
       );
 

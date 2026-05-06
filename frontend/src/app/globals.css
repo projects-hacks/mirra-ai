@@ -80,6 +80,7 @@
   --z-nav: 40;
   --z-modal: 60;
   --z-toast: 70;
+  --z-camera-kit: 80;
 }
 
 /* ── Base ──────────────────────────────────────────── */
@@ -143,6 +144,51 @@ body::before {
     radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.1), transparent 26%);
   mix-blend-mode: screen;
   z-index: -1;
+}
+
+/* ── Perfect Corp Camera Kit Overlay ──────────────── */
+body:has(#YMK-wrapper),
+body:has(#ymk-wrapper),
+body:has(.YMK-wrapper),
+body:has(.ymk-wrapper) {
+  overflow: hidden;
+}
+
+#YMK-wrapper,
+#ymk-wrapper,
+#YMK-container,
+#ymk-container,
+#YMK-cameraKit,
+#ymk-cameraKit,
+.YMK-wrapper,
+.ymk-wrapper,
+.YMK-container,
+.ymk-container,
+.YMK-cameraKit,
+.ymk-cameraKit {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: var(--z-camera-kit) !important;
+  margin: 0 !important;
+  background: #050712 !important;
+}
+
+#YMK-wrapper iframe,
+#ymk-wrapper iframe,
+#YMK-container iframe,
+#ymk-container iframe,
+.YMK-wrapper iframe,
+.ymk-wrapper iframe,
+.YMK-container iframe,
+.ymk-container iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  display: block !important;
 }
 
 /* ── Typography ───────────────────────────────────── */

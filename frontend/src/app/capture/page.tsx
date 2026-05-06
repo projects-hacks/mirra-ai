@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TriangleAlert } from "lucide-react";
+import { CheckCircle2, Loader2, ScanFace, TriangleAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@/components/providers/AppProvider";
 import { getSupabase } from "@/lib/supabase";
@@ -10,6 +10,14 @@ import { apiPost, skinApi } from "@/lib/api";
 import { SelfieCaptureScreen } from "@/components/onboarding/SelfieCaptureScreen";
 
 type CaptureStep = "capture" | "analyzing" | "error";
+type AnalysisStage = "uploading" | "analyzing" | "saving" | "routing";
+
+const ANALYSIS_STEPS: Array<{ id: AnalysisStage; title: string; detail: string }> = [
+  { id: "uploading", title: "Preparing selfie", detail: "Converting the capture into a scan-ready image." },
+  { id: "analyzing", title: "Running Perfect Corp analysis", detail: "Scoring skin concerns, skin tone, and profile data." },
+  { id: "saving", title: "Saving scan", detail: "Writing your baseline to history and profile." },
+  { id: "routing", title: "Opening dashboard", detail: "Loading your skin summary and recommendations." },
+];
 
 function dataUrlToFile(dataUrl: string): File {
   const [header, base64Data] = dataUrl.split(",");
@@ -34,20 +42,45 @@ async function imageStringToFile(image: string): Promise<File> {
   return new File([blob], "selfie.jpg", { type: blob.type || "image/jpeg" });
 }
 
-function AnalysisProgress() {
+function AnalysisProgress({ stage }: Readonly<{ stage: AnalysisStage }>) {
+  const currentIndex = ANALYSIS_STEPS.findIndex((item) => item.id === stage);
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="glass-card max-w-md w-full p-8 text-center space-y-6">
-        <div className="relative w-20 h-20 mx-auto">
-          <div className="processing-ring" />
+      <div className="glass-card max-w-lg w-full p-8 space-y-6">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[var(--primary)]/18">
+          <ScanFace className="text-[var(--primary)]" size={34} aria-hidden="true" />
         </div>
-        <div>
+        <div className="text-center">
           <h2 className="text-xl font-semibold mb-2" style={{ color: "var(--on-surface)" }}>
             Analyzing Your Skin
           </h2>
           <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-            Running your first scan and preparing your dashboard.
+            Keep this screen open while Mirra turns your scan into scores, guidance, and product direction.
           </p>
+        </div>
+        <div className="space-y-3">
+          {ANALYSIS_STEPS.map((item, index) => {
+            const isComplete = index < currentIndex;
+            const isActive = index === currentIndex;
+            return (
+              <div key={item.id} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10">
+                  {isComplete ? (
+                    <CheckCircle2 size={16} className="text-emerald-400" aria-hidden="true" />
+                  ) : isActive ? (
+                    <Loader2 size={16} className="animate-spin text-[var(--primary)]" aria-hidden="true" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-white/30" />
+                  )}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--on-surface)" }}>{item.title}</p>
+                  <p className="mt-1 text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>{item.detail}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -85,6 +118,7 @@ export default function CapturePage() {
   const dispatch = useAppDispatch();
   const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState<CaptureStep>("capture");
+  const [analysisStage, setAnalysisStage] = useState<AnalysisStage>("uploading");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,14 +131,17 @@ export default function CapturePage() {
     if (!user) return;
 
     setStep("analyzing");
+    setAnalysisStage("uploading");
     setError(null);
 
     try {
       dispatch({ type: "SET_SELFIE", payload: selfie });
 
       const selfieFile = await imageStringToFile(selfie);
+      setAnalysisStage("analyzing");
       await skinApi.analyze(selfieFile, user.id);
 
+      setAnalysisStage("saving");
       const supabase = getSupabase();
       const { data: profileData } = await supabase
         .from("profiles")
@@ -119,6 +156,7 @@ export default function CapturePage() {
         });
       }
 
+      setAnalysisStage("routing");
       router.replace("/dashboard");
     } catch (err) {
       console.error("Capture flow failed:", err);
@@ -136,7 +174,7 @@ export default function CapturePage() {
   }
 
   if (step === "analyzing") {
-    return <AnalysisProgress />;
+    return <AnalysisProgress stage={analysisStage} />;
   }
 
   if (step === "error" && error) {

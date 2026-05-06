@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Search } from "lucide-react";
+import { ExternalLink, Search, TriangleAlert } from "lucide-react";
 import type { Product } from "@/types";
 import type { ProductRecommendationGroup } from "@/hooks/useSkinAnalysis";
 
@@ -40,6 +40,8 @@ function ProductCard({ product }: Readonly<{ product: Product }>) {
 }
 
 export default function ProductRecommendations({ groups, isLoading = false }: Readonly<ProductRecommendationsProps>) {
+  const failedCount = groups.filter((group) => group.status === "error").length;
+
   return (
     <section className="surface-card rounded-[1.25rem] border border-black/8 p-5 shadow-[0_14px_34px_rgba(17,24,39,0.07)] backdrop-blur">
       <div>
@@ -48,6 +50,14 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
         <p className="body-copy mt-2 text-sm" style={{ color: "var(--on-card-variant)" }}>
           Live shopping results are matched to your lowest skin scores.
         </p>
+        {!isLoading && failedCount > 0 && (
+          <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <TriangleAlert size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>
+              {failedCount} product search {failedCount === 1 ? "query needs" : "queries need"} a retry, but your scan data is still available.
+            </span>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -69,7 +79,12 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
                   {group.concern.score}/100
                 </span>
               </div>
-              {group.products.length ? (
+              {group.status === "error" ? (
+                <div className="surface-subcard rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <p className="font-semibold">Product search did not complete.</p>
+                  <p className="mt-1 text-xs leading-5">{group.error ?? "Try refreshing this concern or searching manually."}</p>
+                </div>
+              ) : group.products.length ? (
                 <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
                   {group.products.map((product) => (
                     <ProductCard key={`${group.concern.key}-${product.link}-${product.title}`} product={product} />
@@ -77,7 +92,7 @@ export default function ProductRecommendations({ groups, isLoading = false }: Re
                 </div>
               ) : (
                 <p className="surface-subcard rounded-2xl border border-black/6 p-4 text-sm" style={{ color: "var(--on-card-variant)" }}>
-                  No live product results came back for this concern.
+                  No live products matched this concern yet. Try a more specific search from the products page.
                 </p>
               )}
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Camera, TriangleAlert } from "lucide-react";
+import { Camera, CheckCircle2, TriangleAlert } from "lucide-react";
 import { useCameraKit } from "@/hooks/useCameraKit";
 import { useCamera } from "@/hooks/useCamera";
 import { ENABLE_CAMERA_KIT } from "@/lib/constants";
@@ -79,7 +79,7 @@ export function SelfieCaptureScreen({
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="glass-card w-full max-w-md space-y-6 p-8 text-center">
+      <div className="glass-card w-full max-w-3xl space-y-6 p-6 sm:p-8">
         {useNativeCamera ? (
           <div className="overflow-hidden rounded-[1.75rem] border border-white/30 bg-black/20">
             <video
@@ -97,12 +97,26 @@ export function SelfieCaptureScreen({
         )}
 
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">Let&apos;s setup your profile</h2>
-          <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <h2 className="text-center text-2xl font-bold text-white">Let&apos;s setup your profile</h2>
+          <p className="mx-auto max-w-xl text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
             {useNativeCamera
               ? "Center your face and capture when you're ready. Perfect Corp Camera Kit is paused while using the device camera fallback."
               : "We'll use the Perfect Corp Face SDK to perform a detailed scan of your skin health. Please ensure you are in a well-lit room."}
           </p>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[
+            "Bright, even lighting",
+            "Face centered and forward",
+            "Forehead and cheeks visible",
+            "No glasses, hair, or hands covering features",
+          ].map((item) => (
+            <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm">
+              <CheckCircle2 size={16} className="shrink-0 text-emerald-400" aria-hidden="true" />
+              <span style={{ color: "var(--on-surface-variant)" }}>{item}</span>
+            </div>
+          ))}
         </div>
 
         <button
