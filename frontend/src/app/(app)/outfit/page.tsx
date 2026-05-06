@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CloudSun, LoaderCircle, Shirt, Sparkles, Wand2 } from "lucide-react";
 import ProofCard from "@/components/cards/ProofCard";
@@ -55,6 +55,8 @@ type ProofCardShape = {
   weather: string;
 };
 
+const BODY_IMAGE_STORAGE_KEY = "mirra:body_tryon_image";
+
 const OCCASIONS: OccasionOption[] = [
   { value: Occasion.WORK, title: "Board Meeting", subtitle: "Polished, high-trust layers", mood: "Work", accent: "#0f766e" },
   { value: Occasion.DATE, title: "Date Night", subtitle: "Elevated and memorable", mood: "Date", accent: "#be185d" },
@@ -84,6 +86,24 @@ function productToSelectedItem(product: Product) {
     owned: false,
     category: "new",
   };
+}
+
+async function imageStringToBlob(image: string): Promise<Blob> {
+  if (image.startsWith("data:")) {
+    const [header, base64Data] = image.split(",");
+    const mime = header.match(/data:(.*?);base64/)?.[1] ?? "image/jpeg";
+    const binary = globalThis.atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new Blob([bytes], { type: mime });
+  }
+
+  const response = await fetch(image);
+  return response.blob();
 }
 
 function MatchGroup({
@@ -155,6 +175,15 @@ export default function OutfitPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTryingOn, setIsTryingOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bodyImage, setBodyImage] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem(BODY_IMAGE_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [bodyBlob, setBodyBlob] = useState<Blob | null>(null);
 
   const groupedMatches = matchResult?.matches
     ? Object.entries(matchResult.matches).filter(([, items]) => items.length > 0)
@@ -168,6 +197,27 @@ export default function OutfitPage() {
     }));
 
   const canBuildProofCard = selectedOwnedItems.length > 0 || Object.keys(selectedGapProducts).length > 0;
+
+  useEffect(() => {
+    if (!bodyImage) return;
+
+    let cancelled = false;
+
+    void imageStringToBlob(bodyImage)
+      .then((blob) => {
+        if (!cancelled) setBodyBlob(blob);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBodyImage(null);
+          setBodyBlob(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bodyImage]);
 
   async function handleOccasionSelect(occasion: OccasionOption) {
     if (!user?.id) {
@@ -213,8 +263,8 @@ export default function OutfitPage() {
   }
 
   async function handleTryLook() {
-    if (!selfie || groupedMatches.length === 0) {
-      setError("Capture a selfie and generate matches before trying on a look.");
+    if (!bodyBlob || groupedMatches.length === 0) {
+      setError("Add a full-body image in Try-On Studio before previewing clothes from Outfit Builder.");
       return;
     }
 
@@ -233,9 +283,7 @@ export default function OutfitPage() {
     dispatch({ type: "SET_CURRENT_TOOL", payload: ToolName.TRY_ON_CLOTHES });
 
     try {
-      const response = await fetch(selfie);
-      const blob = await response.blob();
-      const result = await vtoApi.clothes(blob, topApparel.imageUrl, inferGarmentCategory(topApparel.category));
+      const result = await vtoApi.clothes(bodyBlob, topApparel.imageUrl, inferGarmentCategory(topApparel.category));
       const imageUrl = extractImageUrl(result);
       if (!imageUrl) throw new Error("Try-on preview came back without an image.");
 
@@ -258,8 +306,8 @@ export default function OutfitPage() {
   }
 
   async function handleTryGapProduct(product: Product) {
-    if (!selfie) {
-      setError("Capture a selfie before trying on a product.");
+    if (!bodyBlob) {
+      setError("Add a full-body image in Try-On Studio before previewing clothes from Outfit Builder.");
       return;
     }
 
@@ -269,9 +317,7 @@ export default function OutfitPage() {
     dispatch({ type: "SET_CURRENT_TOOL", payload: ToolName.TRY_ON_CLOTHES });
 
     try {
-      const response = await fetch(selfie);
-      const blob = await response.blob();
-      const result = await vtoApi.clothes(blob, product.imageUrl, "upper");
+      const result = await vtoApi.clothes(bodyBlob, product.imageUrl, "upper");
       const imageUrl = extractImageUrl(result);
       if (!imageUrl) throw new Error("Product try-on did not return an image.");
 
@@ -346,7 +392,13 @@ export default function OutfitPage() {
 
       {!selfie && (
         <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-          Capture a selfie first if you want to preview matched clothing or shop options with VTO.
+          Capture a selfie first if you want to build the outfit context and proof card.
+        </div>
+      )}
+
+      {!bodyImage && (
+        <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+          Clothes preview in Outfit Builder needs the same full-body image used by <Link href="/try-on" className="font-semibold underline">Try-On Studio</Link>. Add it there before using clothes VTO here.
         </div>
       )}
 
@@ -428,7 +480,7 @@ export default function OutfitPage() {
               <p className="label-caps">Step 2</p>
               <h2 className="mt-2 text-2xl">Matched closet items</h2>
             </div>
-            <button type="button" className="btn-primary" onClick={() => void handleTryLook()} disabled={isTryingOn}>
+            <button type="button" className="btn-primary" onClick={() => void handleTryLook()} disabled={isTryingOn || !bodyBlob}>
               {isTryingOn ? "Trying On..." : "Try This Look"}
             </button>
           </div>
@@ -483,7 +535,7 @@ export default function OutfitPage() {
                           <button type="button" className="btn-secondary flex-1 text-xs" onClick={() => handleSelectGapProduct(gap, product)}>
                             {isSelected ? "Selected" : "Add To Look"}
                           </button>
-                          <button type="button" className="btn-primary text-xs" onClick={() => void handleTryGapProduct(product)} disabled={isTryingOn || !selfie}>
+                          <button type="button" className="btn-primary text-xs" onClick={() => void handleTryGapProduct(product)} disabled={isTryingOn || !bodyBlob}>
                             Try On
                           </button>
                         </div>

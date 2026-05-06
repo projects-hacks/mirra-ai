@@ -146,6 +146,10 @@ This section documents what was completed across the previous implementation pas
     - added full-body upload and in-tab camera capture for clothes
     - added lightweight client-side body image validation for framing / size before clothes VTO runs
     - added explicit body-source preview, retake, and removal controls in the clothes flow
+  - Aligned Outfit Builder clothes VTO with the same body-image contract:
+    - outfit clothes preview no longer uses the portrait selfie for body try-on
+    - outfit VTO now depends on the stored full-body image from Try-On Studio
+    - added user-facing guidance when the body source image is missing
   - Upgraded GlowUp persistence:
     - `Save Look` now persists via proof-card generation instead of downloading only
     - save success state is surfaced in the UI
