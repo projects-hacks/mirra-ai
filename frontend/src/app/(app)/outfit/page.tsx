@@ -3,10 +3,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CloudSun, LoaderCircle, Shirt, Sparkles, Wand2 } from "lucide-react";
 import ProofCard from "@/components/cards/ProofCard";
+import { useToast } from "@/components/ui/Toast";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
-import { extractImageUrl, formatApiError, outfitApi, productsApi, vtoApi, weatherApi } from "@/lib/api";
+import {
+  extractImageUrl,
+  formatApiError,
+  outfitApi,
+  productsApi,
+  proofCardsApi,
+  vtoApi,
+  weatherApi,
+} from "@/lib/api";
 import { Occasion } from "@/lib/closet-constants";
 import { ToolName } from "@/lib/constants";
 import { resolveUserLocation } from "@/lib/userContext";
@@ -43,6 +53,7 @@ type MatchResponse = {
 };
 
 type ProofCardShape = {
+  id?: string;
   look_name: string;
   vto_image_url?: string;
   tone_match: number;
@@ -164,6 +175,8 @@ export default function OutfitPage() {
   const dispatch = useAppDispatch();
   const { selfie } = useAppState();
   const { user } = useAuth();
+  const router = useRouter();
+  const { showToast } = useToast();
 
   const [selectedOccasion, setSelectedOccasion] = useState<OccasionOption | null>(null);
   const [location, setLocation] = useState("San Francisco");
@@ -173,6 +186,7 @@ export default function OutfitPage() {
   const [gapStatuses, setGapStatuses] = useState<Record<string, string>>({});
   const [selectedGapProducts, setSelectedGapProducts] = useState<Record<string, Product>>({});
   const [proofCard, setProofCard] = useState<ProofCardShape | null>(null);
+  const [proofCardApproved, setProofCardApproved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isTryingOn, setIsTryingOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,6 +243,7 @@ export default function OutfitPage() {
 
     setSelectedOccasion(occasion);
     setProofCard(null);
+    setProofCardApproved(false);
     setError(null);
     setOutfitPreviewImage(null);
     setIsLoading(true);
@@ -363,6 +378,7 @@ export default function OutfitPage() {
 
     setError(null);
     setIsLoading(true);
+    setProofCardApproved(false);
 
     try {
       const selectedItems = [
@@ -386,6 +402,34 @@ export default function OutfitPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleApproveProofCard() {
+    if (!user?.id || !proofCard?.id) {
+      showToast("Build the proof card first.", "error");
+      return;
+    }
+
+    try {
+      await proofCardsApi.approve(proofCard.id, user.id);
+      setProofCardApproved(true);
+      showToast("Approved — saved to your look diary.", "success");
+    } catch (approveError) {
+      showToast(formatApiError(approveError, "Could not approve this look."), "error");
+    }
+  }
+
+  function handleAdjustProofCard() {
+    setProofCard(null);
+    setProofCardApproved(false);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function handleSaveProofCard() {
+    showToast("Look already saved. Opening your look diary.", "info");
+    router.push("/look-diary");
   }
 
   return (
@@ -604,7 +648,14 @@ export default function OutfitPage() {
 
           {proofCard && (
             <div className="mt-6">
-              <ProofCard card={proofCard} />
+              <ProofCard
+                card={proofCard}
+                approved={proofCardApproved}
+                onApprove={handleApproveProofCard}
+                onAdjust={handleAdjustProofCard}
+                onSave={handleSaveProofCard}
+                onClose={() => setProofCard(null)}
+              />
             </div>
           )}
         </section>

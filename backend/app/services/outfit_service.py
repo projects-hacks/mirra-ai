@@ -130,20 +130,28 @@ def generate_proof_card(user_id: str | None, args: dict[str, Any]) -> dict[str, 
             "season": proof_card.season,
         }
 
-        supabase.table("proof_cards").insert(
-            {
-                "user_id": user_id,
-                "look_name": proof_card.look_name,
-                "occasion": proof_card.occasion,
-                "tone_match": proof_card.tone_match,
-                "style_fit": proof_card.style_fit,
-                "skin_safe": proof_card.skin_safe,
-                "owned_items": proof_card.owned_items,
-                "new_items": proof_card.new_items,
-                "total_cost": proof_card.total_new_spend,
-                "result_image_url": proof_card.vto_image_url,
-            }
-        ).execute()
+        # Persist and surface the row id so the client can approve / track later.
+        insert_response = (
+            supabase.table("proof_cards")
+            .insert(
+                {
+                    "user_id": user_id,
+                    "look_name": proof_card.look_name,
+                    "occasion": proof_card.occasion,
+                    "tone_match": proof_card.tone_match,
+                    "style_fit": proof_card.style_fit,
+                    "skin_safe": proof_card.skin_safe,
+                    "owned_items": proof_card.owned_items,
+                    "new_items": proof_card.new_items,
+                    "total_cost": proof_card.total_new_spend,
+                    "result_image_url": proof_card.vto_image_url,
+                }
+            )
+            .execute()
+        )
+
+        if insert_response.data:
+            card_dict["id"] = insert_response.data[0].get("id")
 
         return {"card": card_dict}
     except Exception as exc:

@@ -332,8 +332,11 @@ export default function LookDiaryPage() {
                         look_name: card.look_name || 'Untitled Look',
                         occasion: card.occasion || 'casual',
                         created_at: card.created_at,
-                        tone_match_score: card.tone_match / 100,
-                        style_fit_score: card.style_fit / 100,
+                        tone_match: card.tone_match,
+                        style_fit: card.style_fit,
+                        skin_safe: card.skin_safe,
+                        approved: card.approved,
+                        total_cost: card.total_cost,
                         owned_items: card.owned_items.map((item, index) => ({
                           id: item.id ?? `${card.id}-owned-${index}`,
                           name: item.name ?? 'Closet item',
@@ -350,8 +353,8 @@ export default function LookDiaryPage() {
                               condition: card.weather.condition ?? 'Unknown',
                             }
                           : undefined,
-                        calendar_event: typeof card.calendar_event === 'string' 
-                          ? undefined 
+                        calendar_event: typeof card.calendar_event === 'string'
+                          ? undefined
                           : card.calendar_event,
                         is_favorite: false,
                       }}

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, BookMarked, History, Shirt } from "lucide-react";
+import { BarChart3, BookMarked, History, Shirt, Wand2 } from "lucide-react";
 
 const ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/closet", label: "Closet", icon: Shirt },
+  { href: "/outfit", label: "Build", icon: Wand2 },
   { href: "/closet/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/outfit-history", label: "Outfits", icon: History },
   { href: "/look-diary", label: "Looks", icon: BookMarked },

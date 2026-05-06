@@ -91,8 +91,23 @@ export interface OutfitMatchResponse {
   [key: string]: unknown;
 }
 
+export interface ProofCardCard {
+  id?: string;
+  look_name: string;
+  vto_image_url?: string | null;
+  tone_match: number;
+  style_fit: number;
+  skin_safe: boolean;
+  owned_items: Array<{ name: string; price?: number; imageUrl?: string; owned?: boolean }>;
+  new_items: Array<{ name: string; price?: number; imageUrl?: string; owned?: boolean }>;
+  total_new_spend: number;
+  occasion: string;
+  weather: string;
+  season?: string;
+}
+
 export interface ProofCardResponse {
-  card?: unknown;
+  card?: ProofCardCard;
   [key: string]: unknown;
 }
 
@@ -101,6 +116,22 @@ export interface ProofCardRecord {
   look_name?: string;
   result_image_url?: string | null;
   created_at?: string;
+  tone_match?: number;
+  style_fit?: number;
+  skin_safe?: boolean;
+  owned_items?: Array<{ id?: string; name?: string; category?: string; brand?: string; price?: number; url?: string }>;
+  new_items?: Array<{ name?: string; price?: number; url?: string }>;
+  total_cost?: number;
+  approved?: boolean;
+  occasion?: string;
+  weather?: { temperature?: number; condition?: string } | null;
+}
+
+export interface ApproveProofCardResponse {
+  success: boolean;
+  proof_card_id: string;
+  outfit_log_id: string;
+  message: string;
 }
 
 export interface StyleProfileResponse {
@@ -573,6 +604,12 @@ export const proofCardsApi = {
     );
     return response.proof_cards ?? [];
   },
+
+  approve: (proofCardId: string, userId: string) =>
+    apiPost<ApproveProofCardResponse>(`${ApiRoutes.PROOF_CARDS}approve`, {
+      proof_card_id: proofCardId,
+      user_id: userId,
+    }),
 
   recentLooks: async (userId: string): Promise<VTOResult[]> => {
     const cards = await proofCardsApi.list(userId);

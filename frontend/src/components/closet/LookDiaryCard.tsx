@@ -9,10 +9,14 @@ interface ProofCard {
   look_name: string;
   occasion: string;
   created_at: string;
-  tone_match_score?: number;
-  style_fit_score?: number;
+  /** DB columns: tone_match / style_fit are stored as 0-100 floats. */
+  tone_match?: number;
+  style_fit?: number;
+  skin_safe?: boolean;
   owned_items?: Array<{ id: string; name: string; category: string }>;
   new_items?: Array<{ name: string; price: number; url: string }>;
+  total_cost?: number;
+  approved?: boolean;
   weather?: {
     temperature: number;
     condition: string;
@@ -43,10 +47,10 @@ export default function LookDiaryCard({
     onFavoriteToggle?.(proofCard.id, newFavoriteState);
   };
 
-  const totalCost = proofCard.new_items?.reduce(
-    (sum, item) => sum + (item.price || 0),
-    0
-  ) || 0;
+  const totalCost =
+    typeof proofCard.total_cost === "number"
+      ? proofCard.total_cost
+      : (proofCard.new_items?.reduce((sum, item) => sum + (item.price || 0), 0) || 0);
 
   return (
     <>
@@ -89,22 +93,22 @@ export default function LookDiaryCard({
             </span>
           </button>
 
-          {/* Match Scores */}
-          {(proofCard.tone_match_score || proofCard.style_fit_score) && (
+          {/* Match Scores (0-100 floats from proof_cards table) */}
+          {(typeof proofCard.tone_match === "number" || typeof proofCard.style_fit === "number") && (
             <div className="absolute bottom-3 left-3 right-3 flex gap-2">
-              {proofCard.tone_match_score && (
+              {typeof proofCard.tone_match === "number" && (
                 <div className="flex-1 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
                   <div className="text-xs text-white/60">Tone Match</div>
                   <div className="text-sm font-medium text-mirra-accent">
-                    {Math.round(proofCard.tone_match_score * 100)}%
+                    {Math.round(proofCard.tone_match)}%
                   </div>
                 </div>
               )}
-              {proofCard.style_fit_score && (
+              {typeof proofCard.style_fit === "number" && (
                 <div className="flex-1 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
                   <div className="text-xs text-white/60">Style Fit</div>
                   <div className="text-sm font-medium text-mirra-accent">
-                    {Math.round(proofCard.style_fit_score * 100)}%
+                    {Math.round(proofCard.style_fit)}%
                   </div>
                 </div>
               )}

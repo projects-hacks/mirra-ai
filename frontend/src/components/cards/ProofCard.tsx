@@ -16,6 +16,7 @@ interface ProofCardItem {
 
 interface ProofCardProps {
   card: {
+    id?: string;
     look_name: string;
     vto_image_url?: string;
     tone_match: number;
@@ -27,9 +28,11 @@ interface ProofCardProps {
     occasion: string;
     weather: string;
   };
-  onApprove?: () => void;
+  /** Already approved — replace the Approve button with a "Saved to look diary" badge. */
+  approved?: boolean;
+  onApprove?: () => void | Promise<void>;
   onAdjust?: () => void;
-  onSave?: () => void;
+  onSave?: () => void | Promise<void>;
   onClose?: () => void;
 }
 
@@ -41,6 +44,7 @@ interface ProofCardProps {
  */
 const ProofCard = memo(function ProofCard({
   card,
+  approved = false,
   onApprove,
   onAdjust,
   onSave,
@@ -289,22 +293,33 @@ const ProofCard = memo(function ProofCard({
         )}
 
         {/* Action Buttons */}
-        <button
-          onClick={handleApprove}
-          className="w-full h-14 rounded-full text-lg font-medium flex items-center justify-center gap-2 transition-all shadow-lg"
-          style={{
-            background: "var(--primary)",
-            color: "var(--on-primary)",
-          }}
-        >
-          <span
-            className="material-symbols-outlined text-[20px]"
-            style={{ fontVariationSettings: "'FILL' 1" }}
+        {approved ? (
+          <div
+            className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-base font-semibold"
+            style={{ background: "var(--success)", color: "var(--on-primary)" }}
           >
-            thumb_up
-          </span>
-          Approve
-        </button>
+            <CheckCircle2 size={18} aria-hidden="true" />
+            Saved to your look diary
+          </div>
+        ) : (
+          <button
+            onClick={handleApprove}
+            disabled={!onApprove}
+            className="w-full h-14 rounded-full text-lg font-medium flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "var(--primary)",
+              color: "var(--on-primary)",
+            }}
+          >
+            <span
+              className="material-symbols-outlined text-[20px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              thumb_up
+            </span>
+            Approve
+          </button>
+        )}
 
         <div className="flex gap-4">
           <button
