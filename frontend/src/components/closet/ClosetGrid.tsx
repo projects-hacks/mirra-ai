@@ -2,6 +2,7 @@
 
 import { useState, useMemo, memo, useRef, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { ArrowDownUp, Camera, Plus, Search, SearchX, Shirt, SlidersHorizontal } from "lucide-react";
 import ClosetItemCard from "./ClosetItemCard";
 import CategoryFilter from "./CategoryFilter";
 import { getAllOccasions, getAllSeasons, FORMALITY_MIN, FORMALITY_MAX } from "@/lib/closet-constants";
@@ -238,20 +239,6 @@ const ClosetGrid = memo(function ClosetGrid({
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-semibold tracking-tight sm:text-4xl" style={{ color: "var(--primary)", fontFamily: "var(--font-serif)" }}>
-          Digital Closet
-        </h1>
-        <p
-          className="max-w-2xl text-sm sm:text-base"
-          style={{ color: "var(--on-surface-variant)" }}
-        >
-          Manage your collection. Mix, match, and discover new combinations with
-          your curated items.
-        </p>
-      </div>
-
       {/* Category Filters */}
       <CategoryFilter
         categories={categories}
@@ -263,12 +250,12 @@ const ClosetGrid = memo(function ClosetGrid({
       <div className="mb-6 flex flex-col gap-4 lg:flex-row">
         {/* Search Input */}
         <div className="flex-1 relative">
-          <span
-            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px]"
+          <Search
+            size={18}
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 -translate-y-1/2"
             style={{ color: "var(--on-surface-variant)" }}
-          >
-            search
-          </span>
+          />
           <input
             type="text"
             placeholder="Search by name, brand, or color..."
@@ -281,12 +268,12 @@ const ClosetGrid = memo(function ClosetGrid({
 
         {/* Sort Dropdown */}
         <div className="relative min-w-[200px] lg:w-[240px]">
-          <span
-            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px]"
+          <ArrowDownUp
+            size={18}
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 -translate-y-1/2"
             style={{ color: "var(--on-surface-variant)" }}
-          >
-            sort
-          </span>
+          />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -307,9 +294,7 @@ const ClosetGrid = memo(function ClosetGrid({
           className="px-4 py-3 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm font-body-md text-body-md transition-all duration-300 hover:bg-white/10 flex items-center gap-2"
           style={{ color: "var(--on-surface)" }}
         >
-          <span className="material-symbols-outlined text-[20px]">
-            tune
-          </span>
+          <SlidersHorizontal size={18} aria-hidden="true" />
           <span>Filters</span>
           {hasActiveFilters && (
             <span
@@ -546,48 +531,58 @@ const ClosetGrid = memo(function ClosetGrid({
         </div>
       ) : (
         <div
-          className="text-center py-16"
+          className="mx-auto flex max-w-xl flex-col items-center rounded-[1.5rem] border border-white/10 bg-white/[0.03] px-6 py-12 text-center shadow-[0_18px_60px_rgba(2,6,23,0.18)]"
           style={{ color: "var(--on-surface-variant)" }}
         >
-          <span className="material-symbols-outlined text-[64px] opacity-30 mb-4">
-            {hasActiveFilters ? "search_off" : "checkroom"}
-          </span>
-          <p className="text-lg">
-            {hasActiveFilters ? "No items match your filters" : "No items in this category"}
+          <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-container)] text-[var(--primary)]">
+            {hasActiveFilters ? <SearchX size={26} aria-hidden="true" /> : <Shirt size={26} aria-hidden="true" />}
+          </div>
+          <p className="text-lg font-semibold" style={{ color: "var(--on-surface)" }}>
+            {hasActiveFilters ? "No items match your filters" : "Your closet is empty"}
           </p>
-          <p className="text-sm mt-2">
+          <p className="mt-2 text-sm">
             {hasActiveFilters
               ? "Try adjusting your search or filters"
               : activeCategory === "All Items"
-              ? "Add items to your closet to get started"
+              ? "Add a photo to start building outfits and recommendations."
               : "Try selecting a different category"}
           </p>
-          {hasActiveFilters && (
+          {hasActiveFilters ? (
             <button
               onClick={handleClearFilters}
-              className="mt-4 px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white/10"
+              className="mt-5 inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 hover:bg-white/10"
               style={{ color: "var(--primary)" }}
             >
               Clear all filters
             </button>
+          ) : (
+            onAddItem && (
+              <button
+                onClick={onAddItem}
+                className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)] shadow-[0_12px_30px_rgba(139,92,246,0.28)] transition-transform hover:-translate-y-0.5"
+              >
+                <Camera size={16} aria-hidden="true" />
+                Add photo
+              </button>
+            )
           )}
         </div>
       )}
 
-      {/* FAB */}
+      {/* Compact mobile add affordance */}
       {onAddItem && (
         <button
           onClick={onAddItem}
-          className="fixed right-5 z-[var(--z-nav)] flex h-14 w-14 items-center justify-center rounded-full border border-white/20 shadow-lg transition-transform duration-300 hover:scale-105 md:right-8"
+          className="fixed right-4 z-[var(--z-nav)] inline-flex min-h-12 items-center gap-2 rounded-full border border-white/20 px-4 text-sm font-semibold shadow-lg transition-transform duration-300 hover:scale-105 sm:hidden"
           style={{
             background: "var(--primary)",
             color: "var(--on-primary)",
-            bottom: "calc(var(--nav-height) + var(--safe-bottom) + 1rem)",
+            bottom: "calc(var(--nav-height) + var(--safe-bottom) + 0.85rem)",
           }}
+          aria-label="Add closet photo"
         >
-          <span className="material-symbols-outlined text-[28px]">
-            add_a_photo
-          </span>
+          <Plus size={18} aria-hidden="true" />
+          Add
         </button>
       )}
     </div>

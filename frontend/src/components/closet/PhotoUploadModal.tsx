@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { AlertCircle, Camera, ImageIcon, Upload, X } from "lucide-react";
 import { getApiUrl } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { uploadToStorage as uploadFile } from "@/lib/storage";
@@ -338,26 +339,16 @@ export default function PhotoUploadModal({
   if (!isOpen) return null;
 
   return (
-    <dialog
-      open
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-      }}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
       onClick={handleBackdropClick}
+      role="dialog"
       aria-modal="true"
       aria-labelledby="photo-upload-modal-title"
     >
       <div
         ref={modalRef}
-        className="glass-card w-full max-w-lg animate-slide-up"
-        style={{
-          animation: "slide-up 0.3s ease-in-out",
-          maxHeight: "90vh",
-          overflow: "auto",
-        }}
+        className="glass-card max-h-[90dvh] w-full max-w-xl overflow-auto rounded-[1.5rem] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-6"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -370,12 +361,11 @@ export default function PhotoUploadModal({
           </h2>
           <button
             onClick={handleClose}
-            className="p-2 rounded-full hover:bg-black/5 transition-colors"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
             aria-label="Close modal"
-            style={{ minWidth: "44px", minHeight: "44px" }}
             disabled={isUploading}
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -391,7 +381,7 @@ export default function PhotoUploadModal({
             role="alert"
           >
             <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-[20px]">error</span>
+              <AlertCircle size={18} aria-hidden="true" className="mt-0.5 shrink-0" />
               <p className="text-sm flex-1">{error}</p>
             </div>
           </div>
@@ -403,19 +393,15 @@ export default function PhotoUploadModal({
             {/* Camera Capture Button */}
             <button
               onClick={handleCameraCapture}
-              className="w-full p-6 rounded-lg border-2 border-dashed transition-all hover:scale-[1.02]"
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-left transition-all hover:-translate-y-0.5 hover:bg-white/[0.07]"
               style={{
-                borderColor: "var(--outline-variant)",
-                background: "var(--surface)",
+                color: "var(--on-surface)",
               }}
             >
-              <div className="flex flex-col items-center gap-3">
-                <span
-                  className="material-symbols-outlined text-[48px]"
-                  style={{ color: "var(--primary)" }}
-                >
-                  photo_camera
-                </span>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary)]/15 text-[var(--primary)]">
+                  <Camera size={24} aria-hidden="true" />
+                </div>
                 <div>
                   <p
                     className="font-sans font-semibold text-base"
@@ -440,19 +426,17 @@ export default function PhotoUploadModal({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className="w-full p-6 rounded-lg border-2 border-dashed transition-all hover:scale-[1.02]"
+              className="w-full rounded-2xl border border-dashed p-5 text-left transition-all hover:-translate-y-0.5 hover:bg-white/[0.07]"
               style={{
                 borderColor: isDragging ? "var(--primary)" : "var(--outline-variant)",
                 background: isDragging ? "rgba(0, 1, 1, 0.05)" : "var(--surface)",
+                color: "var(--on-surface)",
               }}
             >
-              <div className="flex flex-col items-center gap-3">
-                <span
-                  className="material-symbols-outlined text-[48px]"
-                  style={{ color: "var(--primary)" }}
-                >
-                  upload_file
-                </span>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary)]/15 text-[var(--primary)]">
+                  <Upload size={24} aria-hidden="true" />
+                </div>
                 <div>
                   <p
                     className="font-sans font-semibold text-base"
@@ -516,7 +500,7 @@ export default function PhotoUploadModal({
                 Cancel
               </button>
               <button onClick={capturePhoto} className="btn-primary flex-1">
-                <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+                <Camera size={18} aria-hidden="true" />
                 Capture
               </button>
             </div>
@@ -543,12 +527,7 @@ export default function PhotoUploadModal({
               style={{ background: "var(--surface-container)" }}
             >
               <div className="flex items-center gap-2">
-                <span
-                  className="material-symbols-outlined text-[20px]"
-                  style={{ color: "var(--on-surface-variant)" }}
-                >
-                  image
-                </span>
+                <ImageIcon size={18} aria-hidden="true" style={{ color: "var(--on-surface-variant)" }} />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-sm font-medium truncate"
@@ -625,6 +604,6 @@ export default function PhotoUploadModal({
         {/* Hidden canvas for camera capture */}
         <canvas ref={canvasRef} className="hidden" />
       </div>
-    </dialog>
+    </div>
   );
 }

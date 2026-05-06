@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
+import { AlertCircle, CheckSquare, Plus, X } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import ClosetGrid from "@/components/closet/ClosetGrid";
@@ -308,9 +309,7 @@ export default function ClosetPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <span className="material-symbols-outlined text-[64px] text-red-500 mb-4">
-            error
-          </span>
+          <AlertCircle size={56} className="mx-auto mb-4 text-red-500" aria-hidden="true" />
           <p className="text-red-500 mb-4">{error instanceof Error ? error.message : "Failed to load closet items"}</p>
           <button
             onClick={() => void fetchClosetItems()}
@@ -333,19 +332,26 @@ export default function ClosetPage() {
               {items.length} {items.length === 1 ? "item" : "items"} in your wardrobe
             </p>
           </div>
-          <button
-            onClick={toggleSelectionMode}
-            className={`min-h-[44px] rounded-full px-4 py-2 transition-colors ${
-              selectionMode
-                ? "bg-[var(--primary)] text-white"
-                : "glass-panel text-[var(--on-surface)]"
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm">
-              {selectionMode ? "close" : "checklist"}
-            </span>
-            {selectionMode ? " Cancel" : " Select"}
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] shadow-[0_12px_30px_rgba(139,92,246,0.28)] transition-transform hover:-translate-y-0.5"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Add item
+            </button>
+            <button
+              onClick={toggleSelectionMode}
+              className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+                selectionMode
+                  ? "bg-[var(--primary)] text-white"
+                  : "glass-panel text-[var(--on-surface)]"
+              }`}
+            >
+              {selectionMode ? <X size={16} aria-hidden="true" /> : <CheckSquare size={16} aria-hidden="true" />}
+              {selectionMode ? "Cancel" : "Select"}
+            </button>
+          </div>
         </div>
       </div>
 
