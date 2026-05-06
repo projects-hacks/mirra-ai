@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AnalysisResults, TaskStatus } from "@/types/onboarding";
 import { COMPLETION_DISPLAY_DELAY } from "@/constants/onboarding";
+import { API_URL } from "@/lib/constants";
 
 // ── Props Interface ─────────────────────────────────
 interface ScanProgressScreenProps {
@@ -57,7 +58,7 @@ export function ScanProgressScreen({
     try {
       // Call the analyze endpoint
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/analyze`,
+        `${API_URL}/api/onboarding/analyze`,
         {
           method: "POST",
           headers: {

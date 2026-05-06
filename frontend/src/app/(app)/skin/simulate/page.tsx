@@ -6,7 +6,7 @@ import { Camera, Loader2, WandSparkles } from "lucide-react";
 import SkinSimulationCard from "@/components/cards/SkinSimulationCard";
 import ProductRecommendations from "@/components/skin/ProductRecommendations";
 import IntensitySliders from "@/components/skin/IntensitySliders";
-import { skinApi } from "@/lib/api";
+import { formatApiError, skinApi } from "@/lib/api";
 import { useSkinAnalysis } from "@/hooks/useSkinAnalysis";
 
 async function imageUrlToBlob(url: string): Promise<Blob> {
@@ -36,7 +36,7 @@ export default function SkinSimulatePage() {
       const result = await skinApi.simulate(selfie, intensities);
       setSimulationUrl(result.simulation_url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Skin simulation failed.");
+      setError(formatApiError(err, "Skin simulation failed."));
     } finally {
       setIsSimulating(false);
     }

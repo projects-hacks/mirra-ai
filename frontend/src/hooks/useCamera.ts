@@ -27,6 +27,9 @@ interface UseCameraReturn {
 
 interface UseCameraOptions {
   enabled?: boolean;
+  cropToPortrait?: boolean;
+  mirrorCapture?: boolean;
+  facingMode?: "user" | "environment";
 }
 
 /**
@@ -35,7 +38,12 @@ interface UseCameraOptions {
  * quality checks, guided capture). Falls back to native getUserMedia.
  */
 export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
-  const { enabled = true } = options;
+  const {
+    enabled = true,
+    cropToPortrait = true,
+    mirrorCapture = true,
+    facingMode = CAMERA.FACING_MODE,
+  } = options;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -66,7 +74,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: CAMERA.FACING_MODE,
+            facingMode,
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -123,7 +131,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       streamRef.current = null;
       setIsReady(false);
     };
-  }, [enabled]);
+  }, [enabled, facingMode]);
 
   const streamAttachedRef = useRef(false);
 
@@ -180,8 +188,8 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     let sourceX = 0;
     const sourceY = 0;
 
-    // Force portrait: crop sides if landscape (3:4 aspect ratio)
-    if (vw > vh) {
+    // Force portrait when requested: crop sides if landscape (3:4 aspect ratio)
+    if (cropToPortrait && vw > vh) {
       targetWidth = Math.floor(vh * (3 / 4));
       sourceX = Math.floor((vw - targetWidth) / 2);
     }
@@ -193,9 +201,10 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
 
-    // Mirror the capture (front camera is mirrored)
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
+    if (mirrorCapture) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     
     // Crop center part of the video
     ctx.drawImage(
@@ -222,7 +231,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     });
 
     return dataUrl;
-  }, [isReady, isUsingCameraKit]);
+  }, [cropToPortrait, isReady, isUsingCameraKit, mirrorCapture]);
 
   const stop = useCallback(() => {
     debugFlow("native-camera", "stop requested");

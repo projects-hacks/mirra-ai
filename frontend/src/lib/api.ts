@@ -24,6 +24,15 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiContractErrorDetail {
+  category?: string;
+  message?: string;
+  provider_message?: string;
+  provider_code?: string;
+  source?: string;
+  task_type?: string;
+}
+
 export interface SkinAnalyzeResponse {
   scores: Record<string, unknown>;
   skin_age: number | null;
@@ -33,6 +42,7 @@ export interface SkinAnalyzeResponse {
 
 export interface SkinSimulateResponse {
   simulation_url: string;
+  image_url?: string;
   intensities_used: Record<string, number>;
 }
 
@@ -56,9 +66,10 @@ export interface SkinInsightsResponse extends AgentInsight {
 }
 
 export interface VtoImageResponse {
-  image_url?: string;
+  image_url: string;
   result_image_url?: string;
   url?: string;
+  provider_payload?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -156,6 +167,10 @@ function errorMessageFromBody(body: unknown): string {
       const message = (detail as { message: unknown }).message;
       return typeof message === "string" ? message : JSON.stringify(message);
     }
+    if (detail && typeof detail === "object" && "provider_message" in detail) {
+      const message = (detail as { provider_message: unknown }).provider_message;
+      return typeof message === "string" ? message : JSON.stringify(message);
+    }
     return JSON.stringify(detail);
   }
   if (body && typeof body === "object" && "message" in body) {
@@ -163,6 +178,54 @@ function errorMessageFromBody(body: unknown): string {
     return typeof message === "string" ? message : JSON.stringify(message);
   }
   return "Request failed";
+}
+
+export function getApiErrorDetail(error: unknown): ApiContractErrorDetail | null {
+  if (!(error instanceof ApiError)) return null;
+  const body = error.body;
+  if (!body || typeof body !== "object" || !("detail" in body)) return null;
+  const detail = (body as { detail: unknown }).detail;
+  return detail && typeof detail === "object" ? (detail as ApiContractErrorDetail) : null;
+}
+
+export function formatApiError(error: unknown, fallback: string): string {
+  const detail = getApiErrorDetail(error);
+  if (detail) {
+    const category = detail.category;
+    if (category === "product_page_url") return "Use a direct product image instead of a shopping page URL.";
+    if (category === "expired_image_url") return "That product image URL expired or is blocked. Pick another image.";
+    if (category === "face_rejected") return "Retake with your face centered, uncovered, and in bright even light.";
+    if (category === "body_pose_rejected") return "Use a straight-on photo with your face and upper body clearly visible.";
+    if (category === "reference_rejected") return "The reference image is not clean enough for try-on. Pick a clearer product image.";
+    if (category === "api_timeout") return "The render timed out. Retry the same action once.";
+    if (category === "unsupported_category") return "That category is not supported in this mode yet.";
+    if (category === "provider_auth") return "The visual engine credentials are invalid or missing.";
+    if (category === "provider_units") return "Perfect Corp units are unavailable. Check the account balance.";
+    if (category === "provider_response_invalid") return "The visual engine returned an incomplete result. Retry with another image.";
+    if (category === "safety_blocked") return "This image could not be processed because it triggered a safety filter.";
+    if (category === "missing_scan") return "Capture a fresh scan before opening this view.";
+    if (category === "service_unavailable") return detail.message ?? fallback;
+    if (category === "invalid_input") return detail.message ?? fallback;
+    if (detail.message) return detail.message;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+export function extractImageUrl(result: Pick<VtoImageResponse, "image_url" | "result_image_url" | "url">): string | null {
+  return result.image_url ?? result.result_image_url ?? result.url ?? null;
+}
+
+function normalizeVtoImageResponse(response: VtoImageResponse): VtoImageResponse {
+  const imageUrl = extractImageUrl(response);
+  if (!imageUrl) {
+    throw new ApiError(502, "The provider response did not include an image URL.", response);
+  }
+
+  return {
+    ...response,
+    image_url: imageUrl,
+  };
 }
 
 export async function retryWithBackoff<T>(
@@ -324,31 +387,31 @@ export const vtoApi = {
     const form = formWithSelfie(selfie);
     form.append("garment_url", garmentUrl);
     form.append("garment_category", category);
-    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_CLOTHES, form);
+    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_CLOTHES, form).then(normalizeVtoImageResponse);
   },
 
   makeup: (selfie: Blob, effects: unknown[]) => {
     const form = formWithSelfie(selfie);
     form.append("effects", JSON.stringify(effects));
-    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_MAKEUP, form);
+    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_MAKEUP, form).then(normalizeVtoImageResponse);
   },
 
   earrings: (selfie: Blob, earringUrl: string) => {
     const form = formWithSelfie(selfie);
     form.append("earring_url", earringUrl);
-    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_EARRINGS, form);
+    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_EARRINGS, form).then(normalizeVtoImageResponse);
   },
 
   necklace: (selfie: Blob, necklaceUrl: string) => {
     const form = formWithSelfie(selfie);
     form.append("necklace_url", necklaceUrl);
-    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_NECKLACE, form);
+    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_NECKLACE, form).then(normalizeVtoImageResponse);
   },
 
   hair: (selfie: Blob, refHairUrl: string) => {
     const form = formWithSelfie(selfie);
     form.append("ref_hair_url", refHairUrl);
-    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_HAIR, form);
+    return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_HAIR, form).then(normalizeVtoImageResponse);
   },
 };
 

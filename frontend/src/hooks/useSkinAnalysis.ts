@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
-import { productsApi, skinApi, weatherApi, type SkinHistoryRow } from "@/lib/api";
+import { formatApiError, productsApi, skinApi, weatherApi, type SkinHistoryRow } from "@/lib/api";
 import {
   CONCERN_PRODUCT_QUERIES,
   deriveSimulationIntensities,
@@ -124,7 +124,7 @@ export function useSkinAnalysis() {
               query,
               products: [],
               status: "error",
-              error: productError instanceof Error ? productError.message : "Product search failed.",
+              error: formatApiError(productError, "Product search failed."),
             } satisfies ProductRecommendationGroup;
           }
         })

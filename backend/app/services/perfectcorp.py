@@ -110,7 +110,7 @@ class PerfectCorpAPIError(Exception):
         """FastAPI-safe response detail."""
         return {
             "category": self.category().value,
-            "code": self.error_code,
+            "provider_code": self.error_code,
             "message": self.get_user_message(),
             "provider_message": self.error_message,
             "task_type": self.task_type,

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { API_URL } from "@/lib/constants";
 
 interface OutfitItem {
   id: string;
@@ -49,7 +50,7 @@ export default function OutfitRecommendation({
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/closet/recommendations/outfit`,
+        `${API_URL}/api/closet/recommendations/outfit`,
         {
           method: "POST",
           headers: {

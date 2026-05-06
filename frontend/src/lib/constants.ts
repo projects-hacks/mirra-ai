@@ -1,7 +1,31 @@
 /* ── Constants — mirrors backend app/core/constants.py ── */
 
 // ── API Configuration ──────────────────────────────
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const DEFAULT_LOCAL_API_URL = "http://localhost:8000";
+
+function isLocalHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function normalizeApiUrl(rawUrl: string | undefined): string {
+  const configured = rawUrl?.trim();
+  if (!configured) return DEFAULT_LOCAL_API_URL;
+
+  try {
+    const parsed = new URL(configured);
+    const pageProtocol = typeof window !== "undefined" ? window.location.protocol : null;
+
+    if (parsed.protocol === "http:" && pageProtocol === "https:" && !isLocalHostname(parsed.hostname)) {
+      parsed.protocol = "https:";
+    }
+
+    return parsed.origin;
+  } catch {
+    return configured.replace(/\/+$/, "");
+  }
+}
+
+export const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 export const ENABLE_CAMERA_KIT = process.env.NEXT_PUBLIC_ENABLE_CAMERA_KIT !== "false";

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { CloudSun, LoaderCircle, Shirt, Sparkles, Wand2 } from "lucide-react";
 import ProofCard from "@/components/cards/ProofCard";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
-import { outfitApi, productsApi, vtoApi, weatherApi, type VtoImageResponse } from "@/lib/api";
+import { extractImageUrl, formatApiError, outfitApi, productsApi, vtoApi, weatherApi } from "@/lib/api";
 import { Occasion } from "@/lib/closet-constants";
 import { ToolName } from "@/lib/constants";
 import { resolveUserLocation } from "@/lib/userContext";
@@ -69,10 +69,6 @@ function inferGarmentCategory(category: string): "upper" | "lower" | "full" {
   if (["dress"].includes(normalized)) return "full";
   if (["pants", "jeans", "shorts", "skirt"].includes(normalized)) return "lower";
   return "upper";
-}
-
-function extractImageUrl(result: VtoImageResponse): string | null {
-  return result.image_url ?? result.result_image_url ?? result.url ?? null;
 }
 
 function normalizePrice(price: string): number | undefined {
@@ -210,7 +206,7 @@ export default function OutfitPage() {
       }
       setSelectedGapProducts({});
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to build your outfit right now.");
+      setError(formatApiError(loadError, "Unable to build your outfit right now."));
     } finally {
       setIsLoading(false);
     }
@@ -251,7 +247,7 @@ export default function OutfitPage() {
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
-      setError(tryError instanceof Error ? tryError.message : "Failed to preview this look.");
+      setError(formatApiError(tryError, "Failed to preview this look."));
     } finally {
       setIsTryingOn(false);
     }
@@ -287,7 +283,7 @@ export default function OutfitPage() {
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
-      setError(tryError instanceof Error ? tryError.message : "Failed to try on this product.");
+      setError(formatApiError(tryError, "Failed to try on this product."));
     } finally {
       setIsTryingOn(false);
     }
@@ -317,7 +313,7 @@ export default function OutfitPage() {
 
       setProofCard((result.card ?? null) as ProofCardShape | null);
     } catch (proofError) {
-      setError(proofError instanceof Error ? proofError.message : "Unable to build the proof card.");
+      setError(formatApiError(proofError, "Unable to build the proof card."));
     } finally {
       setIsLoading(false);
     }

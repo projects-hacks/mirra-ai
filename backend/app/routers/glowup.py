@@ -46,6 +46,35 @@ HAIRSTYLE_REFERENCES: list[dict[str, str]] = [
 ]
 
 
+def _detail(
+    category: str,
+    message: str,
+    *,
+    provider_message: str | None = None,
+    provider_code: str | None = None,
+    source: str | None = None,
+) -> dict[str, str]:
+    detail = {"category": category, "message": message}
+    if provider_message:
+        detail["provider_message"] = provider_message
+    if provider_code:
+        detail["provider_code"] = provider_code
+    if source:
+        detail["source"] = source
+    return detail
+
+
+def _provider_error_to_http(exc: PerfectCorpAPIError, source: str) -> HTTPException:
+    logger.info("Perfect Corp rejected %s: %s", source, exc.error_code)
+    return HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail={
+            **exc.to_detail(),
+            "source": source,
+        },
+    )
+
+
 class GlowupRecommendRequest(BaseModel):
     face_attributes: dict[str, Any]
     skin_tone: dict[str, Any]
@@ -169,19 +198,17 @@ async def analyze_glowup(selfie: UploadFile = File(...)) -> dict[str, Any]:
             "skin_tone": _normalize_skin_tone(skin_tone),
         }
     except PerfectCorpAPIError as exc:
-        logger.info(
-            "Perfect Corp rejected glowup analysis: %s",
-            exc.error_code,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=exc.get_user_message(),
-        ) from exc
+        raise _provider_error_to_http(exc, "glowup_analysis") from exc
     except Exception as exc:
         logger.exception("Unexpected glowup analyze failure")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to analyze glowup right now. Please try again.",
+            detail=_detail(
+                "provider_internal",
+                "Unable to analyze GlowUp right now. Please try again.",
+                provider_message=str(exc),
+                source="glowup_analysis",
+            ),
         ) from exc
 
 
@@ -204,7 +231,12 @@ async def recommend_glowup(
             if not face_attributes_json or not skin_tone_json:
                 raise HTTPException(
                     status_code=400,
-                    detail="Provide either a selfie or both face_attributes_json and skin_tone_json.",
+                    detail=_detail(
+                        "invalid_input",
+                        "Provide either a selfie or saved face analysis before building GlowUp.",
+                        provider_message="Provide either a selfie or both face_attributes_json and skin_tone_json.",
+                        source="glowup_recommend",
+                    ),
                 )
             try:
                 payload = GlowupRecommendRequest(
@@ -214,26 +246,32 @@ async def recommend_glowup(
                 face_attrs = payload.face_attributes
                 skin_tone = payload.skin_tone
             except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
+                raise HTTPException(
+                    status_code=400,
+                    detail=_detail(
+                        "invalid_input",
+                        "GlowUp analysis data is invalid. Run face analysis again.",
+                        provider_message=str(exc),
+                        source="glowup_recommend",
+                    ),
+                ) from exc
 
         plan = await agent_service.generate_glowup_plan(face_attrs, skin_tone)
         return _enrich_plan(face_attrs, skin_tone, plan)
     except PerfectCorpAPIError as exc:
-        logger.info(
-            "Perfect Corp rejected glowup recommend analysis: %s",
-            exc.error_code,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=exc.get_user_message(),
-        ) from exc
+        raise _provider_error_to_http(exc, "glowup_recommend") from exc
     except HTTPException:
         raise
     except Exception as exc:
         logger.exception("Unexpected glowup recommend failure")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to build a glowup plan right now. Please try again.",
+            detail=_detail(
+                "provider_internal",
+                "Unable to build a GlowUp plan right now. Please try again.",
+                provider_message=str(exc),
+                source="glowup_recommend",
+            ),
         ) from exc
 
 

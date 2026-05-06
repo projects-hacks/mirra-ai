@@ -102,6 +102,109 @@ This section documents what was completed across the previous implementation pas
   - `backend/app/services/outfit_service.py`
   - `backend/app/routers/outfit.py`
 
+### Progress update: skin consistency, camera kit, GlowUp hardening
+
+- Completed:
+  - Traced the dashboard / command-center skin score source and removed drift between dashboard, skin page, and skin history.
+  - Fixed Perfect Corp Camera Kit mounting so the SDK overlay is forced fullscreen instead of rendering in normal page flow.
+  - Removed the user-facing native camera fallback CTA from the production scan flow so capture always follows Perfect Corp quality gating.
+  - Unified skin score calculation across:
+    - dashboard
+    - skin page
+    - skin history
+    - `skinApi.summary()`
+  - Fixed dashboard / skin reasoning CTA behavior:
+    - skin page reasoning actions now work
+    - `Simulate Improvement` routing works
+  - Fixed skin history detail mismatch:
+    - non-concern fields such as `skin_age` and provider-level `all` are no longer treated as concern rows
+  - Hardened GlowUp partial-failure behavior:
+    - deterministic client fallback plan
+    - accessory loading / empty states
+    - explicit notice when fallback planning is used
+  - Filtered backend skin-insight ranking to real skin concern keys only, so Gemini / fallback reasoning cannot promote `skin_age` as a concern.
+  - Normalized backend success contracts for skin simulation and core VTO routes so frontend consumers can rely on canonical `image_url`.
+  - Added shared frontend VTO response normalization and shared image extraction utilities in `frontend/src/lib/api.ts`.
+  - Normalized backend error contracts across skin, VTO, GlowUp, and outfit proof-card routes to structured `detail` payloads with stable categories.
+  - Added shared frontend error formatting for taxonomy-driven failures:
+    - product page URL
+    - expired image URL
+    - face rejected
+    - pose rejected
+    - reference rejected
+    - API timeout
+    - unsupported category
+    - provider auth / units / invalid provider response
+  - Hardened Try-On partial-state behavior:
+    - starter fallback plan when GlowUp analysis or plan generation is unavailable
+    - explicit studio notice when fallback recommendations are in use
+    - inline clothes and accessory search empty / failure states
+    - non-blank makeup and hair sections while recommendation data is degraded
+  - Split Try-On Studio image inputs by modality:
+    - clothes now requires a dedicated full-body image instead of reusing the portrait selfie
+    - makeup, hair, earrings, and necklace remain portrait-selfie-based
+    - added full-body upload and in-tab camera capture for clothes
+    - added lightweight client-side body image validation for framing / size before clothes VTO runs
+    - added explicit body-source preview, retake, and removal controls in the clothes flow
+  - Upgraded GlowUp persistence:
+    - `Save Look` now persists via proof-card generation instead of downloading only
+    - save success state is surfaced in the UI
+    - GlowUp save/share now only operates on a result generated inside GlowUp, preventing stale cross-flow VTO state from being reused
+
+### Gemini integration status
+
+- Gemini integration is currently active in backend for:
+  - `generate_skin_insights`
+  - `generate_glowup_plan`
+  - `generate_outfit_reasoning`
+  - AI metadata extraction
+- Gemini-backed output is currently surfaced in frontend for:
+  - skin reasoning card on dashboard / skin flow
+  - GlowUp plan consumption
+- Gemini work is not fully complete yet:
+  - it is not yet the single consistent orchestration layer across all intended Try-On and appearance flows
+  - not every visual flow is rendered from deterministic Gemini-backed JSON cards / steps / CTAs / failure states
+  - Try-On still relies more on direct API orchestration than Gemini-driven reasoning UI
+
+### Remaining execution checklist
+
+- Completed:
+  - Normalize API contracts for skin and VTO responses:
+    - shared success shapes
+    - shared error shapes
+    - typed frontend consumers
+    - reduced endpoint-specific parsing
+  - Implement end-to-end user-facing error taxonomy for:
+    - product page / image resolution failure
+    - expired image URL
+    - face rejected
+    - API timeout
+    - unsupported category
+- In progress:
+  - Finish Gemini UI coverage so reasoning is surfaced consistently where intended with deterministic rendering and no silent fallback behavior
+    - completed on GlowUp Studio:
+      - shared reasoning trace card now renders normalized Gemini / fallback plan output
+      - recommendation actions now scroll into makeup, hair, and accessories sections
+    - completed on Try-On Studio:
+      - shared reasoning trace card now renders normalized Gemini / fallback plan output
+      - recommendation actions now switch directly into clothes, makeup, hair, or accessories tabs
+    - still remaining:
+      - broader end-to-end reasoning coverage outside skin / glowup / try-on
+  - Complete Try-On flow separation and QA:
+    - preview state
+    - clothes
+    - makeup
+    - hair
+    - accessories
+    - product search
+    - persistence into look diary / proof cards
+  - Complete GlowUp UX hardening:
+    - accessory states
+    - save/share persistence
+    - mobile polish
+    - visual consistency under partial backend failure
+  - Run a full desktop / mobile verification pass across skin, GlowUp, Try-On, and persistence flows
+
 ---
 
 ## ⭐ CORE CONCEPT: The Agent Reasoning Layer

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getSession } from "@/lib/auth";
+import { API_URL } from "@/lib/constants";
 
 interface RecommendedItem {
   id: string;
@@ -54,7 +55,7 @@ export default function RecommendationsCard({
         }
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/closet/recommendations/quick?${params}`,
+          `${API_URL}/api/closet/recommendations/quick?${params}`,
           { headers }
         );
 

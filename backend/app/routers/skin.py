@@ -18,6 +18,35 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _detail(
+    category: str,
+    message: str,
+    *,
+    provider_message: str | None = None,
+    provider_code: str | None = None,
+    source: str | None = None,
+) -> dict[str, str]:
+    detail = {"category": category, "message": message}
+    if provider_message:
+        detail["provider_message"] = provider_message
+    if provider_code:
+        detail["provider_code"] = provider_code
+    if source:
+        detail["source"] = source
+    return detail
+
+
+def _provider_error_to_http(exc: PerfectCorpAPIError, source: str) -> HTTPException:
+    logger.info("Perfect Corp rejected %s: %s", source, exc.error_code)
+    return HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail={
+            **exc.to_detail(),
+            "source": source,
+        },
+    )
+
+
 @router.post("/analyze")
 async def analyze_skin(
     request: Request,
@@ -35,15 +64,7 @@ async def analyze_skin(
             "suggestions": [],
         }
     except PerfectCorpAPIError as exc:
-        logger.info(
-            "Perfect Corp rejected skin analysis for user %s: %s",
-            user_id,
-            exc.error_code,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=exc.get_user_message(),
-        ) from exc
+        raise _provider_error_to_http(exc, "skin_analysis") from exc
 
 
 @router.post("/simulate")
@@ -61,13 +82,25 @@ async def simulate_skin(
         try:
             parsed_intensities = json.loads(intensities)
         except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=400, detail="Invalid intensities JSON") from exc
+            raise HTTPException(
+                status_code=400,
+                detail=_detail(
+                    "invalid_input",
+                    "The skin simulation controls could not be read.",
+                    provider_message="Invalid intensities JSON",
+                    source="skin_simulation",
+                ),
+            ) from exc
 
-    return await skin_tools.simulate_skin(
+    result = await skin_tools.simulate_skin(
         selfie_bytes,
         intensities=parsed_intensities,
         user_id=resolved_user_id,
     )
+    simulation_url = result.get("simulation_url")
+    if isinstance(simulation_url, str) and simulation_url:
+        result["image_url"] = simulation_url
+    return result
 
 
 @router.get("/history")
@@ -78,12 +111,25 @@ async def get_skin_history(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Supabase is not configured",
+            detail=_detail(
+                "service_unavailable",
+                "Skin history is unavailable right now.",
+                provider_message="Supabase is not configured",
+                source="skin_history",
+            ),
         )
 
     resolved_user_id = resolve_user_id(request, user_id)
     if not resolved_user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
+        raise HTTPException(
+            status_code=400,
+            detail=_detail(
+                "invalid_input",
+                "Sign in to view skin history.",
+                provider_message="user_id is required",
+                source="skin_history",
+            ),
+        )
 
     result = (
         supabase.table("skin_scans")
@@ -104,12 +150,25 @@ async def get_skin_insights(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Supabase is not configured",
+            detail=_detail(
+                "service_unavailable",
+                "Skin insights are unavailable right now.",
+                provider_message="Supabase is not configured",
+                source="skin_insights",
+            ),
         )
 
     resolved_user_id = resolve_user_id(request, user_id)
     if not resolved_user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
+        raise HTTPException(
+            status_code=400,
+            detail=_detail(
+                "invalid_input",
+                "Sign in to load skin insights.",
+                provider_message="user_id is required",
+                source="skin_insights",
+            ),
+        )
 
     scans_result = (
         supabase.table("skin_scans")
@@ -121,7 +180,15 @@ async def get_skin_insights(
     )
     scans = scans_result.data or []
     if not scans:
-        raise HTTPException(status_code=404, detail="No skin scans found")
+        raise HTTPException(
+            status_code=404,
+            detail=_detail(
+                "missing_scan",
+                "Capture a skin scan before requesting insights.",
+                provider_message="No skin scans found",
+                source="skin_insights",
+            ),
+        )
 
     body_model_result = (
         supabase.table("body_model")

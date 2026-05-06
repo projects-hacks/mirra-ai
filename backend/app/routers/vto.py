@@ -46,7 +46,60 @@ def _provider_error_to_http(exc: Exception) -> HTTPException:
                 "provider_message": str(exc),
             },
         )
-    return HTTPException(status_code=500, detail="Try-on failed unexpectedly.")
+    return HTTPException(
+        status_code=500,
+        detail={
+            "category": perfectcorp.MirraErrorCategory.PROVIDER_INTERNAL.value,
+            "message": "Try-on failed unexpectedly.",
+            "provider_message": str(exc),
+        },
+    )
+
+
+def _detail(
+    category: str,
+    message: str,
+    *,
+    provider_message: str | None = None,
+    provider_code: str | None = None,
+    source: str | None = None,
+) -> dict[str, str]:
+    detail = {"category": category, "message": message}
+    if provider_message:
+        detail["provider_message"] = provider_message
+    if provider_code:
+        detail["provider_code"] = provider_code
+    if source:
+        detail["source"] = source
+    return detail
+
+
+def _normalize_image_response(payload: Any, source: str) -> dict[str, Any]:
+    image_url = None
+    provider_payload: dict[str, Any] | None = payload if isinstance(payload, dict) else None
+
+    if isinstance(payload, dict):
+      image_url = payload.get("image_url") or payload.get("result_image_url") or payload.get("url")
+    elif isinstance(payload, str):
+      image_url = payload
+
+    if not isinstance(image_url, str) or not image_url:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "category": "provider_response_invalid",
+                "message": "The provider response did not include a usable image URL.",
+                "source": source,
+            },
+        )
+
+    response: dict[str, Any] = {"image_url": image_url}
+    if provider_payload:
+        response["provider_payload"] = provider_payload
+        for key, value in provider_payload.items():
+            if key != "image_url":
+                response[key] = value
+    return response
 
 
 async def _resolve_reference_url(raw_url: str) -> str:
@@ -85,15 +138,19 @@ async def try_on_clothes(
     if not provider_category:
         raise HTTPException(
             status_code=400,
-            detail={
-                "category": perfectcorp.MirraErrorCategory.UNSUPPORTED_CATEGORY.value,
-                "message": "This clothing category is not supported yet.",
-                "provider_message": f"garment_category={garment_category}",
-            },
+            detail=_detail(
+                perfectcorp.MirraErrorCategory.UNSUPPORTED_CATEGORY.value,
+                "This clothing category is not supported yet.",
+                provider_message=f"garment_category={garment_category}",
+                source="clothes",
+            ),
         )
 
     try:
-        return await fashion_tools.try_on_clothes(selfie_bytes, resolved_url, provider_category)
+        return _normalize_image_response(
+            await fashion_tools.try_on_clothes(selfie_bytes, resolved_url, provider_category),
+            "clothes",
+        )
     except Exception as exc:
         raise _provider_error_to_http(exc) from exc
 
@@ -107,11 +164,30 @@ async def try_on_makeup(
     try:
         parsed_effects = json.loads(effects)
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail="Invalid effects JSON") from exc
+        raise HTTPException(
+            status_code=400,
+            detail=_detail(
+                perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                "The makeup configuration could not be read.",
+                provider_message="Invalid effects JSON",
+                source="makeup",
+            ),
+        ) from exc
     if not isinstance(parsed_effects, list):
-        raise HTTPException(status_code=400, detail="effects must be a JSON array")
+        raise HTTPException(
+            status_code=400,
+            detail=_detail(
+                perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                "The makeup configuration must be a list of effects.",
+                provider_message="effects must be a JSON array",
+                source="makeup",
+            ),
+        )
     try:
-        return await beauty_tools.try_on_makeup(selfie_bytes, parsed_effects)
+        return _normalize_image_response(
+            await beauty_tools.try_on_makeup(selfie_bytes, parsed_effects),
+            "makeup",
+        )
     except Exception as exc:
         raise _provider_error_to_http(exc) from exc
 
@@ -124,7 +200,10 @@ async def try_on_earrings(
     selfie_bytes = await read_image(selfie)
     resolved_url = await _resolve_reference_url(earring_url)
     try:
-        return await accessory_tools.try_on_earrings(selfie_bytes, resolved_url)
+        return _normalize_image_response(
+            await accessory_tools.try_on_earrings(selfie_bytes, resolved_url),
+            "earrings",
+        )
     except Exception as exc:
         raise _provider_error_to_http(exc) from exc
 
@@ -137,7 +216,10 @@ async def try_on_necklace(
     selfie_bytes = await read_image(selfie)
     resolved_url = await _resolve_reference_url(necklace_url)
     try:
-        return await accessory_tools.try_on_necklace(selfie_bytes, resolved_url)
+        return _normalize_image_response(
+            await accessory_tools.try_on_necklace(selfie_bytes, resolved_url),
+            "necklace",
+        )
     except Exception as exc:
         raise _provider_error_to_http(exc) from exc
 
@@ -150,6 +232,9 @@ async def try_on_hair(
     selfie_bytes = await read_image(selfie)
     resolved_url = await _resolve_reference_url(ref_hair_url)
     try:
-        return await hair_tools.change_hairstyle(selfie_bytes, resolved_url)
+        return _normalize_image_response(
+            await hair_tools.change_hairstyle(selfie_bytes, resolved_url),
+            "hair",
+        )
     except Exception as exc:
         raise _provider_error_to_http(exc) from exc

@@ -5,10 +5,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Share2, Sparkles, WandSparkles } from "lucide-react";
-import { glowupApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
+import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
+import { glowupPlanToAgentInsight } from "@/lib/agentAdapters";
 import { ToolName } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
+import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { useImageTransition } from "@/hooks/useImageTransition";
 import type {
   GlowupAnalysis,
@@ -88,10 +90,6 @@ async function imageStringToBlob(image: string): Promise<Blob> {
 
   const response = await fetch(image);
   return response.blob();
-}
-
-function extractImageUrl(result: VtoImageResponse): string | null {
-  return result.image_url ?? result.result_image_url ?? result.url ?? null;
 }
 
 function formatFaceAnalysis(analysis: GlowupAnalysis | null) {
@@ -279,7 +277,7 @@ function AccessoryRow({
 export default function GlowupPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { selfie, vtoResult, isHydrated } = useAppState();
+  const { selfie, isHydrated } = useAppState();
 
   const [selfieBlob, setSelfieBlob] = useState<Blob | null>(null);
   const [analysis, setAnalysis] = useState<GlowupAnalysis | null>(null);
@@ -293,6 +291,7 @@ export default function GlowupPage() {
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [planNotice, setPlanNotice] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [activeHairId, setActiveHairId] = useState<string | null>(null);
   const [activeAccessoryUrl, setActiveAccessoryUrl] = useState<string | null>(null);
@@ -405,7 +404,7 @@ export default function GlowupPage() {
         });
       } catch (loadError) {
         if (cancelled) return;
-        setError(loadError instanceof Error ? loadError.message : "GlowUp is unavailable right now.");
+        setError(formatApiError(loadError, "GlowUp is unavailable right now."));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -419,7 +418,8 @@ export default function GlowupPage() {
 
   const formatted = useMemo(() => formatFaceAnalysis(analysis), [analysis]);
   const beforeImage = earliestSelfieUrl ?? selfie ?? null;
-  const previewImage = currentImage ?? vtoResult?.imageUrl ?? latestSavedSelfieUrl ?? selfie ?? null;
+  const previewImage = currentImage ?? latestSavedSelfieUrl ?? selfie ?? null;
+  const hasAppliedLook = Boolean(currentImage);
   const makeupRecommendations = useMemo(
     () => getRecommendationByCategory(plan?.recommendations, "makeup"),
     [plan?.recommendations]
@@ -432,6 +432,7 @@ export default function GlowupPage() {
     () => getRecommendationByCategory(plan?.recommendations, "accessories"),
     [plan?.recommendations]
   );
+  const reasoningInsight = useMemo(() => glowupPlanToAgentInsight(plan), [plan]);
 
   const applyResult = useCallback((tool: ToolName, title: string, imageUrl: string) => {
     setCurrentTitle(title);
@@ -452,6 +453,7 @@ export default function GlowupPage() {
 
     setIsApplying(true);
     setError(null);
+    setSaveMessage(null);
     dispatch({ type: "SET_PROCESSING", payload: true });
     dispatch({ type: "SET_CURRENT_TOOL", payload: tool });
 
@@ -463,7 +465,7 @@ export default function GlowupPage() {
     } catch (applyError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
-      setError(applyError instanceof Error ? applyError.message : "Failed to apply look.");
+      setError(formatApiError(applyError, "Failed to apply look."));
     } finally {
       setIsApplying(false);
     }
@@ -505,16 +507,47 @@ export default function GlowupPage() {
     );
   }, [runVto, selfieBlob]);
 
-  const handleSave = useCallback(() => {
-    if (!previewImage) return;
-    const anchor = document.createElement("a");
-    anchor.href = previewImage;
-    anchor.download = "mirra-glowup.jpg";
-    anchor.click();
-  }, [previewImage]);
+  const handleSave = useCallback(async () => {
+    if (!currentImage) {
+      setError("Apply a GlowUp result before saving this look.");
+      return;
+    }
+
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Sign in again before saving this look.");
+
+      await outfitApi.proofCard({
+        user_id: userId,
+        look_name: currentTitle,
+        selected_items: [
+          {
+            name: currentTitle,
+            category: activePresetId ? "makeup" : activeHairId ? "hair" : activeAccessoryUrl ? "accessories" : "glowup",
+            source: "GlowUp Studio",
+            imageUrl: currentImage,
+          },
+        ],
+        occasion: "glowup studio",
+        vto_image_url: currentImage,
+      });
+
+      setSaveMessage("Saved to your look diary.");
+    } catch (saveError) {
+      setError(formatApiError(saveError, "Unable to save this GlowUp look."));
+    }
+  }, [activeAccessoryUrl, activeHairId, activePresetId, currentImage, currentTitle]);
 
   const handleShare = useCallback(async () => {
-    if (!previewImage) return;
+    if (!currentImage) {
+      setError("Apply a GlowUp result before sharing this look.");
+      return;
+    }
 
     const shareData: ShareData = {
       title: "Mirra GlowUp",
@@ -522,7 +555,7 @@ export default function GlowupPage() {
     };
 
     try {
-      const parsedUrl = new URL(previewImage);
+      const parsedUrl = new URL(currentImage);
       if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
         shareData.url = parsedUrl.toString();
       }
@@ -535,8 +568,22 @@ export default function GlowupPage() {
       return;
     }
 
-    await navigator.clipboard.writeText(shareData.url ?? previewImage);
-  }, [previewImage]);
+    await navigator.clipboard.writeText(shareData.url ?? currentImage);
+  }, [currentImage]);
+
+  const handleReasoningTap = useCallback((action: string) => {
+    if (action === "tab:makeup") {
+      document.getElementById("glowup-makeup-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (action === "tab:hair") {
+      document.getElementById("glowup-hair-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (action === "tab:accessories") {
+      document.getElementById("glowup-accessories-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   if (isHydrated && !selfie) {
     return (
@@ -595,6 +642,12 @@ export default function GlowupPage() {
         </div>
       )}
 
+      {saveMessage && !error && (
+        <div className="rounded-2xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          {saveMessage}
+        </div>
+      )}
+
       {beforeImage && previewImage && (
         <PreviewShell
           originalImage={beforeImage}
@@ -603,6 +656,12 @@ export default function GlowupPage() {
           subtitle={plan?.insight ?? "Your latest preview updates here as you apply makeup, hair, or accessory choices."}
         />
       )}
+
+      <AgentInsightCard
+        insight={reasoningInsight}
+        isLoading={isLoading}
+        onRecommendationTap={handleReasoningTap}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-6">
@@ -660,7 +719,7 @@ export default function GlowupPage() {
             ) : null}
           </div>
 
-          <div className="glass-card p-5">
+          <div id="glowup-makeup-section" className="glass-card p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f59e0b]/15 text-[#f59e0b]">
                 <WandSparkles size={20} />
@@ -712,7 +771,7 @@ export default function GlowupPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="glass-card p-5">
+          <div id="glowup-hair-section" className="glass-card p-5">
             <p className="label-caps">Step 3</p>
             <h2 className="mt-2 text-2xl">Hairstyle Transfer</h2>
             <p className="mt-3 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
@@ -750,7 +809,7 @@ export default function GlowupPage() {
             )}
           </div>
 
-          <div className="glass-card p-5">
+          <div id="glowup-accessories-section" className="glass-card p-5">
             <p className="label-caps">Step 4</p>
             <h2 className="mt-2 text-2xl">Accessories</h2>
             <p className="mt-3 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
@@ -793,10 +852,10 @@ export default function GlowupPage() {
           <h2 className="mt-2 text-2xl">Share or keep this version</h2>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button type="button" className="btn-secondary" onClick={handleSave} disabled={!previewImage}>
+          <button type="button" className="btn-secondary" onClick={() => void handleSave()} disabled={!hasAppliedLook}>
             Save Look
           </button>
-          <button type="button" className="btn-primary" onClick={() => void handleShare()} disabled={!previewImage}>
+          <button type="button" className="btn-primary" onClick={() => void handleShare()} disabled={!hasAppliedLook}>
             <Share2 size={16} className="mr-2 inline" />
             Share
           </button>
