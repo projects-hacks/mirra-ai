@@ -35,6 +35,32 @@ export function getApiUrl(path = ""): string {
   return `${getApiBaseUrl()}${normalizedPath}`;
 }
 
+/**
+ * If anything (extension, stale bundle, or manual URL) turns an API path into an
+ * absolute URL pointing at NEXT_PUBLIC_API_URL, coerce it back to a same-origin
+ * `/api/...` path in the browser.
+ *
+ * Browser → Vercel `/api/*` → rewrite → DigitalOcean preserves Authorization and
+ * avoids cross-origin / CORS edge cases. Hitting DO directly from the page origin
+ * is a common source of mysterious 401s.
+ */
+export function coerceAbsoluteApiUrlToSameOrigin(url: string): string {
+  if (typeof globalThis.window === "undefined") return url;
+  if (!url.startsWith("http")) return url;
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!configured) return url;
+  const backendOrigin = normalizeApiUrl(configured);
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin === backendOrigin && parsed.pathname.startsWith("/api/")) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+  } catch {
+    return url;
+  }
+  return url;
+}
+
 export const API_URL = getApiBaseUrl();
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";

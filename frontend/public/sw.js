@@ -2,7 +2,7 @@
 // Version: 2.1.1
 // Strategy: Network-first for dynamic content, Cache-first for static assets
 
-const CACHE_VERSION = "v2.1.1";
+const CACHE_VERSION = "v2.1.2";
 const CACHE_NAMES = {
   static: `mirra-static-${CACHE_VERSION}`,
   dynamic: `mirra-dynamic-${CACHE_VERSION}`,
@@ -24,7 +24,7 @@ const CACHE_MAX_AGE = {
 
 // ── Install Event ──────────────────────────────────
 globalThis.addEventListener("install", (event) => {
-  console.log("[SW] Installing service worker v2.1.1");
+  console.log("[SW] Installing service worker", CACHE_VERSION);
   
   event.waitUntil(
     caches.open(CACHE_NAMES.static).then((cache) => {
@@ -39,7 +39,7 @@ globalThis.addEventListener("install", (event) => {
 
 // ── Activate Event ─────────────────────────────────
 globalThis.addEventListener("activate", (event) => {
-  console.log("[SW] Activating service worker v2.1.1");
+  console.log("[SW] Activating service worker", CACHE_VERSION);
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -269,4 +269,4 @@ globalThis.addEventListener("message", (event) => {
   }
 });
 
-  console.log("[SW] Service worker v2.0.1 loaded");
+console.log("[SW] Service worker", CACHE_VERSION, "loaded");

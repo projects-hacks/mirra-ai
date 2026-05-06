@@ -1,4 +1,5 @@
 """Application configuration via environment variables."""
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -28,6 +29,15 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
     DATABASE_URL: str = ""
+
+    @field_validator("SUPABASE_URL", "SUPABASE_KEY", mode="before")
+    @classmethod
+    def strip_supabase_strings(cls, value: object) -> object:
+        # Trim trailing whitespace/newlines that creep in when env vars are pasted into
+        # a hosted dashboard — those silently break /auth/v1/user with a 401.
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

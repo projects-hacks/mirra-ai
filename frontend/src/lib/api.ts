@@ -1,4 +1,4 @@
-import { ApiRoutes, getApiUrl } from "@/lib/constants";
+import { ApiRoutes, coerceAbsoluteApiUrlToSameOrigin, getApiUrl } from "@/lib/constants";
 import { refreshSession } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
@@ -213,15 +213,42 @@ async function getAuthHeaders(contentType = "application/json"): Promise<Record<
   return headers;
 }
 
-const DEBUG_AUTH =
-  typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEBUG_AUTH === "true";
+/** Best-effort extraction of the human-readable detail from a backend error body. */
+function describeBackendBody(body: unknown): string {
+  if (!body) return "(no body)";
+  if (typeof body === "string") return body || "(empty)";
+  if (typeof body === "object") {
+    const detail = (body as { detail?: unknown }).detail;
+    if (typeof detail === "string") return detail;
+    if (detail && typeof detail === "object") {
+      const message =
+        (detail as { message?: unknown }).message ??
+        (detail as { provider_message?: unknown }).provider_message;
+      if (typeof message === "string") return message;
+      try {
+        return JSON.stringify(detail);
+      } catch {
+        return String(detail);
+      }
+    }
+    try {
+      return JSON.stringify(body);
+    } catch {
+      return String(body);
+    }
+  }
+  return String(body);
+}
 
 function logAuthEvent(message: string, detail?: Record<string, unknown>) {
   if (typeof console === "undefined") return;
-  // Always emit a short warning so users can diagnose redirect surprises.
-  // Detail (URL, status, etc.) is gated behind NEXT_PUBLIC_DEBUG_AUTH to avoid PII leakage in shared logs.
-  if (DEBUG_AUTH && detail) {
-    console.warn(`[auth] ${message}`, detail);
+  // Always include the URL, status, and rejection reason so it's diagnosable from a single
+  // log line without expanding objects in the console.
+  if (detail) {
+    const url = typeof detail.url === "string" ? detail.url : "(unknown url)";
+    const status = typeof detail.status === "number" ? detail.status : "(unknown status)";
+    const reason = "body" in detail ? describeBackendBody(detail.body) : "";
+    console.warn(`[auth] ${message} — ${status} ${url}${reason ? ` — ${reason}` : ""}`, detail);
   } else {
     console.warn(`[auth] ${message}`);
   }
@@ -441,7 +468,7 @@ export async function fetchApi<T>(
 ): Promise<T> {
   const { retry, headers: optionHeaders, ...fetchOptions } = options;
   const retryOptions = retry === true ? {} : retry;
-  const url = getApiUrl(normalizePath(path));
+  const url = coerceAbsoluteApiUrlToSameOrigin(getApiUrl(normalizePath(path)));
 
   const requestOnce = async (alreadyRefreshed = false) => {
     const headers = await getAuthHeaders();
@@ -475,7 +502,7 @@ export async function fetchWithFormData<T>(
   retry?: RetryOptions | boolean
 ): Promise<T> {
   const retryOptions = retry === true ? {} : retry;
-  const url = getApiUrl(normalizePath(path));
+  const url = coerceAbsoluteApiUrlToSameOrigin(getApiUrl(normalizePath(path)));
 
   const requestOnce = async (alreadyRefreshed = false) => {
     const headers = await getAuthHeaders("");

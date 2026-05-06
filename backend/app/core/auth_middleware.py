@@ -147,11 +147,10 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 async def _verify_supabase_jwt(token: str) -> str | None:
     """Call Supabase /auth/v1/user to verify the token and return user_id."""
     if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
-        # If Supabase is not configured (e.g. local dev without env), skip validation
         logger.debug("Supabase not configured — skipping JWT validation")
         return "anonymous"
 
-    url = f"{settings.SUPABASE_URL}/auth/v1/user"
+    url = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/user"
     headers = {
         "apikey": settings.SUPABASE_KEY,
         "Authorization": f"Bearer {token}",
@@ -164,4 +163,10 @@ async def _verify_supabase_jwt(token: str) -> str | None:
         data = resp.json()
         return data.get("id")
 
+    snippet = (resp.text or "")[:400].replace("\n", " ")
+    logger.warning(
+        "Supabase /auth/v1/user returned %s during token verify: %s",
+        resp.status_code,
+        snippet or "(empty body)",
+    )
     return None
