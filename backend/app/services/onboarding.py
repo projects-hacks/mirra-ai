@@ -4,7 +4,6 @@ import base64
 import logging
 from typing import Any
 
-from app.core.cache import set as cache_set, TTL
 from app.core.config import settings
 from app.core.onboarding_constants import (
     MAX_RETRIES,
@@ -563,9 +562,6 @@ class OnboardingService:
                 "selfie_url": selfie_url,  # Store selfie URL for before/after comparisons
             }).execute()
 
-            # Cache body_model in Redis
-            await cache_set(f"body_model:{user_id}", body_model, TTL.BODY_MODEL)
-
             # Generate greeting based on overall score
             greeting = self._generate_greeting_from_scores(skin_scores)
 
@@ -636,9 +632,6 @@ class OnboardingService:
             # Insert all items
             supabase.from_("closet_items").insert(items_to_insert).execute()
 
-            # Cache closet items
-            await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
-
             logger.info(f"Seeded {len(items_to_insert)} closet items for user {user_id}")
 
             return {"success": True, "item_count": len(items_to_insert)}
@@ -650,7 +643,6 @@ class OnboardingService:
                 logger.info(f"Retrying closet seeding for user {user_id}")
                 items_to_insert = [{"user_id": user_id, **item} for item in DEMO_CLOSET_ITEMS]
                 supabase.from_("closet_items").insert(items_to_insert).execute()
-                await cache_set(f"closet:{user_id}", items_to_insert, TTL.CLOSET)
                 logger.info(f"Closet seeding succeeded on retry")
                 return {"success": True, "item_count": len(items_to_insert)}
             except Exception as retry_error:

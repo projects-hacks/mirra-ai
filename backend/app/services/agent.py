@@ -7,7 +7,9 @@ from typing import Any
 
 import httpx
 
+from app.core import cache
 from app.core.config import settings
+from app.core.constants import CachePrefix
 from app.core.llm_config import (
     GEMINI_API_BASE_URL,
     GEMINI_MODEL_NAME,
@@ -72,14 +74,29 @@ class AgentService:
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_AI_STUDIO_KEY
 
+    async def _get_cached_response(self, name: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        cache_key = f"{CachePrefix.AGENT}:{name}:{cache.hash_json(payload)}"
+        return await cache.get(cache_key)
+
+    async def _set_cached_response(self, name: str, payload: dict[str, Any], value: dict[str, Any]) -> None:
+        cache_key = f"{CachePrefix.AGENT}:{name}:{cache.hash_json(payload)}"
+        await cache.set(cache_key, value, cache.TTL.AGENT)
+
     async def generate_glowup_plan(
         self,
         face_attrs: dict[str, Any],
         skin_tone: dict[str, Any],
     ) -> dict[str, Any]:
         """Recommend makeup, hair, and accessories with a visible reasoning trace."""
+        cache_payload = {"face_attrs": face_attrs, "skin_tone": skin_tone}
+        cached = await self._get_cached_response("glowup", cache_payload)
+        if cached:
+            return cached
+
         if not self.api_key:
-            return self._fallback_glowup_plan(face_attrs, skin_tone)
+            fallback = self._fallback_glowup_plan(face_attrs, skin_tone)
+            await self._set_cached_response("glowup", cache_payload, fallback)
+            return fallback
 
         prompt = f"""
 You are Mirra, an AI appearance operator.
@@ -136,10 +153,14 @@ Requirements:
                 )
                 response.raise_for_status()
                 content = _extract_text(response.json())
-                return _safe_json_loads(content)
+                result = _safe_json_loads(content)
+                await self._set_cached_response("glowup", cache_payload, result)
+                return result
         except Exception as exc:
             logger.warning("Gemini glowup generation failed, using fallback: %s", exc)
-            return self._fallback_glowup_plan(face_attrs, skin_tone)
+            fallback = self._fallback_glowup_plan(face_attrs, skin_tone)
+            await self._set_cached_response("glowup", cache_payload, fallback)
+            return fallback
 
     async def generate_skin_insights(
         self,
@@ -150,8 +171,20 @@ Requirements:
     ) -> dict[str, Any]:
         """Connect skin scores, weather, and history into actionable guidance."""
         concern_scores = _filter_skin_concern_scores(scores)
+        cache_payload = {
+            "scores": concern_scores,
+            "skin_tone": skin_tone or {},
+            "weather": weather or {},
+            "history": history or [],
+        }
+        cached = await self._get_cached_response("skin_insights", cache_payload)
+        if cached:
+            return cached
+
         if not self.api_key:
-            return self._fallback_skin_insights(concern_scores, skin_tone, weather, history)
+            fallback = self._fallback_skin_insights(concern_scores, skin_tone, weather, history)
+            await self._set_cached_response("skin_insights", cache_payload, fallback)
+            return fallback
 
         prompt = f"""
 You are Mirra, an AI appearance operator.
@@ -215,10 +248,14 @@ Requirements:
                 )
                 response.raise_for_status()
                 content = _extract_text(response.json())
-                return _safe_json_loads(content)
+                result = _safe_json_loads(content)
+                await self._set_cached_response("skin_insights", cache_payload, result)
+                return result
         except Exception as exc:
             logger.warning("Gemini skin insight generation failed, using fallback: %s", exc)
-            return self._fallback_skin_insights(scores, skin_tone, weather, history)
+            fallback = self._fallback_skin_insights(scores, skin_tone, weather, history)
+            await self._set_cached_response("skin_insights", cache_payload, fallback)
+            return fallback
 
     async def generate_outfit_reasoning(
         self,
@@ -227,8 +264,19 @@ Requirements:
         context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Explain closet matches and missing pieces for an outfit decision."""
+        cache_payload = {
+            "matches": matches,
+            "gaps": gaps or [],
+            "context": context or {},
+        }
+        cached = await self._get_cached_response("outfit_reasoning", cache_payload)
+        if cached:
+            return cached
+
         if not self.api_key:
-            return self._fallback_outfit_reasoning(matches, gaps, context)
+            fallback = self._fallback_outfit_reasoning(matches, gaps, context)
+            await self._set_cached_response("outfit_reasoning", cache_payload, fallback)
+            return fallback
 
         prompt = f"""
 You are Mirra, an AI appearance operator.
@@ -288,10 +336,14 @@ Requirements:
                 )
                 response.raise_for_status()
                 content = _extract_text(response.json())
-                return _safe_json_loads(content)
+                result = _safe_json_loads(content)
+                await self._set_cached_response("outfit_reasoning", cache_payload, result)
+                return result
         except Exception as exc:
             logger.warning("Gemini outfit reasoning generation failed, using fallback: %s", exc)
-            return self._fallback_outfit_reasoning(matches, gaps, context)
+            fallback = self._fallback_outfit_reasoning(matches, gaps, context)
+            await self._set_cached_response("outfit_reasoning", cache_payload, fallback)
+            return fallback
 
     def _fallback_glowup_plan(
         self,

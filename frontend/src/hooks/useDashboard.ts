@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import { getSupabase } from "@/lib/supabase";
 import { proofCardsApi, skinApi, weatherApi } from "@/lib/api";
 import { buildDashboardInsight, buildSkinSummaryFromHistory } from "@/lib/skinSummary";
@@ -8,20 +9,7 @@ import { resolveUserLocation } from "@/lib/userContext";
 import type { AgentInsight, SkinSummary, VTOResult, WeatherInfo } from "@/types";
 
 export function useDashboard() {
-  const [skinSummary, setSkinSummary] = useState<SkinSummary | null>(null);
-  const [weather, setWeather] = useState<WeatherInfo | null>(null);
-  const [insight, setInsight] = useState<AgentInsight | null>(null);
-  const [recentLooks, setRecentLooks] = useState<VTOResult[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-      async function load() {
-      setIsLoading(true);
-      setError(null);
-
+  const { data, error, isLoading } = useSWR("dashboard", async () => {
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
@@ -33,32 +21,33 @@ export function useDashboard() {
         userId ? proofCardsApi.recentLooks(userId) : Promise.resolve([]),
       ]);
 
-      if (cancelled) return;
-
       const history = historyResult.status === "fulfilled" ? historyResult.value : [];
       const weatherInfo = weatherResult.status === "fulfilled" ? weatherResult.value : null;
       const { summary } = buildSkinSummaryFromHistory(history);
+      const recentLooks = recentLooksResult.status === "fulfilled" ? recentLooksResult.value : [];
+      const fetchError =
+        historyResult.status === "rejected" && weatherResult.status === "rejected"
+          ? "Dashboard data is unavailable right now."
+          : null;
 
-      setSkinSummary(summary);
-      setWeather(weatherInfo);
-      setInsight(buildDashboardInsight(summary, weatherInfo));
-      setRecentLooks(recentLooksResult.status === "fulfilled" ? recentLooksResult.value : []);
-
-      if (historyResult.status === "rejected" && weatherResult.status === "rejected") {
-        setError("Dashboard data is unavailable right now.");
-      }
-
-      setIsLoading(false);
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return {
+        skinSummary: summary,
+        weather: weatherInfo,
+        insight: buildDashboardInsight(summary, weatherInfo),
+        recentLooks,
+        error: fetchError,
+      };
+    });
 
   return useMemo(
-    () => ({ skinSummary, weather, insight, recentLooks, isLoading, error }),
-    [skinSummary, weather, insight, recentLooks, isLoading, error]
+    () => ({
+      skinSummary: (data?.skinSummary ?? null) as SkinSummary | null,
+      weather: (data?.weather ?? null) as WeatherInfo | null,
+      insight: (data?.insight ?? null) as AgentInsight | null,
+      recentLooks: (data?.recentLooks ?? []) as VTOResult[],
+      isLoading,
+      error: data?.error ?? (error instanceof Error ? error.message : null),
+    }),
+    [data, error, isLoading]
   );
 }

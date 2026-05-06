@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { proofCardsApi } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
@@ -42,9 +43,6 @@ interface WeatherSnapshot {
 
 export default function LookDiaryPage() {
   const router = useRouter();
-  const [proofCards, setProofCards] = useState<ProofCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Filter states
@@ -66,35 +64,13 @@ export default function LookDiaryPage() {
     fetchUser();
   }, [router]);
 
-  // Fetch proof cards
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchProofCards = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const supabase = getSupabase();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) {
-          router.push('/');
-          return;
-        }
-
-        const cards = await proofCardsApi.list(userId);
-        setProofCards(cards as ProofCard[]);
-      } catch (err) {
-        console.error('Error fetching proof cards:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load look diary');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProofCards();
-  }, [userId, router]);
+  const { data: proofCards = [], error, isLoading: loading } = useSWR<ProofCard[]>(
+    userId ? (["look-diary", userId] as const) : null,
+    async ([, currentUserId]: readonly [string, string]) => {
+      const cards = await proofCardsApi.list(currentUserId);
+      return cards as ProofCard[];
+    }
+  );
 
   // Calculate date range
   const getDateRange = (range: string): { start: string | null; end: string | null } => {
@@ -212,7 +188,7 @@ export default function LookDiaryPage() {
           <div className="glass-panel p-8 text-center">
             <span className="material-symbols-outlined text-red-400 text-5xl mb-4">error</span>
             <h2 className="text-xl font-semibold text-white mb-2">Error Loading Diary</h2>
-            <p className="text-white/70 mb-4">{error}</p>
+            <p className="text-white/70 mb-4">{error instanceof Error ? error.message : 'Failed to load look diary'}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"

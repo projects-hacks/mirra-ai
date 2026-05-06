@@ -11,6 +11,8 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from PIL import Image
 
+from app.core import cache
+from app.core.constants import CachePrefix
 from app.core.config import settings
 from app.services.supabase_client import supabase
 
@@ -191,6 +193,11 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
             "Use a valid product or image URL.",
         )
 
+    cache_key = f"{CachePrefix.PRODUCTS}:image:{cache.hash_json({'url': input_url})}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return ResolvedProductImage(**cached)
+
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(12.0, connect=5.0),
         follow_redirects=True,
@@ -260,7 +267,7 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
         if not _looks_like_direct_image_url(final_url):
             warnings.append("Resolved URL does not include a standard image extension; provider download may still reject it.")
 
-        return ResolvedProductImage(
+        resolved = ResolvedProductImage(
             input_url=input_url,
             resolved_image_url=final_url,
             content_type=normalized_type,
@@ -269,3 +276,5 @@ async def resolve_product_image(raw_url: str) -> ResolvedProductImage:
             source=source,
             warnings=warnings,
         )
+        await cache.set(cache_key, resolved.to_dict(), cache.TTL.PRODUCT_IMAGE)
+        return resolved

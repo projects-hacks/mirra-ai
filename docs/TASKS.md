@@ -163,6 +163,18 @@ This section documents what was completed across the previous implementation pas
     - frontend API callers now resolve the backend origin at runtime instead of depending on stale compile-time `API_URL` values
     - remaining closet / outfit-history / onboarding / recommendation flows no longer use local relative `/api/...` fetches against the Vercel origin
     - service worker cache version was bumped to flush stale cached bundles in production
+  - Reworked frontend/backend transport architecture:
+    - Next.js now rewrites same-origin `/api/*` requests to the backend origin
+    - browser-side API calls now prefer same-origin `/api/*` paths instead of direct cross-origin backend fetches
+    - service worker now bypasses `/api/*` entirely so authenticated backend data is not cached in the service worker
+    - added SWR as the frontend client-cache layer for high-churn authenticated reads
+  - Expanded backend Redis caching where it reduces real cost without broad correctness risk:
+    - Serper product search results are cached by query + price filter
+    - product image resolution results are cached by input URL
+    - Gemini agent outputs are cached by normalized input payload
+    - repeated Perfect Corp skin analysis / tone / face / simulation calls are cached by selfie hash + params where applicable
+  - Removed dead Redis writes:
+    - onboarding no longer writes unused `body_model:{user_id}` and `closet:{user_id}` cache entries that had no live read path
   - Hardened GlowUp backend analysis:
     - `/api/glowup/analyze` now degrades to a safe starter face/tone payload when one provider analysis path fails, instead of returning a hard 500 for partial provider failure
   - Upgraded GlowUp persistence:

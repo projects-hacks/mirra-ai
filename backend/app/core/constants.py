@@ -134,3 +134,5 @@ class CachePrefix(StrEnum):
     STYLE = "style"
     VTO = "vto"
     SESSION = "session"
+    PRODUCTS = "products"
+    AGENT = "agent"

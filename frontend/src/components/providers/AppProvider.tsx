@@ -9,6 +9,7 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
+import { SWRConfig } from "swr";
 import type { AppState, AppAction, Message, VTOResult } from "@/types";
 import { ToolName } from "@/lib/constants";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
@@ -199,13 +200,24 @@ export function AppProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <AppStateContext.Provider value={state}>
-          <AppDispatchContext.Provider value={dispatch}>
-            {children}
-          </AppDispatchContext.Provider>
-        </AppStateContext.Provider>
-      </ToastProvider>
+      <SWRConfig
+        value={{
+          revalidateOnFocus: false,
+          revalidateOnReconnect: true,
+          refreshWhenOffline: false,
+          shouldRetryOnError: false,
+          dedupingInterval: 30_000,
+          focusThrottleInterval: 60_000,
+        }}
+      >
+        <ToastProvider>
+          <AppStateContext.Provider value={state}>
+            <AppDispatchContext.Provider value={dispatch}>
+              {children}
+            </AppDispatchContext.Provider>
+          </AppStateContext.Provider>
+        </ToastProvider>
+      </SWRConfig>
     </ErrorBoundary>
   );
 }

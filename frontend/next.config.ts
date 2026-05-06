@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
+const rawBackendOrigin = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000";
+const backendOrigin = rawBackendOrigin.replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendOrigin}/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

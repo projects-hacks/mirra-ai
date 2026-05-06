@@ -72,6 +72,12 @@ def hash_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:16]
 
 
+def hash_json(value: Any) -> str:
+    """Stable hash for JSON-serializable payloads."""
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
 # Pre-defined TTLs (seconds)
 class TTL:
     WEATHER = 1800       # 30 min
@@ -81,6 +87,8 @@ class TTL:
     STYLE_PROFILE = 86400  # 24 hours
     VTO_RESULT = 86400   # 24 hours (same selfie + product = same result)
     PRODUCT_CATALOG = 3600  # 1 hour
+    PRODUCT_IMAGE = 86400  # 24 hours
+    AGENT = 1800  # 30 minutes
 
 
 async def close() -> None:

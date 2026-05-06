@@ -1,8 +1,8 @@
 // Mirra PWA Service Worker - Enterprise Implementation
-// Version: 2.0.2
+// Version: 2.1.0
 // Strategy: Network-first for dynamic content, Cache-first for static assets
 
-const CACHE_VERSION = "v2.0.2";
+const CACHE_VERSION = "v2.1.0";
 const CACHE_NAMES = {
   static: `mirra-static-${CACHE_VERSION}`,
   dynamic: `mirra-dynamic-${CACHE_VERSION}`,
@@ -24,7 +24,7 @@ const CACHE_MAX_AGE = {
 
 // ── Install Event ──────────────────────────────────
 globalThis.addEventListener("install", (event) => {
-  console.log("[SW] Installing service worker v2.0.2");
+  console.log("[SW] Installing service worker v2.1.0");
   
   event.waitUntil(
     caches.open(CACHE_NAMES.static).then((cache) => {
@@ -39,7 +39,7 @@ globalThis.addEventListener("install", (event) => {
 
 // ── Activate Event ─────────────────────────────────
 globalThis.addEventListener("activate", (event) => {
-  console.log("[SW] Activating service worker v2.0.2");
+  console.log("[SW] Activating service worker v2.1.0");
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -74,18 +74,18 @@ function shouldBypassCache(request, url) {
   return (
     request.method !== "GET" ||
     url.pathname.startsWith("/_next/") ||
+    url.pathname.startsWith("/api/") ||
     url.protocol === "chrome-extension:" ||
     url.pathname.includes("/auth/callback") ||
     url.pathname.includes("/auth/") ||
     url.protocol === "ws:" ||
-    url.protocol === "wss:" ||
-    (url.origin !== globalThis.location.origin && url.pathname.startsWith("/api/"))
+    url.protocol === "wss:"
   );
 }
 
 /** Route request to correct caching strategy */
 async function routeRequest(request, url) {
-  if (url.pathname.startsWith("/api/") || url.hostname.includes("supabase.co")) {
+  if (url.hostname.includes("supabase.co")) {
     return networkFirstStrategy(request, CACHE_NAMES.dynamic);
   }
   if (request.destination === "image") {

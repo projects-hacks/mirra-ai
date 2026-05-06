@@ -4,6 +4,8 @@ import httpx
 import re
 from typing import Dict
 from app.core.config import settings
+from app.core import cache
+from app.core.constants import CachePrefix
 
 
 async def search(query: str, max_price: float | None = None) -> Dict:
@@ -17,8 +19,15 @@ async def search(query: str, max_price: float | None = None) -> Dict:
     Returns:
         Dictionary with products list and metadata
     """
+    cache_key = f"{CachePrefix.PRODUCTS}:search:{cache.hash_json({'q': query.strip().lower(), 'max_price': max_price})}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+
     try:
-        return await _search_serper(query, max_price)
+        result = await _search_serper(query, max_price)
+        await cache.set(cache_key, result, cache.TTL.PRODUCT_CATALOG)
+        return result
     except Exception as e:
         return {
             "products": [],

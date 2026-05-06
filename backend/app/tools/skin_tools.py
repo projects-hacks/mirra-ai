@@ -70,10 +70,17 @@ async def analyze_skin(selfie_bytes: bytes, user_id: str | None = None) -> dict:
     OPTIMIZATION: Piggyback color analysis on this call to avoid extra API unit.
     Since we're already analyzing the face, extract color profile at the same time.
     """
-    result = await perfectcorp.call_api(VTOTaskType.SKIN_ANALYSIS, selfie_bytes, {
+    task_params = {
         "dst_actions": ALL_SKIN_CONCERNS,
         "format": "json",
-    })
+    }
+    selfie_hash = cache.hash_bytes(selfie_bytes)
+    cache_key = f"{CachePrefix.BODY}:skin-analysis:{selfie_hash}:{cache.hash_json(task_params)}"
+    cached = await cache.get(cache_key)
+
+    result = cached or await perfectcorp.call_api(VTOTaskType.SKIN_ANALYSIS, selfie_bytes, task_params)
+    if not cached:
+        await cache.set(cache_key, result, cache.TTL.BODY_MODEL)
 
     scores = _normalize_skin_scores(result)
 
@@ -125,7 +132,12 @@ def _is_color_profile_stale(color_profile: dict) -> bool:
 
 async def analyze_skin_tone(selfie_bytes: bytes, user_id: str | None = None) -> dict:
     """Detect skin undertone, depth, and color profile."""
-    result = await perfectcorp.call_api(VTOTaskType.SKIN_TONE, selfie_bytes)
+    selfie_hash = cache.hash_bytes(selfie_bytes)
+    cache_key = f"{CachePrefix.BODY}:skin-tone:{selfie_hash}"
+    cached = await cache.get(cache_key)
+    result = cached or await perfectcorp.call_api(VTOTaskType.SKIN_TONE, selfie_bytes)
+    if not cached:
+        await cache.set(cache_key, result, cache.TTL.BODY_MODEL)
     tone = result.get("result", result)
 
     if user_id and supabase:
@@ -141,7 +153,12 @@ async def analyze_skin_tone(selfie_bytes: bytes, user_id: str | None = None) -> 
 
 async def analyze_face(selfie_bytes: bytes, user_id: str | None = None) -> dict:
     """Detect face shape and proportions."""
-    result = await perfectcorp.call_api(VTOTaskType.FACE_ATTRIBUTES, selfie_bytes)
+    selfie_hash = cache.hash_bytes(selfie_bytes)
+    cache_key = f"{CachePrefix.BODY}:face-attributes:{selfie_hash}"
+    cached = await cache.get(cache_key)
+    result = cached or await perfectcorp.call_api(VTOTaskType.FACE_ATTRIBUTES, selfie_bytes)
+    if not cached:
+        await cache.set(cache_key, result, cache.TTL.BODY_MODEL)
     face = result.get("result", result)
 
     if user_id and supabase:
@@ -250,9 +267,14 @@ async def simulate_skin(
         }
         logger.info("Using fallback simulation intensities (no skin scan available)")
 
-    result = await perfectcorp.call_api(
+    selfie_hash = cache.hash_bytes(selfie_bytes)
+    cache_key = f"{CachePrefix.BODY}:skin-simulation:{selfie_hash}:{cache.hash_json(intensities)}"
+    cached = await cache.get(cache_key)
+    result = cached or await perfectcorp.call_api(
         VTOTaskType.SKIN_SIMULATION, selfie_bytes, intensities
     )
+    if not cached:
+        await cache.set(cache_key, result, cache.TTL.VTO_RESULT)
 
     # The simulation API returns a result image URL
     simulation_url = result.get("url") or result.get("result", {}).get("url", "")

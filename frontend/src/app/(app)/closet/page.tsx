@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getApiUrl } from "@/lib/constants";
+import useSWR from "swr";
+import { fetchApi } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import ClosetGrid from "@/components/closet/ClosetGrid";
 import PhotoUploadModal from "@/components/closet/PhotoUploadModal";
@@ -60,29 +61,11 @@ interface ClosetApiResponse {
   items?: ClosetApiItem[];
 }
 
-async function parseResponseError(response: Response, fallback: string): Promise<string> {
-  try {
-    const body = await response.json();
-    if (body && typeof body === "object") {
-      if ("detail" in body && typeof body.detail === "string") return body.detail;
-      if ("error_message" in body && typeof body.error_message === "string") return body.error_message;
-    }
-  } catch {
-    // Ignore JSON parse failures and fall back to status text below.
-  }
-
-  return response.statusText || fallback;
-}
-
 /**
  * Closet Browser Page
  * Main page for browsing and managing digital closet items
  */
 export default function ClosetPage() {
-  const [items, setItems] = useState<ClosetItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
   // Modal states
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isMetadataFormOpen, setIsMetadataFormOpen] = useState(false);
@@ -99,71 +82,51 @@ export default function ClosetPage() {
   const [extractedMetadata, setExtractedMetadata] = useState<ExtractedMetadata | null>(null);
   const [userId, setUserId] = useState<string>("");
 
-  // Fetch closet items
-  const fetchClosetItems = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const transformClosetItems = useCallback((data: ClosetApiResponse): ClosetItem[] => {
+    return (data.items || []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      color: item.color || item.primary_color || "Unknown",
+      imageUrl: item.image_url || item.image || "",
+      brand: item.brand,
+      purchasePrice: item.price,
+      timesWorn: item.times_worn || 0,
+    }));
+  }, []);
 
+  useEffect(() => {
+    let active = true;
+    void (async () => {
       const supabase = getSupabase();
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (!active) return;
+      setUserId(user?.id ?? "");
+    })();
 
-      if (!user) {
-        setError("Please sign in to view your closet");
-        return;
-      } else {
-        setUserId(user.id);
-      }
-
-      const { data: { session: activeSession } } = await supabase.auth.getSession();
-      if (!activeSession?.access_token) {
-        setError("Please sign in again to view your closet");
-        return;
-      }
-
-      const response = await fetch(getApiUrl(`/api/closet?user_id=${encodeURIComponent(user.id)}`), {
-        headers: {
-          Authorization: `Bearer ${activeSession.access_token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(await parseResponseError(response, "Failed to fetch closet items"));
-      }
-
-      const data: ClosetApiResponse = await response.json();
-      
-      // Transform API response to match ClosetGrid interface
-      const transformedItems = (data.items || []).map((item) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        color: item.color || item.primary_color || "Unknown",
-        imageUrl: item.image_url || item.image || "",
-        brand: item.brand,
-        purchasePrice: item.price,
-        timesWorn: item.times_worn || 0,
-      }));
-
-      setItems(transformedItems);
-    } catch (err) {
-      console.error("Error fetching closet items:", err);
-      setError(err instanceof Error ? err.message : "Failed to load closet items");
-    } finally {
-      setIsLoading(false);
-    }
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Load items on mount
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void fetchClosetItems();
-    }, 0);
+  const {
+    data: items = [],
+    error,
+    isLoading,
+    mutate: mutateCloset,
+  } = useSWR<ClosetItem[]>(
+    userId ? (["closet", userId] as const) : null,
+    async ([, currentUserId]: readonly [string, string]) => {
+      const data = await fetchApi<ClosetApiResponse>(`/api/closet?user_id=${encodeURIComponent(currentUserId)}`);
+      return transformClosetItems(data);
+    }
+  );
 
-    return () => window.clearTimeout(timeoutId);
-  }, [fetchClosetItems]);
+  const fetchClosetItems = useCallback(async () => {
+    await mutateCloset();
+  }, [mutateCloset]);
 
   // Handle photo upload completion
   const handleUploadComplete = useCallback(
@@ -191,12 +154,8 @@ export default function ClosetPage() {
         }
 
         // Create closet item
-        const response = await fetch(getApiUrl("/api/closet"), {
+        await fetchApi("/api/closet", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
           body: JSON.stringify({
             user_id: user.id,
             name: metadata.name,
@@ -216,10 +175,6 @@ export default function ClosetPage() {
             image_url: uploadedImageUrl,
           }),
         });
-
-        if (!response.ok) {
-          throw new Error(await parseResponseError(response, "Failed to create closet item"));
-        }
 
         // Close form and refresh items
         setIsMetadataFormOpen(false);
@@ -284,21 +239,13 @@ export default function ClosetPage() {
           throw new Error("Not authenticated");
         }
 
-        const response = await fetch(getApiUrl("/api/closet/batch"), {
+        await fetchApi("/api/closet/batch", {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
           body: JSON.stringify({
             item_ids: Array.from(selectedItems),
             action,
           }),
         });
-
-        if (!response.ok) {
-          throw new Error(await parseResponseError(response, `Failed to ${action} items`));
-        }
 
         // Refresh items
         await fetchClosetItems();
@@ -325,21 +272,13 @@ export default function ClosetPage() {
         throw new Error("Not authenticated");
       }
 
-      const response = await fetch(getApiUrl("/api/closet/batch"), {
+      await fetchApi("/api/closet/batch", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({
           item_ids: Array.from(selectedItems),
           action: "delete",
         }),
       });
-
-      if (!response.ok) {
-        throw new Error(await parseResponseError(response, "Failed to delete items"));
-      }
 
       // Refresh items
       await fetchClosetItems();
@@ -372,9 +311,9 @@ export default function ClosetPage() {
           <span className="material-symbols-outlined text-[64px] text-red-500 mb-4">
             error
           </span>
-          <p className="text-red-500 mb-4">{error}</p>
+          <p className="text-red-500 mb-4">{error instanceof Error ? error.message : "Failed to load closet items"}</p>
           <button
-            onClick={fetchClosetItems}
+            onClick={() => void fetchClosetItems()}
             className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
           >
             Retry
