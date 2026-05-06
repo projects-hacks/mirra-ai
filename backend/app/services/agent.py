@@ -16,6 +16,24 @@ from app.core.llm_config import (
 
 logger = logging.getLogger(__name__)
 
+SKIN_CONCERN_LABELS = {
+    "moisture": "Moisture",
+    "acne": "Acne",
+    "wrinkle": "Wrinkles",
+    "pore": "Pores",
+    "redness": "Redness",
+    "dark_circle_v2": "Dark Circles",
+    "dark_circle": "Dark Circles",
+    "eye_bag": "Eye Bags",
+    "firmness": "Firmness",
+    "oiliness": "Oiliness",
+    "texture": "Texture",
+    "radiance": "Radiance",
+    "age_spot": "Spots",
+    "droopy_upper_eyelid": "Upper Eyelid",
+    "droopy_lower_eyelid": "Lower Eyelid",
+}
+
 
 class AgentServiceError(Exception):
     """Raised when the agent service cannot generate a structured response."""
@@ -42,6 +60,10 @@ def _safe_json_loads(text: str) -> dict[str, Any]:
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
         raise AgentServiceError(f"Invalid JSON from Gemini: {exc}") from exc
+
+
+def _filter_skin_concern_scores(scores: dict[str, Any]) -> dict[str, Any]:
+    return {key: scores[key] for key in SKIN_CONCERN_LABELS if key in scores}
 
 
 class AgentService:
@@ -127,15 +149,16 @@ Requirements:
         history: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Connect skin scores, weather, and history into actionable guidance."""
+        concern_scores = _filter_skin_concern_scores(scores)
         if not self.api_key:
-            return self._fallback_skin_insights(scores, skin_tone, weather, history)
+            return self._fallback_skin_insights(concern_scores, skin_tone, weather, history)
 
         prompt = f"""
 You are Mirra, an AI appearance operator.
 Analyze this skin context and return ONLY valid JSON.
 
 SKIN SCORES:
-{json.dumps(scores, indent=2)}
+{json.dumps(concern_scores, indent=2)}
 
 SKIN TONE:
 {json.dumps(skin_tone or {{}}, indent=2)}
@@ -351,7 +374,7 @@ Requirements:
             if (score := extract_score(value)) is not None
         ]
         scored.sort(key=lambda item: item[1])
-        top_concern = scored[0][0].replace("_", " ") if scored else "skin baseline"
+        top_concern = SKIN_CONCERN_LABELS.get(scored[0][0], scored[0][0].replace("_", " ")) if scored else "skin baseline"
         humidity = weather.get("humidity") if weather else None
         has_history = bool(history)
 

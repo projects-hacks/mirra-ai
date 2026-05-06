@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Camera, CheckCircle2, History, Sparkles } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import SkinSummaryCard from "@/components/dashboard/SkinSummaryCard";
@@ -11,6 +12,7 @@ import WeatherCard from "@/components/dashboard/WeatherCard";
 import { useSkinAnalysis } from "@/hooks/useSkinAnalysis";
 
 export default function SkinPage() {
+  const router = useRouter();
   const {
     concerns,
     summary,
@@ -88,7 +90,17 @@ export default function SkinPage() {
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <SkinSummaryCard summary={summary} isLoading={isLoading} />
-        <AgentInsightCard insight={insight} isLoading={isLoading} />
+        <AgentInsightCard
+          insight={insight}
+          isLoading={isLoading}
+          onRecommendationTap={(action) => {
+            if (action === "/skin") {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              return;
+            }
+            router.push(action);
+          }}
+        />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.45fr)]">

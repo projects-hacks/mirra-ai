@@ -1,5 +1,6 @@
 import { API_URL, ApiRoutes } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
+import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
 import { ToolName } from "@/lib/constants";
 import type { AgentInsight, GlowupAnalysis, GlowupPlan, Product, SkinSummary, VTOResult, WeatherInfo } from "@/types";
 
@@ -314,29 +315,7 @@ export const skinApi = {
 
   summary: async (): Promise<SkinSummary[]> => {
     const history = await skinApi.history();
-    return history.map((row) => {
-      const scores = row.scores ?? {};
-      const numericScores = Object.values(scores)
-        .map((value) => {
-          if (typeof value === "number") return value;
-          if (value && typeof value === "object" && "ui_score" in value) {
-            return Number((value as { ui_score: unknown }).ui_score);
-          }
-          return Number.NaN;
-        })
-        .filter(Number.isFinite);
-      const overallScore = numericScores.length
-        ? Math.round(numericScores.reduce((sum, value) => sum + value, 0) / numericScores.length)
-        : 0;
-
-      return {
-        overallScore,
-        skinAge: row.skin_age ?? null,
-        lastScanDate: row.created_at ?? null,
-        trend: "stable",
-        topConcerns: [],
-      };
-    });
+    return history.map((row, index) => buildSkinSummaryFromHistory(history.slice(index)).summary);
   },
 };
 

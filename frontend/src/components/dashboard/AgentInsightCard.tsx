@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Check,
   CheckCircle2,
@@ -98,6 +99,7 @@ export default function AgentInsightCard({
   }
 
   const stepsComplete = visibleSteps >= insight.steps.length;
+  const recommendationClassName = "min-h-10 rounded-full bg-white px-4 py-2 text-sm font-medium text-[#111827] transition-transform hover:-translate-y-0.5";
 
   return (
     <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
@@ -133,16 +135,34 @@ export default function AgentInsightCard({
       >
         <p className="text-base leading-7 text-white/86">{insight.insight}</p>
         <div className="mt-5 flex flex-wrap gap-2">
-          {insight.recommendations.map((recommendation) => (
-            <button
-              key={recommendation.title}
-              type="button"
-              onClick={() => recommendation.action && onRecommendationTap?.(recommendation.action)}
-              className="min-h-10 rounded-full bg-white px-4 py-2 text-sm font-medium text-[#111827] transition-transform hover:-translate-y-0.5"
-            >
-              {recommendation.title}
-            </button>
-          ))}
+          {insight.recommendations.map((recommendation) => {
+            if (!recommendation.action) {
+              return (
+                <span key={recommendation.title} className={recommendationClassName}>
+                  {recommendation.title}
+                </span>
+              );
+            }
+
+            if (onRecommendationTap) {
+              return (
+                <button
+                  key={recommendation.title}
+                  type="button"
+                  onClick={() => onRecommendationTap(recommendation.action as string)}
+                  className={recommendationClassName}
+                >
+                  {recommendation.title}
+                </button>
+              );
+            }
+
+            return (
+              <Link key={recommendation.title} href={recommendation.action} className={recommendationClassName}>
+                {recommendation.title}
+              </Link>
+            );
+          })}
         </div>
         <p className="mt-4 text-xs text-white/45">
           Tools used: {insight.toolsUsed.length ? insight.toolsUsed.join(", ") : "dashboard context"}

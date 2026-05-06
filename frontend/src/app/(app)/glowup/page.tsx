@@ -26,6 +26,48 @@ interface AccessoryCatalog {
   necklace: Product[];
 }
 
+const CLIENT_MAKEUP_PRESETS: GlowupMakeupPreset[] = [
+  {
+    id: "natural-glow",
+    title: "Natural Glow",
+    description: "Soft skin polish with lifted eyes and a fresh lip.",
+    best_for: ["warm", "neutral", "cool"],
+    effects: [
+      { category: "foundation", shade: "warm-beige", intensity: 0.45 },
+      { category: "blush", pattern: "soft-lift", color: "#D68C7A", intensity: 0.38 },
+      { category: "lipstick", finish: "satin", color: "#BC6B66", intensity: 0.46 },
+      { category: "eyeshadow", finish: "matte", color: "#8C6A58", intensity: 0.28 },
+    ],
+  },
+  {
+    id: "bold-lip",
+    title: "Bold Lip",
+    description: "Clean skin with the focus pushed to lip definition.",
+    best_for: ["cool", "neutral"],
+    effects: [
+      { category: "foundation", shade: "neutral-ivory", intensity: 0.4 },
+      { category: "blush", pattern: "minimal", color: "#C4899A", intensity: 0.24 },
+      { category: "lipstick", finish: "cream", color: "#9F375D", intensity: 0.72 },
+      { category: "eyeshadow", finish: "matte", color: "#6F6470", intensity: 0.22 },
+    ],
+  },
+];
+
+const CLIENT_HAIRSTYLES: GlowupHairstyle[] = [
+  {
+    id: "soft-volume",
+    title: "Soft Volume",
+    description: "Clean lift around the crown with movement at the ends.",
+    image_url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "relaxed-waves",
+    title: "Relaxed Waves",
+    description: "Soft width and texture that balances angular features.",
+    image_url: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=900&q=80",
+  },
+];
+
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, base64Data] = dataUrl.split(",");
   const mime = header.match(/data:(.*?);base64/)?.[1] ?? "image/jpeg";
@@ -69,6 +111,54 @@ function getRecommendationByCategory(
   category: GlowupRecommendation["category"]
 ) {
   return recommendations?.filter((item) => item.category === category) ?? [];
+}
+
+function buildClientGlowupPlan(analysis: GlowupAnalysis): GlowupPlan {
+  const formatted = formatFaceAnalysis(analysis);
+  const undertone = formatted.undertone.toLowerCase();
+  const metal = undertone.includes("warm") ? "gold" : "silver";
+
+  return {
+    face_attributes: analysis.face_attributes,
+    skin_tone: analysis.skin_tone,
+    steps: [
+      { icon: "face", text: `Read your face direction as ${formatted.faceShape}.`, status: "complete" },
+      { icon: "palette", text: `Mapped your palette as ${formatted.undertone}.`, status: "complete" },
+      { icon: "sparkle", text: "Built a starter GlowUp plan across makeup, hair, and accessories.", status: "complete" },
+    ],
+    insight: "Use balanced enhancement first: even the complexion, keep shape around the eyes, and use accessories that frame the face without stealing focus.",
+    recommendations: [
+      { category: "makeup", title: "Natural polish", why: "Keeps the scan-driven look wearable while adding definition." },
+      { category: "hair", title: "Soft face-framing volume", why: "Adds shape without changing your proportions too aggressively." },
+      { category: "accessories", title: `${metal} face-framing jewelry`, why: "Matches the palette and keeps attention near the face." },
+    ],
+    tool_calls_made: ["client-fallback"],
+    makeup_presets: CLIENT_MAKEUP_PRESETS,
+    hairstyles: CLIENT_HAIRSTYLES,
+    accessory_queries: {
+      earrings: `${metal} face framing earrings`,
+      necklace: `${metal} pendant necklace`,
+    },
+  };
+}
+
+function normalizeGlowupPlan(plan: GlowupPlan, analysis: GlowupAnalysis): GlowupPlan {
+  const fallback = buildClientGlowupPlan(analysis);
+  return {
+    ...fallback,
+    ...plan,
+    face_attributes: plan.face_attributes ?? analysis.face_attributes,
+    skin_tone: plan.skin_tone ?? analysis.skin_tone,
+    steps: Array.isArray(plan.steps) && plan.steps.length ? plan.steps : fallback.steps,
+    recommendations: Array.isArray(plan.recommendations) && plan.recommendations.length ? plan.recommendations : fallback.recommendations,
+    tool_calls_made: Array.isArray(plan.tool_calls_made) ? plan.tool_calls_made : fallback.tool_calls_made,
+    makeup_presets: Array.isArray(plan.makeup_presets) && plan.makeup_presets.length ? plan.makeup_presets : fallback.makeup_presets,
+    hairstyles: Array.isArray(plan.hairstyles) && plan.hairstyles.length ? plan.hairstyles : fallback.hairstyles,
+    accessory_queries: {
+      earrings: plan.accessory_queries?.earrings || fallback.accessory_queries.earrings,
+      necklace: plan.accessory_queries?.necklace || fallback.accessory_queries.necklace,
+    },
+  };
 }
 
 function PreviewShell({
@@ -126,12 +216,14 @@ function AccessoryRow({
   query,
   onTryOn,
   isApplying,
+  isLoading,
 }: Readonly<{
   title: string;
   products: Product[];
   query: string;
   onTryOn: (product: Product) => void;
   isApplying: boolean;
+  isLoading: boolean;
 }>) {
   return (
     <div className="space-y-3">
@@ -145,6 +237,17 @@ function AccessoryRow({
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-2">
+        {isLoading && (
+          <div className="flex min-h-32 min-w-full items-center gap-3 rounded-[1.5rem] border border-white/10 bg-white/5 px-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+            <LoaderCircle className="animate-spin" size={18} />
+            Loading product options...
+          </div>
+        )}
+        {!isLoading && products.length === 0 && (
+          <div className="min-w-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+            No product images are available for this query yet. Try refreshing the GlowUp plan after product search is healthy.
+          </div>
+        )}
         {products.map((product) => (
           <article
             key={`${title}-${product.link}`}
@@ -189,6 +292,7 @@ export default function GlowupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [planNotice, setPlanNotice] = useState<string | null>(null);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [activeHairId, setActiveHairId] = useState<string | null>(null);
   const [activeAccessoryUrl, setActiveAccessoryUrl] = useState<string | null>(null);
@@ -258,16 +362,33 @@ export default function GlowupPage() {
     async function loadGlowup() {
       setIsLoading(true);
       setError(null);
+      setPlanNotice(null);
 
       try {
-        const nextAnalysis = await glowupApi.analyze(sourceSelfie);
+        let nextAnalysis: GlowupAnalysis;
+        try {
+          nextAnalysis = await glowupApi.analyze(sourceSelfie);
+        } catch {
+          nextAnalysis = {
+            face_attributes: { shape: "Balanced", eye_shape: "Defined", lip_shape: "Natural" },
+            skin_tone: { undertone: "neutral" },
+          };
+          setPlanNotice("Using a starter GlowUp plan because face analysis is temporarily unavailable.");
+        }
         if (cancelled) return;
 
         setAnalysis(nextAnalysis);
-        const nextPlan = await glowupApi.recommendFromAnalysis(
-          nextAnalysis.face_attributes,
-          nextAnalysis.skin_tone
-        );
+        let nextPlan: GlowupPlan;
+        try {
+          const recommendedPlan = await glowupApi.recommendFromAnalysis(
+            nextAnalysis.face_attributes,
+            nextAnalysis.skin_tone
+          );
+          nextPlan = normalizeGlowupPlan(recommendedPlan, nextAnalysis);
+        } catch {
+          nextPlan = buildClientGlowupPlan(nextAnalysis);
+          setPlanNotice("Using a starter GlowUp plan because recommendations are temporarily unavailable.");
+        }
         if (cancelled) return;
 
         setPlan(nextPlan);
@@ -468,6 +589,12 @@ export default function GlowupPage() {
         </div>
       )}
 
+      {planNotice && !error && (
+        <div className="rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {planNotice}
+        </div>
+      )}
+
       {beforeImage && previewImage && (
         <PreviewShell
           originalImage={beforeImage}
@@ -633,16 +760,18 @@ export default function GlowupPage() {
               <AccessoryRow
                 title="Earrings"
                 products={accessories.earrings}
-                query={plan?.accessory_queries.earrings ?? "Loading..."}
+                query={plan?.accessory_queries.earrings ?? "Preparing earring query"}
                 onTryOn={(product) => handleAccessory("earrings", product)}
                 isApplying={isApplying}
+                isLoading={isLoading}
               />
               <AccessoryRow
                 title="Necklaces"
                 products={accessories.necklace}
-                query={plan?.accessory_queries.necklace ?? "Loading..."}
+                query={plan?.accessory_queries.necklace ?? "Preparing necklace query"}
                 onTryOn={(product) => handleAccessory("necklace", product)}
                 isApplying={isApplying}
+                isLoading={isLoading}
               />
             </div>
             {activeAccessoryUrl && accessoryRecommendations.length > 0 && (

@@ -5,32 +5,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cake, Clock, Droplets, MapPin, Thermometer, Wind } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
-import { extractSkinScore } from "@/lib/skinScoring";
+import {
+  extractOverallSkinScore,
+  extractSkinScore,
+  normalizeSkinConcerns,
+  SKIN_CONCERNS,
+} from "@/lib/skinScoring";
 
 // ── Types ────────────────────────────────────────────
-interface SkinScores {
-  [key: string]: number | undefined;
-  overall: number;
-  acne?: number;
-  wrinkles?: number;
-  pores?: number;
-  moisture?: number;
-  texture?: number;
-  radiance?: number;
-  oiliness?: number;
-  firmness?: number;
-  redness?: number;
-  dark_circles?: number;
-  eye_bag?: number;
-  age_spot?: number;
-  droopy_upper_eyelid?: number;
-  droopy_lower_eyelid?: number;
-}
-
 interface SkinScan {
   id: string;
   created_at: string;
-  scores: SkinScores;
+  scores: Record<string, unknown>;
   skin_age?: number | null;
   scan_context?: string;
   weather_at_scan?: {
@@ -52,22 +38,17 @@ interface SkinScanRow extends Omit<SkinScan, "weather_at_scan"> {
 // ── Helpers ──────────────────────────────────────────
 function getMetricScore(
   scores: Record<string, unknown>,
-  metric: keyof SkinScores | string,
+  metric: string,
   fallback = 75
 ): number {
-  const score = extractSkinScore(scores[metric]);
-  if (score !== null) return score;
+  const concerns = normalizeSkinConcerns(scores);
 
   if (metric === "overall") {
-    const numericScores = Object.entries(scores)
-      .filter(([key]) => key !== "overall")
-      .map(([, value]) => extractSkinScore(value))
-      .filter((value): value is number => value !== null);
-
-    if (numericScores.length) {
-      return Math.round(numericScores.reduce((sum, value) => sum + value, 0) / numericScores.length);
-    }
+    return extractOverallSkinScore(scores, concerns) || fallback;
   }
+
+  const score = extractSkinScore(scores[metric]);
+  if (score !== null) return score;
 
   return fallback;
 }
@@ -102,7 +83,7 @@ function formatTime(dateStr: string): string {
 // ── Components ───────────────────────────────────────
 
 // Line chart for score trends
-function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: keyof SkinScores }>) {
+function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: string }>) {
   if (scans.length < 2) return null;
   
   const points = scans.slice(0, 30).reverse().map((s) => getMetricScore(s.scores, metric, 75));
@@ -190,14 +171,7 @@ function TrendChart({ scans, metric }: Readonly<{ scans: SkinScan[]; metric: key
 function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boolean }>) {
   const [expanded, setExpanded] = useState(false);
   const overallScore = getMetricScore(scan.scores, "overall", 75);
-  
-  const allMetrics = Object.entries(scan.scores)
-    .filter(([k]) => k !== "overall")
-    .map(([key, value]) => ({
-      key,
-      score: getMetricScore({ [key]: value }, key, 75),
-    }))
-    .sort((a, b) => a.score - b.score);
+  const allMetrics = normalizeSkinConcerns(scan.scores);
   
   return (
     <div className="glass-card space-y-3">
@@ -284,10 +258,10 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
       {/* Top 3 metrics preview */}
       {!expanded && (
         <div className="space-y-2">
-          {allMetrics.slice(0, 3).map(({ key, score }) => (
+          {allMetrics.slice(0, 3).map(({ key, label, score }) => (
             <div key={key} className="flex items-center justify-between text-xs">
               <span style={{ color: "var(--on-surface-variant)" }}>
-                {key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                {label}
               </span>
               <div className="flex items-center gap-2">
                 <div 
@@ -314,10 +288,10 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
       {/* All metrics (expanded) */}
       {expanded && (
         <div className="space-y-2">
-          {allMetrics.map(({ key, score }) => (
+          {allMetrics.map(({ key, label, score }) => (
             <div key={key} className="flex items-center justify-between text-xs">
               <span style={{ color: "var(--on-surface-variant)" }}>
-                {key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                {label}
               </span>
               <div className="flex items-center gap-2">
                 <div 
@@ -350,7 +324,7 @@ function ScanCard({ scan, isLatest }: Readonly<{ scan: SkinScan; isLatest: boole
           background: "var(--surface-variant)"
         }}
       >
-        {expanded ? "Show less" : `Show all ${allMetrics.length} metrics`}
+        {expanded ? "Show less" : `Show all ${allMetrics.length} focus areas`}
       </button>
     </div>
   );
@@ -361,7 +335,7 @@ export default function SkinHistoryPage() {
   const router = useRouter();
   const [scans, setScans] = useState<SkinScan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMetric, setSelectedMetric] = useState<keyof SkinScores>("overall");
+  const [selectedMetric, setSelectedMetric] = useState("overall");
 
   useEffect(() => {
     async function load() {
@@ -410,18 +384,9 @@ export default function SkinHistoryPage() {
     : 75;
   const scoreDelta = latestScore - firstScore;
 
-  const metricOptions: Array<{ key: keyof SkinScores; label: string }> = [
+  const metricOptions: Array<{ key: string; label: string }> = [
     { key: "overall", label: "Overall" },
-    { key: "moisture", label: "Moisture" },
-    { key: "acne", label: "Acne" },
-    { key: "wrinkles", label: "Wrinkles" },
-    { key: "pores", label: "Pores" },
-    { key: "dark_circles", label: "Dark Circles" },
-    { key: "texture", label: "Texture" },
-    { key: "redness", label: "Redness" },
-    { key: "oiliness", label: "Oiliness" },
-    { key: "radiance", label: "Radiance" },
-    { key: "firmness", label: "Firmness" },
+    ...SKIN_CONCERNS.map(({ key, label }) => ({ key, label })),
   ];
 
   return (
