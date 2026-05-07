@@ -1,8 +1,8 @@
 import type { Product } from "@/types";
 
 /** Serper / CDNs often return protocol-relative image URLs. */
-export function normalizeHttpUrl(raw: string): string {
-  const u = raw.trim();
+export function normalizeHttpUrl(raw: string | undefined | null): string {
+  const u = String(raw ?? "").trim();
   if (!u) return "";
   if (u.startsWith("//")) return `https:${u}`;
   return u;
