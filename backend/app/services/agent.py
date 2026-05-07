@@ -171,7 +171,7 @@ Requirements:
 """
 
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.4,
                 "topP": 0.95,
@@ -260,7 +260,7 @@ Requirements:
 """
 
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.35,
                 "topP": 0.95,
@@ -342,7 +342,7 @@ Requirements:
 """
 
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.35,
                 "topP": 0.95,

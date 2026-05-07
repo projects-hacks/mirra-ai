@@ -182,24 +182,32 @@ class AIMetadataExtractor:
         """Call Gemini Vision API with image and prompt."""
         import base64
         
-        # Encode image to base64
+        # Encode image to base64 (Vertex expects correct mime_type)
         image_base64 = base64.b64encode(image_data).decode('utf-8')
+        mime_type = "image/jpeg"
+        if image_data[:8] == b"\x89PNG\r\n\x1a\n":
+            mime_type = "image/png"
+        elif image_data[:4] == b"GIF8":
+            mime_type = "image/gif"
+        elif image_data[:4] == b"RIFF" and image_data[8:12] == b"WEBP":
+            mime_type = "image/webp"
         
         # Build the request payload
         payload = {
             "contents": [
                 {
+                    "role": "user",
                     "parts": [
                         {
                             "text": EXTRACTION_PROMPT
                         },
                         {
                             "inline_data": {
-                                "mime_type": "image/jpeg",
+                                "mime_type": mime_type,
                                 "data": image_base64
                             }
                         }
-                    ]
+                    ],
                 }
             ],
             "generationConfig": {

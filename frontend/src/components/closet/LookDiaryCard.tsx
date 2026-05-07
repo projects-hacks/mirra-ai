@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { isSupabaseStorageImageUrl } from "@/lib/constants";
 
 interface ProofCard {
   id: string;
@@ -66,6 +67,7 @@ export default function LookDiaryCard({
             alt={proofCard.look_name}
             fill
             className="object-cover"
+            unoptimized={isSupabaseStorageImageUrl(proofCard.result_image_url)}
           />
           
           {/* Hover Overlay */}
@@ -254,6 +256,7 @@ export default function LookDiaryCard({
               alt={proofCard.look_name}
               fill
               className="object-contain"
+              unoptimized={isSupabaseStorageImageUrl(proofCard.result_image_url)}
               onClick={(e) => e.stopPropagation()}
             />
           </div>

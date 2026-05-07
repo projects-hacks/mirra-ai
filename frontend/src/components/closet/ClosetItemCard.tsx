@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo } from "react";
 import Image from "next/image";
+import { isSupabaseStorageImageUrl } from "@/lib/constants";
 import CostPerWearBadge from "./CostPerWearBadge";
 
 interface ClosetItemCardProps {
@@ -107,6 +108,7 @@ const ClosetItemCard = memo(function ClosetItemCard({
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             className="object-contain mix-blend-multiply drop-shadow-lg group-hover:scale-105 transition-transform duration-500 p-4"
             loading="lazy"
+            unoptimized={isSupabaseStorageImageUrl(item.imageUrl)}
           />
         ) : (
           <span className="material-symbols-outlined text-[64px] opacity-30">

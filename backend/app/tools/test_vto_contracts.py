@@ -25,15 +25,23 @@ async def test_makeup_cache_key_includes_effects(monkeypatch):
         return None
 
     async def fake_call_api(task_type, selfie_bytes, params):
-        return {"results": {"url": f"https://cdn.example/{params['effects'][0]['id']}.jpg"}}
+        first = params["effects"][0]
+        label = first.get("id") or first.get("category", "x")
+        return {"results": {"url": f"https://cdn.example/{label}.jpg"}}
 
     monkeypatch.setattr(beauty_tools.cache, "get", fake_get)
     monkeypatch.setattr(beauty_tools.cache, "set", fake_set)
     monkeypatch.setattr(beauty_tools.perfectcorp, "call_api", fake_call_api)
 
     selfie = b"same-selfie"
-    await beauty_tools.try_on_makeup(selfie, [{"id": "natural", "category": "lipstick"}])
-    await beauty_tools.try_on_makeup(selfie, [{"id": "bold", "category": "lipstick"}])
+    await beauty_tools.try_on_makeup(
+        selfie,
+        [{"id": "natural", "category": "lipstick", "color": "#B86C66", "intensity": 0.3}],
+    )
+    await beauty_tools.try_on_makeup(
+        selfie,
+        [{"id": "bold", "category": "lipstick", "color": "#9F375D", "intensity": 0.72}],
+    )
 
     assert len(seen_keys) == 2
     assert seen_keys[0] != seen_keys[1]

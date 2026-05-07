@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { closetApi, formatApiError } from "@/lib/api";
+import { isSupabaseStorageImageUrl } from "@/lib/constants";
 
 interface OutfitItem {
   id: string;
@@ -187,6 +188,7 @@ export default function OutfitRecommendation({
                 alt={item.name}
                 fill
                 className="object-cover"
+                unoptimized={isSupabaseStorageImageUrl(item.image_url)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">

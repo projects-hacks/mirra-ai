@@ -57,16 +57,18 @@ const CLIENT_MAKEUP_PRESETS: GlowupMakeupPreset[] = [
 
 const CLIENT_HAIRSTYLES: GlowupHairstyle[] = [
   {
-    id: "soft-volume",
-    title: "Soft Volume",
-    description: "Clean lift around the crown with movement at the ends.",
-    image_url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+    id: "textured-crop",
+    title: "Textured Crop",
+    description: "Short structured shape with light volume on top — demo reference for masculine/no-makeup GlowUp paths.",
+    image_url:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1024&q=80&fm=jpg",
   },
   {
-    id: "relaxed-waves",
-    title: "Relaxed Waves",
-    description: "Soft width and texture that balances angular features.",
-    image_url: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=900&q=80",
+    id: "natural-curls",
+    title: "Natural Curls",
+    description: "Keeps curl pattern while cleaning up silhouette — pair with a clear, front-facing selfie.",
+    image_url:
+      "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=1024&q=80&fm=jpg",
   },
 ];
 

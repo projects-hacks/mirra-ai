@@ -2,7 +2,7 @@
 // Version: 2.1.1
 // Strategy: Network-first for dynamic content, Cache-first for static assets
 
-const CACHE_VERSION = "v2.1.2";
+const CACHE_VERSION = "v2.1.3";
 const CACHE_NAMES = {
   static: `mirra-static-${CACHE_VERSION}`,
   dynamic: `mirra-dynamic-${CACHE_VERSION}`,
@@ -73,6 +73,8 @@ globalThis.addEventListener("fetch", (event) => {
 function shouldBypassCache(request, url) {
   return (
     request.method !== "GET" ||
+    // HTML / client navigations — do not intercept (Next.js RSC + avoids SW fetch failures on soft nav).
+    request.mode === "navigate" ||
     url.pathname.startsWith("/_next/") ||
     url.pathname.startsWith("/api/") ||
     url.protocol === "chrome-extension:" ||
@@ -136,8 +138,9 @@ async function networkFirstStrategy(request, cacheName) {
         })
       );
     }
-    
-    throw error;
+
+    // Pass through a controlled failure instead of rejecting (avoids FetchEvent promise reject noise).
+    return new Response("", { status: 503, statusText: "Network unavailable" });
   }
 }
 

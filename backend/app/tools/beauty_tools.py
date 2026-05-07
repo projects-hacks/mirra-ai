@@ -5,6 +5,7 @@ from app.services import perfectcorp
 from app.core import cache
 from app.core.constants import VTOTaskType, CachePrefix
 from app.tools.base_vto import extract_result_image_url
+from app.tools.makeup_effect_normalize import normalize_makeup_effects
 
 
 async def try_on_makeup(selfie_bytes: bytes, effects: list[dict[str, Any]]) -> dict:
@@ -13,8 +14,9 @@ async def try_on_makeup(selfie_bytes: bytes, effects: list[dict[str, Any]]) -> d
     Makeup VTO is special — it doesn't use ref_file_url.
     Instead it takes an effects array with category, pattern, palettes.
     """
+    normalized = normalize_makeup_effects(effects)
     selfie_hash = cache.hash_bytes(selfie_bytes)
-    effects_hash = cache.hash_json({"effects": effects, "version": "1.0"})
+    effects_hash = cache.hash_json({"effects": normalized, "version": "1.0"})
     cache_key = f"{CachePrefix.VTO}:{VTOTaskType.MAKEUP}:{selfie_hash}:{effects_hash}"
 
     cached = await cache.get(cache_key)
@@ -24,7 +26,7 @@ async def try_on_makeup(selfie_bytes: bytes, effects: list[dict[str, Any]]) -> d
     result = await perfectcorp.call_api(
         VTOTaskType.MAKEUP,
         selfie_bytes,
-        {"effects": effects, "version": "1.0"},
+        {"effects": normalized, "version": "1.0"},
     )
     inner = result.get("result", result)
     image_url = extract_result_image_url(result)

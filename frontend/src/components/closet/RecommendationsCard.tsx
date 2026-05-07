@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { closetApi, formatApiError } from "@/lib/api";
+import { isSupabaseStorageImageUrl } from "@/lib/constants";
 
 interface RecommendedItem {
   id: string;
@@ -141,6 +142,7 @@ export default function RecommendationsCard({
                   alt={item.name}
                   fill
                   className="object-cover"
+                  unoptimized={isSupabaseStorageImageUrl(item.image_url)}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">

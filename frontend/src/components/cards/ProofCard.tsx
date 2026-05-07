@@ -6,6 +6,7 @@ import { CheckCircle2, TriangleAlert } from "lucide-react";
 import MatchScore from "@/components/ui/MatchScore";
 import { useToast } from "@/components/ui/Toast";
 import { retryWithBackoff } from "@/lib/api";
+import { isSupabaseStorageImageUrl } from "@/lib/constants";
 
 interface ProofCardItem {
   name: string;
@@ -147,6 +148,7 @@ const ProofCard = memo(function ProofCard({
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
             priority
+            unoptimized={isSupabaseStorageImageUrl(card.vto_image_url)}
           />
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
             <p className="text-white text-2xl font-bold tracking-tight">

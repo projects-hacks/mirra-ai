@@ -47,6 +47,12 @@ export function getApiUrl(path = ""): string {
 export const API_URL = getApiBaseUrl();
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+/** Use with next/image `unoptimized` for Supabase buckets — avoids optimizer 400 if remotePatterns drift in deploy. */
+export function isSupabaseStorageImageUrl(url: string | undefined | null): boolean {
+  if (!url || typeof url !== "string") return false;
+  return url.includes(".supabase.co/storage/");
+}
 export const ENABLE_CAMERA_KIT = process.env.NEXT_PUBLIC_ENABLE_CAMERA_KIT !== "false";
 
 // ── API Endpoints ──────────────────────────────────
