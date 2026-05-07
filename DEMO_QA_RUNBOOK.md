@@ -23,21 +23,21 @@ If all pass, proceed to final demo recording.
 
 ## 2) Pre-QA Setup (Do This First)
 
-1. Use production demo URL: `https://mirra-ai-ten.vercel.app`
-2. Open in Chrome mobile emulation (or real phone) for realistic demo behavior.
-3. Clear browser state:
-   - Clear site data for Vercel domain
-   - Hard refresh
-4. Ensure backend is healthy:
-   - `https://mirra-ai-j8erd.ondigitalocean.app/health`
-5. Sign in with a dedicated demo account.
-6. Confirm the account has:
-   - At least 1 selfie scan baseline (or be ready to create one)
-   - Ability to upload closet images
-7. Prepare assets:
-   - 1 clear portrait selfie (for skin + face try-on)
-   - 1 full-body portrait image (for clothes try-on)
-   - 5-10 closet item images (tops, bottoms, shoes, accessories)
+- [ ] Use production demo URL: `https://mirra-ai-ten.vercel.app`
+- [ ] Open in Chrome mobile emulation (or real phone) for realistic demo behavior.
+- [ ] Clear browser state:
+  - [ ] Clear site data for Vercel domain
+  - [ ] Hard refresh
+- [ ] Ensure backend is healthy:
+  - [ ] `https://mirra-ai-j8erd.ondigitalocean.app/health`
+- [ ] Sign in with a dedicated demo account.
+- [ ] Confirm the account has:
+  - [ ] At least 1 selfie scan baseline (or be ready to create one)
+  - [ ] Ability to upload closet images
+- [ ] Prepare assets:
+  - [ ] 1 clear portrait selfie (for skin + face try-on)
+  - [ ] 1 full-body portrait image (for clothes try-on)
+  - [ ] 5-10 closet item images (tops, bottoms, shoes, accessories)
 
 ---
 
@@ -63,10 +63,10 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow A: Landing + Auth
 
 ### Steps
-1. Open `/`
-2. Verify hero section, feature sections, and CTA buttons render.
-3. Click **Try Now** (or **Open Dashboard** if already signed in).
-4. Complete Google OAuth.
+- [ ] Open `/`
+- [ ] Verify hero section, feature sections, and CTA buttons render.
+- [ ] Click **Try Now** (or **Open Dashboard** if already signed in).
+- [ ] Complete Google OAuth.
 
 ### Expected
 - User returns to app without auth errors.
@@ -83,13 +83,13 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow B: Selfie Capture + Skin Analysis
 
 ### Steps
-1. On `/capture`, allow camera permission.
-2. Capture a clear selfie.
-3. Submit and watch analysis stages:
-   - Preparing selfie
-   - Running Perfect Corp analysis
-   - Saving scan
-   - Opening dashboard
+- [ ] On `/capture`, allow camera permission.
+- [ ] Capture a clear selfie.
+- [ ] Submit and watch analysis stages:
+  - [ ] Preparing selfie
+  - [ ] Running Perfect Corp analysis
+  - [ ] Saving scan
+  - [ ] Opening dashboard
 
 ### Expected
 - Analysis completes without timeout.
@@ -105,12 +105,12 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow C: Dashboard
 
 ### Steps
-1. Verify dashboard sections/cards load.
-2. Check quick actions/navigation to:
-   - Skin
-   - GlowUp
-   - Closet
-   - Try-On
+- [ ] Verify dashboard sections/cards load.
+- [ ] Check quick actions/navigation to:
+  - [ ] Skin
+  - [ ] GlowUp
+  - [ ] Closet
+  - [ ] Try-On
 
 ### Expected
 - No broken cards/loading spinners stuck.
@@ -121,10 +121,10 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow D: Skin Hub
 
 ### Steps
-1. Go to `/skin`.
-2. Verify skin concern scores and summary render.
-3. Open `/skin-history` and confirm at least 1 scan record.
-4. Open `/skin/simulate`, run one simulation.
+- [ ] Go to `/skin`.
+- [ ] Verify skin concern scores and summary render.
+- [ ] Open `/skin-history` and confirm at least 1 scan record.
+- [ ] Open `/skin/simulate`, run one simulation.
 
 ### Expected
 - Scores are visible and non-empty.
@@ -140,9 +140,9 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow E: GlowUp
 
 ### Steps
-1. Go to `/glowup`.
-2. Run analysis/recommendation step.
-3. Try at least one suggested makeup or hairstyle option.
+- [ ] Go to `/glowup`.
+- [ ] Run analysis/recommendation step.
+- [ ] Try at least one suggested makeup or hairstyle option.
 
 ### Expected
 - Face/tone-aware recommendations appear.
@@ -157,10 +157,10 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow F: Closet
 
 ### Steps
-1. Go to `/closet`.
-2. Upload 3-5 closet item photos.
-3. Confirm items appear in list/grid.
-4. If metadata extraction is available, verify category/color tags populate.
+- [ ] Go to `/closet`.
+- [ ] Upload 3-5 closet item photos.
+- [ ] Confirm items appear in list/grid.
+- [ ] If metadata extraction is available, verify category/color tags populate.
 
 ### Expected
 - Upload succeeds for each item.
@@ -175,16 +175,16 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow G: Outfit Builder + Proof Card
 
 ### Steps
-1. Go to `/outfit`.
-2. Pick an occasion.
-3. Generate outfit match/recommendation.
-4. Generate proof card.
-5. Validate proof card fields:
-   - Tone match
-   - Style fit
-   - Skin safe
-   - Cost breakdown
-6. Click **Approve/Save** and check persistence.
+- [ ] Go to `/outfit`.
+- [ ] Pick an occasion.
+- [ ] Generate outfit match/recommendation.
+- [ ] Generate proof card.
+- [ ] Validate proof card fields:
+  - [ ] Tone match
+  - [ ] Style fit
+  - [ ] Skin safe
+  - [ ] Cost breakdown
+- [ ] Click **Approve/Save** and check persistence.
 
 ### Expected
 - Proof card generates with complete data.
@@ -199,14 +199,14 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow H: Try-On Studio (Critical for Demo)
 
 ### Steps
-1. Go to `/try-on`.
-2. Confirm selfie is available for face-based tabs.
-3. Capture/upload full-body image for clothes try-on.
-4. Run clothes VTO using full-body image.
-5. Switch to face-based tabs and run:
-   - Makeup
-   - Hair
-   - Earrings or Necklace
+- [ ] Go to `/try-on`.
+- [ ] Confirm selfie is available for face-based tabs.
+- [ ] Capture/upload full-body image for clothes try-on.
+- [ ] Run clothes VTO using full-body image.
+- [ ] Switch to face-based tabs and run:
+  - [ ] Makeup
+  - [ ] Hair
+  - [ ] Earrings or Necklace
 
 ### Expected
 - Clothes VTO uses full-body source.
@@ -222,10 +222,10 @@ Run this first. If any item fails, fix before deep QA.
 ## Flow I: Look Diary + Outfit History
 
 ### Steps
-1. Go to `/look-diary`.
-2. Verify approved proof cards appear.
-3. Confirm score/cost fields are displayed correctly.
-4. Check `/outfit-history` if used in demo.
+- [ ] Go to `/look-diary`.
+- [ ] Verify approved proof cards appear.
+- [ ] Confirm score/cost fields are displayed correctly.
+- [ ] Check `/outfit-history` if used in demo.
 
 ### Expected
 - Saved cards are visible after refresh.
@@ -252,17 +252,17 @@ Only start recording when all are true:
 
 Use this exact path while recording:
 
-1. Landing page (5-10s)
-2. Sign in (10-15s)
-3. Capture selfie + analysis result (25-35s)
-4. Skin page + quick history/simulation (25-35s)
-5. GlowUp recommendation + one try-on (20-30s)
-6. Closet quick view (10-15s)
-7. Outfit builder + proof card generation (30-40s)
-8. Try-On Studio:
-   - full-body clothes VTO
-   - selfie-based accessory/makeup (30-45s)
-9. Look Diary showing saved outcome (10-15s)
+- [ ] Landing page (5-10s)
+- [ ] Sign in (10-15s)
+- [ ] Capture selfie + analysis result (25-35s)
+- [ ] Skin page + quick history/simulation (25-35s)
+- [ ] GlowUp recommendation + one try-on (20-30s)
+- [ ] Closet quick view (10-15s)
+- [ ] Outfit builder + proof card generation (30-40s)
+- [ ] Try-On Studio:
+  - [ ] full-body clothes VTO
+  - [ ] selfie-based accessory/makeup (30-45s)
+- [ ] Look Diary showing saved outcome (10-15s)
 
 Target video length: 3:00 to 3:50.
 
