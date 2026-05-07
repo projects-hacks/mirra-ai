@@ -7,6 +7,8 @@ GEMINI_TOP_K = 40
 GEMINI_TOP_P = 0.95
 GEMINI_MAX_OUTPUT_TOKENS = 2048
 GEMINI_TIMEOUT_SECONDS = 60
+# Skin insights can return longer JSON; keep bounded but generous for slow responses.
+GEMINI_SKIN_INSIGHTS_TIMEOUT_SECONDS = 60
 
 # Retry Configuration (Gemini calls)
 MAX_RETRIES = 3
