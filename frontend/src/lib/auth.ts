@@ -74,11 +74,6 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo: getAuthRedirectUrl(),
-      scopes: "openid profile email https://www.googleapis.com/auth/calendar.readonly",
-      queryParams: {
-        access_type: "offline",
-        prompt: "consent",
-      },
     },
   });
 }

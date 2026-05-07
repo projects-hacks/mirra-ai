@@ -75,33 +75,6 @@ function CallbackHandler() {
 
         const session = await establishSession();
 
-        // Extract Google provider token for calendar access
-        const providerToken = session.provider_token;
-        const providerRefreshToken = session.provider_refresh_token;
-        
-        if (providerToken) {
-          // Store calendar token in user_preferences
-          try {
-            await supabase.from("user_preferences").upsert({
-              user_id: session.user.id,
-              calendar_connected: true,
-              google_calendar_token: JSON.stringify({
-                token: providerToken,
-                refresh_token: providerRefreshToken,
-                token_uri: "https://oauth2.googleapis.com/token",
-                scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
-              }),
-            } as never, {
-              onConflict: "user_id"
-            });
-            
-            console.log("Calendar token stored successfully");
-          } catch (tokenError) {
-            console.warn("Failed to store calendar token:", tokenError);
-            // Don't fail the auth flow if calendar token storage fails
-          }
-        }
-
         try {
           const { data } = await supabase
             .from("profiles")

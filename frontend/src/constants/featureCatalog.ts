@@ -10,7 +10,6 @@ import {
   Scissors,
   Search,
   Cloud,
-  Calendar,
   Shuffle,
   FileCheck,
 } from "lucide-react";
@@ -109,15 +108,6 @@ export const FEATURE_CATALOG: FeatureConfig[] = [
     category: FeatureCategory.CONTEXT,
     requiresParams: false,
   },
-  {
-    tool: ToolName.CHECK_CALENDAR,
-    icon: Calendar,
-    label: "Check Calendar",
-    description: "View upcoming events",
-    category: FeatureCategory.CONTEXT,
-    requiresParams: false,
-  },
-
   // ── Closet ───────────────────────────────────────
   {
     tool: ToolName.MATCH_CLOSET,

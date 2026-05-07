@@ -649,12 +649,11 @@ class OnboardingService:
                 logger.error(f"Closet seeding retry failed: {str(retry_error)}")
                 raise
 
-    async def complete(self, user_id: str, calendar_connected: bool = False) -> dict[str, Any]:
+    async def complete(self, user_id: str) -> dict[str, Any]:
         """Mark onboarding as complete.
 
         Args:
             user_id: User ID
-            calendar_connected: Whether calendar was connected
 
         Returns:
             Dict with success status and updated profile
@@ -673,12 +672,6 @@ class OnboardingService:
                 check_response = supabase.from_("profiles").select("*").eq("id", user_id).execute()
                 logger.debug(f"Profile check: {check_response.data}")
                 raise ValueError(f"Failed to update profile for user {user_id}")
-
-            # Update calendar_connected if applicable
-            if calendar_connected:
-                supabase.from_("user_preferences").update({"calendar_connected": True}).eq(
-                    "user_id", user_id
-                ).execute()
 
             logger.info(f"Onboarding completed for user {user_id}")
 

@@ -7,7 +7,6 @@ export type OnboardingStep =
   | 'selfie_capture'
   | 'analysis'
   | 'greeting'
-  | 'calendar_prompt'
   | 'completion';
 
 // ── User Interface ──────────────────────────────────
@@ -74,7 +73,6 @@ export interface OnboardingState {
   user: User | null;
   selfie: string | null;
   analysisResults: AnalysisResults | null;
-  calendarConnected: boolean;
   error: OnboardingError | null;
   isLoading: boolean;
 }
@@ -93,7 +91,6 @@ export type OnboardingAction =
   | { type: 'SET_USER'; payload: User }
   | { type: 'SET_SELFIE'; payload: string }
   | { type: 'SET_ANALYSIS_RESULTS'; payload: AnalysisResults }
-  | { type: 'SET_CALENDAR_CONNECTED'; payload: boolean }
   | { type: 'SET_ERROR'; payload: OnboardingError | null }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'RESET' };

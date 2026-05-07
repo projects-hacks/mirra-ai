@@ -1,6 +1,6 @@
 """
 Context Builder
-Assembles MatchContext from calendar, weather, user input, and color profile
+Assembles MatchContext from weather, user input, and color profile
 
 HYBRID APPROACH: Fetches Perfect Corp color analysis if available (cached)
 """
@@ -8,7 +8,7 @@ HYBRID APPROACH: Fetches Perfect Corp color analysis if available (cached)
 from datetime import datetime
 from app.services.matching_engine import MatchContext
 from app.core.closet_constants import Occasion, Season
-from app.services import calendar, weather
+from app.services import weather
 from app.services.color_analyzer import get_user_color_profile
 
 
@@ -42,22 +42,10 @@ async def build_match_context(
     temp = weather_data.get('temperature', 70)
     condition = weather_data.get('condition', 'clear').lower()
     
-    # Get calendar events if no occasion specified
+    # Default to casual when no occasion is provided.
+    # Calendar integration is intentionally disabled in the current public flow.
     if not occasion:
-        try:
-            calendar_data = await calendar.get_todays_events()
-            events = calendar_data.get('events', [])
-            
-            if events:
-                # Use first event as occasion
-                first_event = events[0]
-                occasion = _infer_occasion_from_event(first_event)
-            else:
-                occasion = 'casual'
-        except ValueError as e:
-            # Calendar credentials not configured, default to casual
-            print(f"Calendar not available: {e}")
-            occasion = 'casual'
+        occasion = "casual"
     
     # Determine formality
     formality = _determine_formality(occasion)
@@ -96,28 +84,6 @@ async def build_match_context(
         user_preferences=user_preferences or {},
         color_profile=color_profile,  # HYBRID: Perfect Corp or None
     )
-
-
-def _infer_occasion_from_event(event: dict) -> str:
-    """Infer occasion from calendar event"""
-    summary = event.get('summary', '').lower()
-    
-    # Keyword matching
-    if any(kw in summary for kw in ['wedding', 'ceremony', 'gala']):
-        return 'formal'
-    elif any(kw in summary for kw in ['meeting', 'interview', 'presentation', 'office', 'work', 'standup']):
-        return 'work'
-    elif any(kw in summary for kw in ['date', 'dinner', 'romantic']):
-        return 'date'
-    elif any(kw in summary for kw in ['brunch', 'lunch', 'breakfast']):
-        return 'casual'
-    elif any(kw in summary for kw in ['concert', 'show', 'performance', 'party', 'celebration']):
-        return 'party'
-    elif any(kw in summary for kw in ['gym', 'workout', 'run', 'training', 'yoga']):
-        return 'athletic'
-    else:
-        return 'casual'
-
 
 def _determine_formality(occasion: str) -> str:
     """Determine formality level from occasion"""

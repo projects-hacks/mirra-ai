@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core import cache
 from app.core.auth_middleware import JWTAuthMiddleware
 from app.routers import (
-    vto, context, closet, onboarding, profile, calendar_auth,
+    vto, context, closet, onboarding, profile,
     closet_analytics, proof_cards, outfit_history, style_profile,
     closet_recommendations, skin, outfit, products, glowup,
 )
@@ -65,7 +65,6 @@ app.include_router(closet_recommendations.router)  # Already has prefix="/api/cl
 app.include_router(proof_cards.router, prefix="/api/proof-cards", tags=["Proof Cards"])
 app.include_router(outfit_history.router, prefix="/api/outfit-history", tags=["Outfit History"])
 app.include_router(style_profile.router, prefix="/api/style-profile", tags=["Style Profile"])
-app.include_router(calendar_auth.router, prefix="/api/calendar", tags=["Calendar"])
 
 
 @app.get("/")

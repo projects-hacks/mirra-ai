@@ -13,31 +13,6 @@ import { ScanProgressScreen } from "./ScanProgressScreen";
 import { GreetingScreen } from "./GreetingScreen";
 import type { User, OnboardingError, AnalysisResults } from "@/types/onboarding";
 
-function CalendarPromptScreen() {
-  const { skipCalendar } = useOnboarding();
-  
-  return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="glass-card text-center max-w-md">
-        <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--on-surface)" }}>
-          Connect Your Calendar
-        </h2>
-        <p className="text-sm mb-6" style={{ color: "var(--on-surface-variant)" }}>
-          Want to connect your calendar so I know what&apos;s coming up?
-        </p>
-        <div className="flex gap-3">
-          <button onClick={skipCalendar} className="btn-secondary flex-1">
-            Skip for Now
-          </button>
-          <button onClick={skipCalendar} className="btn-primary flex-1">
-            Connect Calendar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
   const [isCompleting, setIsCompleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -66,7 +41,7 @@ function CompletionScreen({ userId }: Readonly<{ userId: string }>) {
         const completeResponse = await fetch(getApiUrl("/api/onboarding/complete"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, calendar_connected: false }),
+          body: JSON.stringify({ user_id: userId }),
         });
 
         if (!completeResponse.ok) {
@@ -351,9 +326,6 @@ export function OnboardingFlow() {
             onContinue={() => advanceStep()}
           />
         );
-
-      case "calendar_prompt":
-        return <CalendarPromptScreen />;
 
       case "completion":
         return <CompletionScreen userId={state.user?.id || ""} />;

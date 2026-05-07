@@ -26,7 +26,6 @@ const initialState: OnboardingState = {
   user: null,
   selfie: null,
   analysisResults: null,
-  calendarConnected: false,
   error: null,
   isLoading: false,
 };
@@ -48,9 +47,6 @@ function onboardingReducer(
 
     case "SET_ANALYSIS_RESULTS":
       return { ...state, analysisResults: action.payload };
-
-    case "SET_CALENDAR_CONNECTED":
-      return { ...state, calendarConnected: action.payload };
 
     case "SET_ERROR":
       return { ...state, error: action.payload, isLoading: false };
@@ -77,8 +73,6 @@ interface OnboardingContextValue {
   captureSelfie: (selfie: string) => void;
   startAnalysis: () => Promise<void>;
   setAnalysisResults: (results: AnalysisResults) => void;
-  connectCalendar: () => Promise<void>;
-  skipCalendar: () => void;
   completeOnboarding: () => Promise<void>;
 
   // Utilities
@@ -170,17 +164,6 @@ export function OnboardingProvider({ children }: Readonly<{ children: ReactNode 
     dispatch({ type: "SET_STEP", payload: "greeting" });
   }, []);
 
-  const connectCalendar = useCallback(async () => {
-    dispatch({ type: "SET_LOADING", payload: true });
-    // Calendar connection logic will be implemented in the component
-    // This is just a placeholder for the context
-  }, []);
-
-  const skipCalendar = useCallback(() => {
-    dispatch({ type: "SET_CALENDAR_CONNECTED", payload: false });
-    dispatch({ type: "SET_STEP", payload: "completion" });
-  }, []);
-
   const completeOnboarding = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     // Completion logic will be implemented in the component
@@ -232,8 +215,6 @@ export function OnboardingProvider({ children }: Readonly<{ children: ReactNode 
       captureSelfie,
       startAnalysis,
       setAnalysisResults,
-      connectCalendar,
-      skipCalendar,
       completeOnboarding,
       saveProgress,
       resumeProgress,
@@ -248,8 +229,6 @@ export function OnboardingProvider({ children }: Readonly<{ children: ReactNode 
       captureSelfie,
       startAnalysis,
       setAnalysisResults,
-      connectCalendar,
-      skipCalendar,
       completeOnboarding,
       saveProgress,
       resumeProgress,

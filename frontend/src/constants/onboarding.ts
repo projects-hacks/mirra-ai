@@ -19,6 +19,5 @@ export const STEP_ORDER = [
   "selfie_capture",
   "analysis",
   "greeting",
-  "calendar_prompt",
   "completion",
 ] as const;

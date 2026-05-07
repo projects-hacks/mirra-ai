@@ -168,10 +168,10 @@ async def seed_closet(request: SeedClosetRequest) -> SeedClosetResponse:
 async def complete_onboarding(request: CompleteRequest) -> CompleteResponse:
     """Mark onboarding as complete and finalize setup.
     
-    Updates profile.onboarded to true and calendar_connected if applicable.
+    Updates profile.onboarded to true.
     
     Args:
-        request: CompleteRequest with user_id and calendar_connected flag
+        request: CompleteRequest with user_id
         
     Returns:
         CompleteResponse with success status and updated profile
@@ -180,10 +180,7 @@ async def complete_onboarding(request: CompleteRequest) -> CompleteResponse:
         HTTPException: 500 if completion fails
     """
     try:
-        result = await onboarding_service.complete(
-            request.user_id,
-            request.calendar_connected
-        )
+        result = await onboarding_service.complete(request.user_id)
         return CompleteResponse(**result)
     except Exception as e:
         logger.error(f"Onboarding completion failed: {str(e)}")

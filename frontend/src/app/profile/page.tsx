@@ -182,7 +182,6 @@ export default function ProfilePage() {
   const [bodyModel, setBodyModel] = useState<BodyModel | null>(null);
   const [skinScans, setSkinScans] = useState<SkinScan[]>([]);
   const [closetCount, setClosetCount] = useState<number | null>(null);
-  const [calendarConnected, setCalendarConnected] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -265,9 +264,6 @@ export default function ProfilePage() {
           budget_max:
             typeof p.budget_max === "number" ? p.budget_max.toString() : "",
         };
-        setCalendarConnected(
-          typeof p.calendar_connected === "boolean" ? p.calendar_connected : false
-        );
         setSavedPreferences(nextPreferences);
         setEditForm((f) => ({
           ...f,
@@ -383,32 +379,6 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
     await signOut();
   }, [signOut]);
-
-  // ── Connect calendar ────────────────────────────
-  const handleConnectCalendar = useCallback(async () => {
-    if (!user) return;
-    
-    // Calendar is connected during sign-in, so we need to prompt re-authentication
-    const confirmed = confirm(
-      "To connect your calendar, you'll need to sign out and sign in again. " +
-      "You'll be prompted to grant calendar access during sign-in. Continue?"
-    );
-    
-    if (confirmed) {
-      await signOut();
-    }
-  }, [user, signOut]);
-
-  // ── Disconnect calendar ────────────────────────────
-  const handleDisconnectCalendar = useCallback(async () => {
-    if (!user) return;
-    const supabase = getSupabase();
-    await supabase.from("user_preferences").upsert(
-      { user_id: user.id, calendar_connected: false, google_calendar_token: null } as never,
-      { onConflict: "user_id" }
-    );
-    setCalendarConnected(false);
-  }, [user]);
 
   // ── Render ─────────────────────────────────────────
   if (isLoading) {
@@ -669,36 +639,6 @@ export default function ProfilePage() {
             View Closet
             <ArrowRight size={16} aria-hidden="true" />
           </button>
-        </div>
-
-        {/* ── Calendar ── */}
-        <div className="glass-card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Google Calendar</p>
-              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--on-surface-variant)" }}>
-                <span
-                  className="w-2 h-2 rounded-full inline-block"
-                  style={{ background: calendarConnected ? "var(--success)" : "var(--outline)" }}
-                />
-                {calendarConnected ? "Connected" : "Not connected"}
-              </p>
-              {!calendarConnected && (
-                <p className="text-xs mt-1" style={{ color: "var(--on-surface-muted)" }}>
-                  Calendar access is granted during sign-in
-                </p>
-              )}
-            </div>
-          {calendarConnected ? (
-            <button onClick={handleDisconnectCalendar} className="btn-secondary text-sm" style={{ color: "var(--error)" }}>
-              Disconnect
-            </button>
-          ) : (
-            <button onClick={handleConnectCalendar} className="btn-primary text-sm">
-              Connect
-            </button>
-          )}
-          </div>
         </div>
 
         {/* ── Danger Zone ── */}

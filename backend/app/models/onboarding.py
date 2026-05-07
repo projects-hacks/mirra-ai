@@ -73,7 +73,6 @@ class SeedClosetRequest(BaseModel):
 class CompleteRequest(BaseModel):
     """Request model for onboarding completion."""
     user_id: str = Field(..., min_length=1, description=USER_ID_DESCRIPTION)
-    calendar_connected: bool = Field(default=False, description="Whether calendar was connected")
 
     @field_validator('user_id')
     @classmethod

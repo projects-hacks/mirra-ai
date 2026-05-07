@@ -86,7 +86,6 @@ export enum ToolName {
   CHANGE_HAIRSTYLE = "change_hairstyle",
   SEARCH_PRODUCTS = "search_products",
   CHECK_WEATHER = "check_weather",
-  CHECK_CALENDAR = "check_calendar",
   MATCH_CLOSET = "match_closet",
   GENERATE_PROOF_CARD = "generate_proof_card",
 }
@@ -104,7 +103,6 @@ export const LOADING_TEXT: Record<string, string> = {
   [ToolName.CHANGE_HAIRSTYLE]: "Styling your hair…",
   [ToolName.SEARCH_PRODUCTS]: "Finding the best deals…",
   [ToolName.CHECK_WEATHER]: "Checking the weather…",
-  [ToolName.CHECK_CALENDAR]: "Checking your schedule…",
   [ToolName.MATCH_CLOSET]: "Matching your closet to the occasion…",
   [ToolName.GENERATE_PROOF_CARD]: "Generating your proof card…",
 };

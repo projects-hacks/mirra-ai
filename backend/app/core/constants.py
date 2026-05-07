@@ -107,7 +107,6 @@ class ToolName(StrEnum):
     TRY_ON_EARRINGS = "try_on_earrings"
     TRY_ON_NECKLACE = "try_on_necklace"
     CHANGE_HAIRSTYLE = "change_hairstyle"
-    CHECK_CALENDAR = "check_calendar"
     CHECK_WEATHER = "check_weather"
     SEARCH_PRODUCTS = "search_products"
     MATCH_CLOSET = "match_closet"

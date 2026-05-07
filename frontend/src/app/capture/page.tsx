@@ -176,8 +176,7 @@ export default function CapturePage() {
 
       if (!(profileData as { onboarded?: boolean } | null)?.onboarded) {
         await apiPost("/api/onboarding/complete", {
-            user_id: user.id,
-            calendar_connected: false,
+          user_id: user.id,
         });
       }
 
