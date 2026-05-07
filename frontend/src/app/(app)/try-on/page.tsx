@@ -137,8 +137,7 @@ function getImageSize(dataUrl: string): Promise<{ width: number; height: number 
   });
 }
 
-const BODY_IMAGE_MIN_SHORT_SIDE = 480;
-const BODY_IMAGE_SOFT_SHORT_SIDE = 720;
+const BODY_IMAGE_HINT_SOFT_SHORT_SIDE = 720;
 
 async function validateBodyImage(dataUrl: string): Promise<{ error: string | null; hint: string | null }> {
   const { width, height } = await getImageSize(dataUrl);
@@ -149,21 +148,20 @@ async function validateBodyImage(dataUrl: string): Promise<{ error: string | nul
     return { error: "Resize the full-body image so its longest side is 4096px or less.", hint: null };
   }
 
-  if (shortSide < BODY_IMAGE_MIN_SHORT_SIDE) {
-    return {
-      error: `This photo is too small. Use an image where the shorter side is at least ${BODY_IMAGE_MIN_SHORT_SIDE}px.`,
-      hint: null,
-    };
-  }
-
   const hints: string[] = [];
 
   if (height <= width) {
     hints.push("Portrait (taller than wide) usually gives the best full-body fit; landscape is still accepted.");
   }
 
-  if (shortSide < BODY_IMAGE_SOFT_SHORT_SIDE) {
-    hints.push(`Short side is under ${BODY_IMAGE_SOFT_SHORT_SIDE}px — results may be softer; re-shoot if VTO looks weak.`);
+  if (shortSide < 480) {
+    hints.push(
+      "Small photos are accepted; the try-on engine may still reject very low-resolution shots—use a larger full-body image if this fails.",
+    );
+  } else if (shortSide < BODY_IMAGE_HINT_SOFT_SHORT_SIDE) {
+    hints.push(
+      `Short side is under ${BODY_IMAGE_HINT_SOFT_SHORT_SIDE}px — results may be softer; re-shoot if VTO looks weak.`,
+    );
   }
 
   return { error: null, hint: hints.length ? hints.join(" ") : null };
@@ -861,7 +859,7 @@ export default function TryOnPage() {
               <div>
                 <p className="text-sm font-semibold">Full-body photo</p>
                 <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-                  Use a head-to-toe shot with even light and a simple background (portrait works best; short side at least 480px).
+                  Use a head-to-toe shot with even light and a simple background. Any resolution is accepted; larger photos usually produce cleaner try-on.
                 </p>
               </div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[280px]">

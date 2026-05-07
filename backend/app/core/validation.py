@@ -1,4 +1,7 @@
-"""Selfie/image validation — ensures images meet Perfect Corp and upload constraints."""
+"""Selfie/image validation — size cap, format decode, orientation.
+
+Minimum pixel dimensions are enforced by Perfect Corp per API; we do not duplicate a floor here so small inputs reach the provider (or product resolver) and fail with their errors if unsupported.
+"""
 from __future__ import annotations
 
 import io
@@ -6,7 +9,7 @@ from enum import StrEnum
 
 from PIL import Image, ImageOps
 
-from app.core.constants import MAX_IMAGE_SIZE_BYTES, MIN_IMAGE_DIMENSION
+from app.core.constants import MAX_IMAGE_SIZE_BYTES
 
 
 class ValidationError(Exception):
@@ -55,11 +58,6 @@ def prepare_image_bytes(image_bytes: bytes, policy: ImageOrientationPolicy) -> b
                 f"Landscape orientation ({w}x{h}) — portrait required"
             )
 
-    if min(w, h) < MIN_IMAGE_DIMENSION:
-        raise ValidationError(
-            f"Image too small ({w}x{h}) — minimum {MIN_IMAGE_DIMENSION}px"
-        )
-
     out = io.BytesIO()
     rgb = img.convert("RGB") if img.mode in ("RGBA", "P", "LA") else img
     if rgb.mode != "RGB":
@@ -89,8 +87,4 @@ def validate(image_bytes: bytes) -> None:
     if h < w:
         raise ValidationError(
             f"Landscape orientation ({w}x{h}) — portrait required"
-        )
-    if min(w, h) < MIN_IMAGE_DIMENSION:
-        raise ValidationError(
-            f"Image too small ({w}x{h}) — minimum {MIN_IMAGE_DIMENSION}px"
         )
