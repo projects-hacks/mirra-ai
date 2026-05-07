@@ -26,6 +26,8 @@ interface AgentInsightCardProps {
   insight: AgentInsight | null;
   isLoading: boolean;
   onRecommendationTap?: (action: string) => void;
+  /** Match Mirra glass / Nebula surfaces (e.g. GlowUp). Default keeps the slate dashboard card. */
+  variant?: "slate" | "nebula";
 }
 
 const STEP_ICONS: Record<AgentStep["icon"], LucideIcon> = {
@@ -40,9 +42,14 @@ const STEP_ICONS: Record<AgentStep["icon"], LucideIcon> = {
   check: CheckCircle2,
 };
 
-function StepIcon({ step, visible }: Readonly<{ step: AgentStep; visible: boolean }>) {
+function StepIcon({ step, visible, nebula }: Readonly<{ step: AgentStep; visible: boolean; nebula: boolean }>) {
   if (!visible || step.status === "running" || step.status === "pending") {
-    return <Loader2 size={16} className="animate-spin" />;
+    return (
+      <Loader2
+        size={16}
+        className={nebula ? "animate-spin text-[var(--primary)]" : "animate-spin text-white/70"}
+      />
+    );
   }
   if (step.status === "error") {
     return <TriangleAlert size={16} className="text-amber-300" />;
@@ -55,8 +62,14 @@ export default function AgentInsightCard({
   insight,
   isLoading,
   onRecommendationTap,
+  variant = "slate",
 }: Readonly<AgentInsightCardProps>) {
   const [visibleSteps, setVisibleSteps] = useState(0);
+  const nebula = variant === "nebula";
+
+  const sectionShell = nebula
+    ? "glass-card rounded-[1.75rem] border border-white/[0.1] p-5 shadow-[0_16px_48px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-white/[0.04] sm:p-6 md:p-8"
+    : "rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]";
 
   useEffect(() => {
     if (!insight?.steps.length) return;
@@ -73,19 +86,24 @@ export default function AgentInsightCard({
   }, [insight]);
 
   if (isLoading) {
+    const badgeClass = nebula
+      ? "inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--on-surface-muted)]"
+      : "inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/78";
+    const skeletonClass = nebula ? "h-10 rounded-xl bg-white/[0.08]" : "h-10 rounded-xl bg-white/10";
+
     return (
-      <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
+      <section className={sectionShell}>
         <div className="flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/78">
+          <div className={badgeClass}>
             <Cpu size={14} aria-hidden="true" />
             AI processing
           </div>
-          <Loader2 size={16} className="animate-spin text-white/70" />
+          <Loader2 size={16} className={nebula ? "animate-spin text-[var(--primary)]" : "animate-spin text-white/70"} />
         </div>
         <div className="mt-4 space-y-3">
-          <div className="h-10 rounded-xl bg-white/10" />
-          <div className="h-10 rounded-xl bg-white/10" />
-          <div className="h-10 rounded-xl bg-white/10" />
+          <div className={skeletonClass} />
+          <div className={skeletonClass} />
+          <div className={skeletonClass} />
         </div>
       </section>
     );
@@ -93,13 +111,22 @@ export default function AgentInsightCard({
 
   if (!insight) {
     return (
-      <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
+      <section className={sectionShell}>
         <div className="flex items-start gap-3">
-          <Sparkles size={20} className="mt-1 text-white/70" />
+          <Sparkles size={20} className={nebula ? "mt-1 text-[var(--primary)]" : "mt-1 text-white/70"} />
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Mirra Agent</p>
-            <h2 className="mt-2 text-2xl text-white">Scan context pending</h2>
-            <p className="mt-3 text-sm leading-6 text-white/70">
+            <p
+              className={`text-sm font-semibold uppercase tracking-[0.18em] ${nebula ? "text-[var(--on-surface-muted)]" : "text-white/50"}`}
+            >
+              Mirra Agent
+            </p>
+            <h2
+              className={`mt-2 text-2xl ${nebula ? "text-[var(--on-surface)]" : "text-white"}`}
+              style={nebula ? { fontFamily: "var(--font-serif)" } : undefined}
+            >
+              Scan context pending
+            </h2>
+            <p className={`mt-3 text-sm leading-6 ${nebula ? "text-[var(--on-surface-variant)]" : "text-white/70"}`}>
               Run a skin scan to unlock trend-aware guidance across skin, glowup, and try-on flows.
             </p>
           </div>
@@ -109,22 +136,40 @@ export default function AgentInsightCard({
   }
 
   const stepsComplete = visibleSteps >= insight.steps.length;
-  const recommendationClassName = "min-h-10 rounded-full bg-white px-4 py-2 text-sm font-medium text-[#111827] transition-transform hover:-translate-y-0.5";
+  const recommendationSlate = "min-h-10 rounded-full bg-white px-4 py-2 text-sm font-medium text-[#111827] transition-transform hover:-translate-y-0.5";
+  const recommendationNebula =
+    "min-h-10 rounded-full border border-[var(--primary)]/40 bg-[var(--primary)]/14 px-4 py-2 text-sm font-semibold text-[var(--on-surface)] shadow-[0_4px_20px_rgba(139,92,246,0.12)] transition hover:border-[var(--primary)]/55 hover:bg-[var(--primary)]/22";
+  const recommendationClassName = nebula ? recommendationNebula : recommendationSlate;
+
+  const badgeClass = nebula
+    ? "inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--on-surface-muted)]"
+    : "inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/78";
+
+  const stepRowClass = nebula
+    ? "flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm ring-1 ring-inset ring-white/[0.04] transition-all duration-300"
+    : "flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm ring-1 ring-white/8 transition-all duration-300";
+
+  const routeClass = nebula ? "text-[var(--on-surface-muted)]" : "text-white/50";
 
   return (
-    <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
+    <section className={sectionShell}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/78">
+          <div className={badgeClass}>
             <Brain size={14} aria-hidden="true" />
             AI reasoning active
           </div>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">Reasoning trace</h2>
-          <p className="mt-2 text-xs text-white/60">
+          <h2
+            className={`mt-2 text-xl font-semibold tracking-tight sm:text-2xl ${nebula ? "text-[var(--on-surface)]" : "text-white"}`}
+            style={nebula ? { fontFamily: "var(--font-serif)" } : undefined}
+          >
+            Reasoning trace
+          </h2>
+          <p className={`mt-2 text-xs ${nebula ? "text-[var(--on-surface-variant)]" : "text-white/60"}`}>
             Mirra combines live skin signal, weather, and history to suggest your next best action.
           </p>
         </div>
-        <Route size={22} className="text-white/50" />
+        <Route size={22} className={routeClass} />
       </div>
 
       <div className="mt-5 space-y-3">
@@ -133,24 +178,36 @@ export default function AgentInsightCard({
           return (
             <div
               key={`${step.text}-${index}`}
-              className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm ring-1 ring-white/8 transition-all duration-300"
+              className={stepRowClass}
               style={{ opacity: visible ? 1 : 0.35, transform: visible ? "translateY(0)" : "translateY(4px)" }}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10">
-                <StepIcon step={step} visible={visible} />
+              <span
+                className={
+                  nebula
+                    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.08]"
+                    : "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10"
+                }
+              >
+                <StepIcon step={step} visible={visible} nebula={nebula} />
               </span>
-              <span className="leading-5 text-white/82">{step.text}</span>
+              <span className={`leading-5 ${nebula ? "text-[var(--on-surface)]" : "text-white/82"}`}>
+                {step.text}
+              </span>
             </div>
           );
         })}
       </div>
 
       <div
-        className="mt-5 border-t border-white/12 pt-5 transition-all duration-500"
+        className={`mt-5 border-t pt-5 transition-all duration-500 ${nebula ? "border-white/10" : "border-white/12"}`}
         style={{ opacity: stepsComplete ? 1 : 0.2 }}
       >
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/52">How AI helps now</p>
-        <p className="text-base leading-7 text-white/86">{insight.insight}</p>
+        <p
+          className={`text-[0.68rem] font-semibold uppercase tracking-[0.14em] ${nebula ? "text-[var(--on-surface-muted)]" : "text-white/52"}`}
+        >
+          How AI helps now
+        </p>
+        <p className={`text-base leading-7 ${nebula ? "text-[var(--on-surface)]" : "text-white/86"}`}>{insight.insight}</p>
         <div className="mt-5 flex flex-wrap gap-2">
           {insight.recommendations.map((recommendation) => {
             if (!recommendation.action) {
@@ -182,11 +239,19 @@ export default function AgentInsightCard({
           })}
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-white/45">Signals:</span>
+          <span
+            className={`text-[0.68rem] uppercase tracking-[0.14em] ${nebula ? "text-[var(--on-surface-muted)]" : "text-white/45"}`}
+          >
+            Signals:
+          </span>
           {(insight.toolsUsed.length ? insight.toolsUsed : ["dashboard context"]).map((tool) => (
             <span
               key={tool}
-              className="rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-[0.68rem] text-white/72"
+              className={
+                nebula
+                  ? "rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-[0.68rem] text-[var(--on-surface-variant)]"
+                  : "rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-[0.68rem] text-white/72"
+              }
             >
               {tool}
             </span>
