@@ -39,6 +39,9 @@ PUBLIC_PATHS: Set[str] = {
     "/docs",
     "/openapi.json",
     "/redoc",
+    # Browsers / clients probe these without Bearer tokens; do not 401.
+    "/favicon.ico",
+    "/robots.txt",
     "/api/onboarding/init",         # first call after OAuth
     "/api/onboarding/analyze",      # called during onboarding before api.ts is wired
     "/api/onboarding/seed-closet",  # called from CompletionScreen inline

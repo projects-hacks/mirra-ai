@@ -19,6 +19,11 @@ def test_paid_routes_are_not_public():
     assert paid_routes.isdisjoint(PUBLIC_PATHS)
 
 
+def test_browser_probes_are_public():
+    assert "/favicon.ico" in PUBLIC_PATHS
+    assert "/robots.txt" in PUBLIC_PATHS
+
+
 def test_paid_route_detection_covers_costly_prefixes():
     assert _is_paid_route("/api/skin/analyze")
     assert _is_paid_route("/api/vto/clothes")
