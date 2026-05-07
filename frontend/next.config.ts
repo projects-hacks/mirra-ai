@@ -22,7 +22,53 @@ function normalizeBackendOrigin(rawOrigin: string) {
 
 const backendOrigin = normalizeBackendOrigin(rawBackendOrigin);
 
+/** Allow `next/image` to optimize remote URLs (closet uploads, avatars, mocks). */
+function imageRemotePatterns(): NonNullable<NextConfig["images"]>["remotePatterns"] {
+  const patterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [
+    {
+      protocol: "https",
+      hostname: "*.supabase.co",
+      pathname: "/storage/v1/object/**",
+    },
+    {
+      protocol: "https",
+      hostname: "images.unsplash.com",
+      pathname: "/**",
+    },
+    {
+      protocol: "https",
+      hostname: "lh3.googleusercontent.com",
+      pathname: "/**",
+    },
+  ];
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (supabaseUrl) {
+    try {
+      const { hostname, protocol } = new URL(supabaseUrl);
+      if (hostname && (protocol === "https:" || protocol === "http:")) {
+        const proto = protocol === "http:" ? "http" : "https";
+        const exists = patterns.some((p) => p.hostname === hostname && p.protocol === proto);
+        if (!exists) {
+          patterns.push({
+            protocol: proto,
+            hostname,
+            pathname: "/storage/v1/object/**",
+          });
+        }
+      }
+    } catch {
+      /* invalid env URL */
+    }
+  }
+
+  return patterns;
+}
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: imageRemotePatterns(),
+  },
   async rewrites() {
     return [
       {

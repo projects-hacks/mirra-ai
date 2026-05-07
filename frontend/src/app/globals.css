@@ -185,10 +185,15 @@ body:has(.ymk-wrapper) {
   max-height: none !important;
   z-index: var(--z-camera-kit) !important;
   margin: 0 !important;
-  padding: 0 !important;
+  /* Breathing room so status chips / oval aren’t flush against a clipping rect */
+  padding-left: max(14px, env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(14px, env(safe-area-inset-right, 0px)) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   background: #050712 !important;
   box-shadow: 0 0 0 9999px rgba(5, 7, 18, 0.92) !important;
-  overflow: hidden !important;
+  /* hidden clips Perfect Corp HUD that extends past the video layer */
+  overflow: visible !important;
   box-sizing: border-box !important;
 }
 

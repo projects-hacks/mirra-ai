@@ -54,14 +54,20 @@ const SkinSimulationCard = ({
     <div className="glass-card w-full max-w-md mx-auto px-4 sm:px-0 float-in overflow-hidden relative pointer-events-auto shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between p-3 sm:p-4 pb-2 border-b border-white/20">
-        <button
-          onClick={onClose}
-          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/20 transition-colors min-w-[44px] min-h-[44px]"
-        >
-          <X size={22} aria-hidden="true" />
-        </button>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition-colors hover:bg-white/20"
+            aria-label="Clear preview and start over"
+          >
+            <X size={22} aria-hidden="true" />
+          </button>
+        ) : (
+          <div className="min-w-[44px]" aria-hidden="true" />
+        )}
         <h2 className="text-base sm:text-lg font-bold tracking-tight">SKIN PROGRESSION</h2>
-        <div className="w-10" />
+        <div className="min-w-[44px]" aria-hidden="true" />
       </div>
 
       {/* Comparison Area */}

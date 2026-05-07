@@ -136,6 +136,21 @@ function applyImportantStyle(element: HTMLElement, property: string, value: stri
   element.style.setProperty(property, value, "important");
 }
 
+/** Vendor stacks HUD (chips, oval) in divs that often use overflow:hidden — clip the edges. */
+function relaxCameraKitOverflowAncestors(root: HTMLElement, maxDepth: number) {
+  function walk(el: HTMLElement, depth: number) {
+    if (depth > maxDepth) return;
+    Array.from(el.children).forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      applyImportantStyle(node, "overflow", "visible");
+      applyImportantStyle(node, "overflow-x", "visible");
+      applyImportantStyle(node, "overflow-y", "visible");
+      walk(node, depth + 1);
+    });
+  }
+  walk(root, 0);
+}
+
 function styleCameraKitRoot(element: HTMLElement) {
   element.dataset.mirraCameraKitRoot = "true";
   applyImportantStyle(element, "position", "fixed");
@@ -153,11 +168,14 @@ function styleCameraKitRoot(element: HTMLElement) {
   );
   applyImportantStyle(element, "max-height", "none");
   applyImportantStyle(element, "margin", "0");
-  applyImportantStyle(element, "padding", "0");
+  applyImportantStyle(element, "padding-top", "0");
+  applyImportantStyle(element, "padding-bottom", "0");
+  applyImportantStyle(element, "padding-left", "max(14px, env(safe-area-inset-left, 0px))");
+  applyImportantStyle(element, "padding-right", "max(14px, env(safe-area-inset-right, 0px))");
   applyImportantStyle(element, "box-sizing", "border-box");
   applyImportantStyle(element, "z-index", "80");
   applyImportantStyle(element, "background", "#050712");
-  applyImportantStyle(element, "overflow", "hidden");
+  applyImportantStyle(element, "overflow", "visible");
   applyImportantStyle(element, "box-shadow", "0 0 0 9999px rgba(5, 7, 18, 0.92)");
 
   /* Vendor often nests a full-width row; kill accidental max-width from their CSS */
@@ -176,6 +194,8 @@ function styleCameraKitRoot(element: HTMLElement) {
     applyImportantStyle(child, "max-height", "none");
     applyImportantStyle(child, "object-fit", "cover");
   });
+
+  relaxCameraKitOverflowAncestors(element, 5);
 }
 
 function styleKnownCameraKitRoots() {
