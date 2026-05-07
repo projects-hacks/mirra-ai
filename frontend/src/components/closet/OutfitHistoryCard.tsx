@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { formatApiError, outfitHistoryApi } from '@/lib/api';
+import { materialSymbolLigature } from '@/lib/materialSymbols';
 
 interface OutfitWeather {
   temperature?: number;
@@ -130,7 +131,7 @@ export default function OutfitHistoryCard({ log, onUpdate }: OutfitHistoryCardPr
               )}`}
             >
               <span className="material-symbols-outlined text-sm">
-                {getOutcomeIcon(log.outcome)}
+                {materialSymbolLigature(getOutcomeIcon(log.outcome))}
               </span>
               {log.outcome.charAt(0).toUpperCase() + log.outcome.slice(1)}
             </span>

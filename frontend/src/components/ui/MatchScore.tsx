@@ -1,5 +1,7 @@
 "use client";
 
+import { materialSymbolLigature } from "@/lib/materialSymbols";
+
 interface MatchScoreProps {
   label: string;
   score: number;
@@ -19,6 +21,7 @@ export default function MatchScore({
 }: Readonly<MatchScoreProps>) {
   const percentage = Math.round(score);
   const barWidth = `${percentage}%`;
+  const ligature = materialSymbolLigature(icon);
 
   return (
     <div className="flex items-center gap-4 px-4 min-h-14 justify-between">
@@ -27,7 +30,7 @@ export default function MatchScore({
           className="flex items-center justify-center rounded-lg shrink-0 size-10"
           style={{ background: "var(--surface-container)" }}
         >
-          <span className="material-symbols-outlined text-[24px]">{icon}</span>
+          <span className="material-symbols-outlined text-[24px]">{ligature}</span>
         </div>
         <p className="text-base font-normal leading-normal flex-1 truncate">
           {label} ({percentage}%)

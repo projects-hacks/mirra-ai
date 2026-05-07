@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import { materialSymbolLigature } from "@/lib/materialSymbols";
 
 interface CostPerWearBadgeProps {
   price?: number;
@@ -67,11 +68,13 @@ const CostPerWearBadge = memo(function CostPerWearBadge({
     };
   }, [price, timesWorn]);
 
+  const ligature = materialSymbolLigature(icon);
+
   return (
     <div
       className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${colorClass} ${className}`}
     >
-      <span className="material-symbols-outlined text-[14px]">{icon}</span>
+      <span className="material-symbols-outlined text-[14px]">{ligature}</span>
       <span>{display}</span>
     </div>
   );

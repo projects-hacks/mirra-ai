@@ -3,6 +3,8 @@
  * Displays helpful messages and CTAs when there's no content to show
  */
 
+import { materialSymbolLigature } from "@/lib/materialSymbols";
+
 interface EmptyStateProps {
   icon?: string;
   title: string;
@@ -22,13 +24,14 @@ export default function EmptyState({
   secondaryActionLabel,
   onSecondaryAction,
 }: EmptyStateProps) {
+  const ligature = materialSymbolLigature(icon);
   return (
     <div className="glass-panel p-12 text-center">
       <span
         className="material-symbols-outlined text-[80px] mb-4 block"
         style={{ color: 'var(--on-surface-variant)', opacity: 0.3 }}
       >
-        {icon}
+        {ligature}
       </span>
       <h2
         className="text-2xl font-bold mb-2"

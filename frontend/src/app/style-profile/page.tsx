@@ -7,6 +7,7 @@ import { getSupabase } from '@/lib/supabase';
 import StyleInsightsChart from '@/components/closet/StyleInsightsChart';
 import { SkeletonAnalyticsCard } from '@/components/common/SkeletonLoader';
 import { EmptyAnalytics } from '@/components/common/EmptyState';
+import { materialSymbolLigature } from '@/lib/materialSymbols';
 
 interface StyleProfile {
   user_id: string;
@@ -222,7 +223,7 @@ export default function StyleProfilePage() {
                     className="material-symbols-outlined text-[24px]"
                     style={{ color: 'var(--primary)' }}
                   >
-                    {getDriftIcon(insight.type)}
+                    {materialSymbolLigature(getDriftIcon(insight.type))}
                   </span>
                   <div className="flex-1">
                     <p style={{ color: 'var(--on-surface)' }}>{insight.message}</p>

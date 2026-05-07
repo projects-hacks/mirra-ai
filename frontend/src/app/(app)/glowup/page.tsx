@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoaderCircle, Share2, Sparkles, WandSparkles } from "lucide-react";
+import { Camera, History, LoaderCircle, ScanLine, Share2, Sparkles, Upload, WandSparkles } from "lucide-react";
 import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
 import { glowupPlanToAgentInsight } from "@/lib/agentAdapters";
 import { ToolName } from "@/lib/constants";
@@ -306,8 +306,33 @@ export default function GlowupPage() {
   const [activeHairId, setActiveHairId] = useState<string | null>(null);
   const [activeAccessoryUrl, setActiveAccessoryUrl] = useState<string | null>(null);
 
+  const importInputEmptyRef = useRef<HTMLInputElement>(null);
+  const importInputHeaderRef = useRef<HTMLInputElement>(null);
+  const isFirstSelfieTransition = useRef(true);
+
+  const handleImportPhotoChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file?.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result ?? "");
+        if (dataUrl.startsWith("data:")) {
+          dispatch({ type: "SET_SELFIE", payload: dataUrl });
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    [dispatch]
+  );
+
   useEffect(() => {
-    if (!selfie) return;
+    if (!selfie) {
+      startTransition(() => setSelfieBlob(null));
+      return;
+    }
+    startTransition(() => setSelfieBlob(null));
     const selfieImage = selfie;
     let cancelled = false;
 
@@ -321,6 +346,28 @@ export default function GlowupPage() {
       cancelled = true;
     };
   }, [selfie]);
+
+  useEffect(() => {
+    if (!selfie) return;
+    if (isFirstSelfieTransition.current) {
+      isFirstSelfieTransition.current = false;
+      return;
+    }
+    setPlan(null);
+    setAnalysis(null);
+    setAccessoryStatuses({ earrings: null, necklace: null });
+    setAccessories({ earrings: [], necklace: [] });
+    setCurrentImage(null);
+    setCurrentTitle("Original Selfie");
+    setActivePresetId(null);
+    setActiveHairId(null);
+    setActiveAccessoryUrl(null);
+    setSaveMessage(null);
+    setPlanNotice(null);
+    dispatch({ type: "CLEAR_VTO" });
+    dispatch({ type: "SET_PROCESSING", payload: false });
+    dispatch({ type: "SET_CURRENT_TOOL", payload: null });
+  }, [selfie, dispatch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -361,10 +408,10 @@ export default function GlowupPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selfie]);
 
   useEffect(() => {
-    if (!selfieBlob || plan) return;
+    if (!selfieBlob) return;
     const sourceSelfie = selfieBlob;
     let cancelled = false;
 
@@ -437,7 +484,7 @@ export default function GlowupPage() {
     return () => {
       cancelled = true;
     };
-  }, [plan, selfieBlob]);
+  }, [selfieBlob]);
 
   const formatted = useMemo(() => formatFaceAnalysis(analysis), [analysis]);
   const beforeImage = earliestSelfieUrl ?? selfie ?? null;
@@ -611,18 +658,58 @@ export default function GlowupPage() {
   if (isHydrated && !selfie) {
     return (
       <section className="page-shell">
+        <input
+          ref={importInputEmptyRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          aria-hidden
+          onChange={handleImportPhotoChange}
+        />
         <div className="glass-panel rounded-[2rem] p-6 sm:p-8">
           <p className="label-caps">GlowUp Studio</p>
           <h1 className="mt-3 text-3xl font-semibold" style={{ fontFamily: "var(--font-serif)" }}>
             Start from a selfie
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-            GlowUp needs a saved selfie so it can read your face shape, map your undertone, and preview makeup,
-            hair, and accessories on your own image.
+            GlowUp needs a face photo so it can read your shape, map your undertone, and preview makeup, hair, and
+            accessories. Run a new skin scan, capture in the moment, pull your latest saved scan from records, or
+            import a photo from your device.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/capture" className="btn-primary">Capture Selfie</Link>
-            <Link href="/dashboard" className="btn-secondary">Back To Dashboard</Link>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link href="/new-scan" className="btn-primary inline-flex items-center justify-center gap-2">
+              <ScanLine size={18} aria-hidden />
+              New skin scan
+            </Link>
+            <Link href="/capture" className="btn-primary inline-flex items-center justify-center gap-2">
+              <Camera size={18} aria-hidden />
+              Capture selfie
+            </Link>
+            <button
+              type="button"
+              className="btn-secondary inline-flex items-center justify-center gap-2 disabled:opacity-45"
+              disabled={!latestSavedSelfieUrl}
+              onClick={() => {
+                if (latestSavedSelfieUrl) {
+                  dispatch({ type: "SET_SELFIE", payload: latestSavedSelfieUrl });
+                }
+              }}
+              title={!latestSavedSelfieUrl ? "Complete a skin scan while signed in to save a selfie to records." : undefined}
+            >
+              <History size={18} aria-hidden />
+              Latest from records
+            </button>
+            <button
+              type="button"
+              className="btn-secondary inline-flex items-center justify-center gap-2"
+              onClick={() => importInputEmptyRef.current?.click()}
+            >
+              <Upload size={18} aria-hidden />
+              Import photo
+            </button>
+            <Link href="/dashboard" className="btn-secondary inline-flex items-center justify-center gap-2">
+              Back to dashboard
+            </Link>
           </div>
         </div>
       </section>
@@ -631,6 +718,14 @@ export default function GlowupPage() {
 
   return (
     <div className="page-shell space-y-6">
+      <input
+        ref={importInputHeaderRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        aria-hidden
+        onChange={handleImportPhotoChange}
+      />
       <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -642,13 +737,53 @@ export default function GlowupPage() {
               Move from face analysis into undertone-aware makeup, hairstyle transfer, and accessory try-on in one guided flow.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => router.push("/capture")}>
-              Refresh Selfie
-            </button>
-            <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => router.push("/dashboard")}>
-              Back To Dashboard
-            </button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--on-surface-variant)" }}>
+              Change photo
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap"
+                onClick={() => router.push("/new-scan")}
+              >
+                <ScanLine size={16} aria-hidden />
+                New scan
+              </button>
+              <button
+                type="button"
+                className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap"
+                onClick={() => router.push("/capture")}
+              >
+                <Camera size={16} aria-hidden />
+                Capture
+              </button>
+              <button
+                type="button"
+                className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-45"
+                disabled={!latestSavedSelfieUrl}
+                onClick={() => {
+                  if (latestSavedSelfieUrl) {
+                    dispatch({ type: "SET_SELFIE", payload: latestSavedSelfieUrl });
+                  }
+                }}
+                title={!latestSavedSelfieUrl ? "Complete a skin scan while signed in to save a selfie to records." : undefined}
+              >
+                <History size={16} aria-hidden />
+                Latest record
+              </button>
+              <button
+                type="button"
+                className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap"
+                onClick={() => importInputHeaderRef.current?.click()}
+              >
+                <Upload size={16} aria-hidden />
+                Import
+              </button>
+              <button type="button" className="btn-primary whitespace-nowrap" onClick={() => router.push("/dashboard")}>
+                Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </section>

@@ -3,6 +3,35 @@
 
 @import "tailwindcss";
 
+/* Material Symbols Outlined — ligature names must stay lowercase; use correct font */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "liga";
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+/* Explicit reset when nested inside uppercase label styles (inherited text-transform) */
+.label-caps .material-symbols-outlined,
+.font-label-caps .material-symbols-outlined,
+.eyebrow .material-symbols-outlined {
+  text-transform: none;
+}
+
 /* ── Theme Tokens ──────────────────────────────────── */
 :root {
   --bg: #090b17;
