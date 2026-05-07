@@ -27,38 +27,21 @@ export function getApiBaseUrl(): string {
   return normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
 }
 
+/**
+ * Always return an absolute URL pointing at the backend origin.
+ *
+ * Vercel rewrites (`/api/:path*` → DO) turn into 307 redirects under the hood.
+ * Per the HTTP spec, browsers **strip the Authorization header** on cross-origin
+ * redirects — so every API call routed through the rewrite silently loses its
+ * Bearer token and gets a 401 "Missing or invalid Authorization header".
+ *
+ * Calling DigitalOcean directly avoids the redirect entirely.  The explicit
+ * Authorization header in `fetch()` survives a same-request cross-origin call
+ * (CORS preflight handles it).  CORS is already configured on the backend.
+ */
 export function getApiUrl(path = ""): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  if (normalizedPath.startsWith("/api/")) {
-    return normalizedPath;
-  }
   return `${getApiBaseUrl()}${normalizedPath}`;
-}
-
-/**
- * If anything (extension, stale bundle, or manual URL) turns an API path into an
- * absolute URL pointing at NEXT_PUBLIC_API_URL, coerce it back to a same-origin
- * `/api/...` path in the browser.
- *
- * Browser → Vercel `/api/*` → rewrite → DigitalOcean preserves Authorization and
- * avoids cross-origin / CORS edge cases. Hitting DO directly from the page origin
- * is a common source of mysterious 401s.
- */
-export function coerceAbsoluteApiUrlToSameOrigin(url: string): string {
-  if (typeof globalThis.window === "undefined") return url;
-  if (!url.startsWith("http")) return url;
-  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (!configured) return url;
-  const backendOrigin = normalizeApiUrl(configured);
-  try {
-    const parsed = new URL(url);
-    if (parsed.origin === backendOrigin && parsed.pathname.startsWith("/api/")) {
-      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-    }
-  } catch {
-    return url;
-  }
-  return url;
 }
 
 export const API_URL = getApiBaseUrl();

@@ -1,4 +1,4 @@
-import { ApiRoutes, coerceAbsoluteApiUrlToSameOrigin, getApiUrl } from "@/lib/constants";
+import { ApiRoutes, getApiUrl } from "@/lib/constants";
 import { refreshSession } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
@@ -468,7 +468,7 @@ export async function fetchApi<T>(
 ): Promise<T> {
   const { retry, headers: optionHeaders, ...fetchOptions } = options;
   const retryOptions = retry === true ? {} : retry;
-  const url = coerceAbsoluteApiUrlToSameOrigin(getApiUrl(normalizePath(path)));
+  const url = getApiUrl(normalizePath(path));
 
   const requestOnce = async (alreadyRefreshed = false) => {
     const headers = await getAuthHeaders();
@@ -502,7 +502,7 @@ export async function fetchWithFormData<T>(
   retry?: RetryOptions | boolean
 ): Promise<T> {
   const retryOptions = retry === true ? {} : retry;
-  const url = coerceAbsoluteApiUrlToSameOrigin(getApiUrl(normalizePath(path)));
+  const url = getApiUrl(normalizePath(path));
 
   const requestOnce = async (alreadyRefreshed = false) => {
     const headers = await getAuthHeaders("");
