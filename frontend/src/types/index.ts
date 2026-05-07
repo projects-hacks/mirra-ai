@@ -162,6 +162,8 @@ export interface GlowupAnalysis {
   skin_tone: Record<string, unknown>;
 }
 
+export type GlowupPersona = "masculine" | "feminine" | "neutral";
+
 export interface GlowupPlan extends GlowupAnalysis {
   steps: AgentStep[];
   insight: string;
@@ -173,6 +175,7 @@ export interface GlowupPlan extends GlowupAnalysis {
     earrings: string;
     necklace: string;
   };
+  persona?: GlowupPersona;
 }
 
 // ── Dashboard ──────────────────────────────────────

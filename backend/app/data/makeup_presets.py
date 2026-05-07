@@ -1,4 +1,10 @@
-"""Curated makeup presets for GlowUp recommendations."""
+"""Curated makeup presets for GlowUp recommendations.
+
+The chooser is gender + undertone aware so masculine-presenting users see
+grooming-style polish (skin smoothing, brows, lip tint) instead of full
+"glam" looks. Effects are still mapped through ``makeup_effect_normalize``
+before being sent to Perfect Corp's makeup-vto endpoint.
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -58,12 +64,91 @@ MAKEUP_PRESETS: list[dict[str, Any]] = [
 ]
 
 
-def choose_makeup_presets(undertone: str | None, limit: int = 4) -> list[dict[str, Any]]:
-    """Return undertone-aware presets, falling back to the base set."""
-    normalized = (undertone or "neutral").strip().lower()
+# Subtle, grooming-oriented presets surfaced when the analyzed face reads
+# masculine. We avoid bold lip / smoky eye combos and lean on foundation,
+# skin smoothing, brow definition, and the lightest lip tint.
+MASCULINE_MAKEUP_PRESETS: list[dict[str, Any]] = [
+    {
+        "id": "fresh-skin",
+        "title": "Fresh Skin",
+        "description": "Even tone with light skin polish — looks like you, just well-rested.",
+        "best_for": ["warm", "neutral", "cool"],
+        "effects": [
+            {"category": "skin-smoothing", "intensity": 0.55, "color_intensity": 0.4},
+            {"category": "foundation", "shade": "neutral-beige", "intensity": 0.18},
+        ],
+    },
+    {
+        "id": "defined-brows",
+        "title": "Defined Brows",
+        "description": "Sharper brow shape with a clean, neutral complexion.",
+        "best_for": ["warm", "neutral", "cool"],
+        "effects": [
+            {"category": "skin-smoothing", "intensity": 0.45},
+            {"category": "foundation", "shade": "neutral-beige", "intensity": 0.16},
+            {"category": "eyebrows", "color": "#3F2E22", "intensity": 0.55, "texture": "matte"},
+        ],
+    },
+    {
+        "id": "even-undereye",
+        "title": "Even Under-Eye",
+        "description": "Softens shadows below the eye without looking made-up.",
+        "best_for": ["warm", "neutral", "cool"],
+        "effects": [
+            {"category": "skin-smoothing", "intensity": 0.5},
+            {"category": "concealer", "color": "#D6B89C", "intensity": 0.35},
+        ],
+    },
+    {
+        "id": "lip-tint",
+        "title": "Lip Tint",
+        "description": "Hydrated lip with the most subtle warm shift.",
+        "best_for": ["warm", "neutral", "cool"],
+        "effects": [
+            {"category": "skin-smoothing", "intensity": 0.4},
+            {"category": "foundation", "shade": "neutral-beige", "intensity": 0.14},
+            {"category": "lipstick", "finish": "sheer", "color": "#9B6A60", "intensity": 0.18},
+        ],
+    },
+]
+
+
+_MASCULINE_TOKENS = {"male", "man", "masculine", "m"}
+_FEMININE_TOKENS = {"female", "woman", "feminine", "f"}
+
+
+def normalize_persona(gender: Any) -> str:
+    """Map a Perfect Corp gender label to ``"masculine" | "feminine" | "neutral"``."""
+    if not gender:
+        return "neutral"
+    raw = str(gender).strip().lower()
+    if not raw:
+        return "neutral"
+    if raw in _FEMININE_TOKENS or "female" in raw or raw.startswith("woman"):
+        return "feminine"
+    if raw in _MASCULINE_TOKENS or raw.startswith("man") or "male" in raw:
+        return "masculine"
+    return "neutral"
+
+
+def choose_makeup_presets(
+    undertone: str | None,
+    gender: str | None = None,
+    limit: int = 4,
+) -> list[dict[str, Any]]:
+    """Return persona-aware presets, falling back to the universal set.
+
+    - Masculine-presenting → grooming presets (skin polish / brows / under-eye).
+    - Feminine or unknown → the original glam-leaning catalog.
+    - Undertone is used as a soft filter; we never return an empty list.
+    """
+    persona = normalize_persona(gender)
+    catalog = MASCULINE_MAKEUP_PRESETS if persona == "masculine" else MAKEUP_PRESETS
+
+    normalized_tone = (undertone or "neutral").strip().lower()
     matching = [
         preset
-        for preset in MAKEUP_PRESETS
-        if normalized in [tone.lower() for tone in preset.get("best_for", [])]
+        for preset in catalog
+        if normalized_tone in [tone.lower() for tone in preset.get("best_for", [])]
     ]
-    return (matching or MAKEUP_PRESETS)[:limit]
+    return (matching or catalog)[:limit]

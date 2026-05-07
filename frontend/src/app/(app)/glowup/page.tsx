@@ -931,12 +931,16 @@ export default function GlowupPage() {
             <div className="min-w-0">
               <p className="label-caps">Step 2</p>
               <h2 className="text-2xl sm:text-3xl" style={{ fontFamily: "var(--font-serif)" }}>
-                Makeup Looks
+                {plan?.persona === "masculine" ? "Grooming Polish" : "Makeup Looks"}
               </h2>
             </div>
           </div>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed sm:text-base" style={{ color: "var(--on-surface-variant)" }}>
-            Based on your {formatted.faceShape.toLowerCase()} face and {formatted.undertone.toLowerCase()} undertone, these are the strongest first looks.
+            {plan?.persona === "masculine"
+              ? `Tuned for a masculine face and ${formatted.undertone.toLowerCase()} undertone — subtle skin polish, brow definition, and lip tint instead of full glam.`
+              : plan?.persona === "feminine"
+                ? `Based on your ${formatted.faceShape.toLowerCase()} face and ${formatted.undertone.toLowerCase()} undertone, these are the strongest first looks.`
+                : `Based on your ${formatted.faceShape.toLowerCase()} face and ${formatted.undertone.toLowerCase()} undertone — gender-neutral starter polish.`}
           </p>
           <div className="mt-6 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {(plan?.makeup_presets ?? []).map((preset) => (
@@ -960,7 +964,7 @@ export default function GlowupPage() {
                   </span>
                 </div>
                 <button type="button" className="btn-primary mt-5 min-h-11 w-full" disabled={isApplying} onClick={() => handleMakeup(preset)}>
-                  Apply Look
+                  {plan?.persona === "masculine" ? "Apply Polish" : "Apply Look"}
                 </button>
               </article>
             ))}

@@ -141,9 +141,29 @@ class AgentService:
             await self._set_cached_response("glowup", cache_payload, fallback)
             return fallback
 
+        gender_label = str(face_attrs.get("gender") or "").strip() or "unspecified"
+        gender_lower = gender_label.lower()
+        if "female" in gender_lower or gender_lower.startswith("woman"):
+            persona_hint = (
+                "Reads feminine — full makeup looks (lip color, blush, eye shadow) are appropriate."
+            )
+        elif "male" in gender_lower or gender_lower.startswith("man") or gender_lower in {"m"}:
+            persona_hint = (
+                "Reads masculine — favor grooming-style polish: even skin tone, brow definition, "
+                "subtle lip tint, well-shaped hair. AVOID bold lipstick, smoky eye, dramatic blush, "
+                "or earrings/jewelry the user did not ask for."
+            )
+        else:
+            persona_hint = (
+                "Persona is unspecified — keep recommendations gender-neutral and conservative."
+            )
+
         prompt = f"""
 You are Mirra, an AI appearance operator.
 Analyze the following face and skin tone data, then return ONLY valid JSON.
+
+PERSONA (gender label = {gender_label}):
+{persona_hint}
 
 FACE ATTRIBUTES:
 {json.dumps(face_attrs, indent=2)}
@@ -170,7 +190,9 @@ Return this exact JSON schema:
 Requirements:
 - Keep it concise, premium, and practical.
 - Give 3 to 5 recommendations total.
-- Base recommendations on face shape, facial features, and coloring.
+- Base recommendations on face shape, facial features, coloring AND the persona hint above.
+- The "insight" sentence must address the same persona (e.g. mention "grooming" / "polish"
+  for masculine, "makeup" / "look" for feminine, "balanced enhancement" otherwise).
 - Do not include markdown.
 """
 
@@ -386,6 +408,13 @@ Requirements:
             or skin_tone.get("skin_tone")
             or "neutral"
         ).lower()
+        gender_lower = str(face_attrs.get("gender") or "").strip().lower()
+        if "female" in gender_lower or gender_lower.startswith("woman"):
+            persona = "feminine"
+        elif "male" in gender_lower or gender_lower.startswith("man") or gender_lower in {"m"}:
+            persona = "masculine"
+        else:
+            persona = "neutral"
 
         hair_title = "Soft volume around the crown"
         if "round" in face_shape:
@@ -394,6 +423,12 @@ Requirements:
             hair_title = "Soft waves to relax the jawline"
         elif "heart" in face_shape:
             hair_title = "Chin-level fullness for balance"
+        if persona == "masculine":
+            hair_title = "Clean, structured cut with light volume on top"
+            if "round" in face_shape:
+                hair_title = "Higher-fade crop to lengthen a round shape"
+            elif "square" in face_shape:
+                hair_title = "Soft texture on top to relax the jawline"
 
         makeup_tone = "rose-beige"
         if "warm" in undertone or "gold" in undertone:
@@ -401,31 +436,55 @@ Requirements:
         elif "cool" in undertone or "pink" in undertone:
             makeup_tone = "berry-rose"
 
-        eyeliner_note = "Lift the outer corners with a soft wing"
-        if "round" in eye_shape:
-            eyeliner_note = "Elongate the eye shape with a tapered liner"
-
-        lip_note = "Use a softly defined satin lip"
-        if "full" in lip_shape:
-            lip_note = "Keep lips polished with a blurred satin finish"
-
-        return {
-            "steps": [
-                {"icon": "face", "text": f"Read your face shape as {face_shape}.", "status": "complete"},
-                {"icon": "palette", "text": f"Mapped your coloring to a {undertone} palette.", "status": "complete"},
-                {"icon": "sparkle", "text": "Built a glowup plan across makeup, hair, and accessories.", "status": "complete"},
-            ],
-            "insight": (
-                f"Your strongest lane is balanced enhancement: use {makeup_tone} tones, "
-                f"shape-focused hair, and accessories that reinforce facial symmetry."
-            ),
-            "recommendations": [
+        if persona == "masculine":
+            recommendations: list[dict[str, str]] = [
+                {"category": "makeup", "title": "Even skin polish", "why": "Skin smoothing + a sheer foundation evens tone without looking made-up."},
+                {"category": "makeup", "title": "Defined brows", "why": "Sharper brow shape pulls the whole face together — biggest visual ROI for masc grooming."},
+                {"category": "makeup", "title": "Subtle lip tint", "why": "A barely-there hydrated lip reads healthy, not painted."},
+                {"category": "hair", "title": hair_title, "why": f"Suits a {face_shape} face shape and stays on-trend."},
+            ]
+            insight = (
+                "Lean into grooming-style polish: even the complexion, sharpen the brows, "
+                "and let the haircut do the heavy lifting — skip glam makeup for this persona."
+            )
+        elif persona == "feminine":
+            eyeliner_note = "Lift the outer corners with a soft wing"
+            if "round" in eye_shape:
+                eyeliner_note = "Elongate the eye shape with a tapered liner"
+            lip_note = "Use a softly defined satin lip"
+            if "full" in lip_shape:
+                lip_note = "Keep lips polished with a blurred satin finish"
+            recommendations = [
                 {"category": "makeup", "title": f"{makeup_tone.title()} complexion accents", "why": "Supports your undertone and brightens the face."},
                 {"category": "makeup", "title": eyeliner_note, "why": "Adds definition without overwhelming your features."},
                 {"category": "makeup", "title": lip_note, "why": "Keeps the look polished and proportionate."},
                 {"category": "hair", "title": hair_title, "why": f"Works especially well for a {face_shape} face shape."},
                 {"category": "accessories", "title": "Choose refined, face-framing jewelry", "why": "Keeps attention near the eyes and cheekbones."},
+            ]
+            insight = (
+                f"Your strongest lane is balanced enhancement: use {makeup_tone} tones, "
+                f"shape-focused hair, and accessories that reinforce facial symmetry."
+            )
+        else:
+            recommendations = [
+                {"category": "makeup", "title": "Light skin polish", "why": "Even tone reads healthy regardless of personal style."},
+                {"category": "makeup", "title": f"{makeup_tone.title()} accent (optional)", "why": "Anchors a single feature if you want a touch of color."},
+                {"category": "hair", "title": hair_title, "why": f"Works for a {face_shape} face shape."},
+                {"category": "accessories", "title": "Subtle, face-framing piece", "why": "One quiet accessory keeps the focus near the face."},
+            ]
+            insight = (
+                "Stick with balanced enhancement: even the complexion, frame the face with "
+                "shape-driven hair, and choose accessories that complement rather than dominate."
+            )
+
+        return {
+            "steps": [
+                {"icon": "face", "text": f"Read your face shape as {face_shape}.", "status": "complete"},
+                {"icon": "palette", "text": f"Mapped your coloring to a {undertone} palette.", "status": "complete"},
+                {"icon": "sparkle", "text": f"Built a {persona} glowup plan across makeup, hair, and accessories.", "status": "complete"},
             ],
+            "insight": insight,
+            "recommendations": recommendations,
             "tool_calls_made": ["analyze_face", "analyze_skin_tone"],
         }
 

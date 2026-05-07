@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Shirt, Smartphone, Sparkles, SwitchCamera, Upload } from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Shirt, Smartphone, Sparkles, SwitchCamera, Upload } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { tryOnPlanToAgentInsight } from "@/lib/agentAdapters";
 import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoClothesOptions, type VtoImageResponse } from "@/lib/api";
@@ -266,11 +266,74 @@ function StudioStatus({
   );
 }
 
+type ClothesStepState = "pending" | "active" | "done";
+
+interface ClothesStep {
+  key: string;
+  label: string;
+  state: ClothesStepState;
+  detail: string;
+  thumbnail?: string | null;
+}
+
+function ClothesStepper({ steps }: Readonly<{ steps: ClothesStep[] }>) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-3 sm:p-4">
+      <div className="grid items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr]">
+        {steps.map((step, idx) => {
+          const isLast = idx === steps.length - 1;
+          const ringClass =
+            step.state === "done"
+              ? "border-emerald-400/40 bg-emerald-400/5"
+              : step.state === "active"
+                ? "border-[var(--primary)]/55 bg-[var(--primary)]/10"
+                : "border-white/10 bg-white/[0.03]";
+
+          return (
+            <div key={step.key} className="contents">
+              <div className={`flex min-w-0 items-center gap-3 rounded-2xl border px-3 py-2.5 transition ${ringClass}`}>
+                <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                  {step.thumbnail ? (
+                    <img src={step.thumbnail} alt="" className="h-full w-full object-cover" />
+                  ) : step.state === "active" ? (
+                    <LoaderCircle className="animate-spin text-[var(--primary)]" size={18} />
+                  ) : step.state === "done" ? (
+                    <CheckCircle2 className="text-emerald-400" size={20} />
+                  ) : (
+                    <span className="text-xs font-semibold text-white/55">{idx + 1}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">
+                    {step.label}
+                  </p>
+                  <p
+                    className="mt-0.5 truncate text-sm font-medium"
+                    style={{ color: "var(--on-surface)" }}
+                    title={step.detail}
+                  >
+                    {step.detail}
+                  </p>
+                </div>
+              </div>
+              {!isLast && (
+                <div className="hidden items-center justify-center text-white/30 sm:flex">
+                  <ArrowRight size={16} aria-hidden="true" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const TABS: Array<{ id: TryOnTab; title: string; subtitle: string }> = [
-  { id: "clothes", title: "Clothes", subtitle: "Full-body photo + garment image → composite preview at top." },
-  { id: "makeup", title: "Makeup", subtitle: "Apply preset looks from the GlowUp data." },
-  { id: "hair", title: "Hair", subtitle: "Transfer a reference hairstyle." },
-  { id: "accessories", title: "Accessories", subtitle: "Try on earrings or necklaces from search." },
+  { id: "clothes", title: "Clothes", subtitle: "Full-body photo + garment image." },
+  { id: "makeup", title: "Makeup", subtitle: "Preset makeup looks." },
+  { id: "hair", title: "Hair", subtitle: "Reference hairstyle transfer." },
+  { id: "accessories", title: "Accessories", subtitle: "Earrings and necklaces." },
 ];
 
 const tryOnInputClass =
@@ -314,6 +377,8 @@ export default function TryOnPage() {
   const [clothesUrl, setClothesUrl] = useState("");
   /** Local garment JPEG/PNG — sent as multipart ``garment``; no URL required. */
   const [clothesGarmentFile, setClothesGarmentFile] = useState<File | null>(null);
+  /** Object URL for the uploaded garment file, used as the stepper thumbnail. */
+  const [garmentFilePreview, setGarmentFilePreview] = useState<string | null>(null);
   const [clothesCategory, setClothesCategory] = useState<"upper" | "lower" | "full">("upper");
   const [clothesSearch, setClothesSearch] = useState("linen button-up shirt");
   const [clothesResults, setClothesResults] = useState<Product[]>([]);
@@ -346,6 +411,45 @@ export default function TryOnPage() {
     ? activeBaseImage ?? null
     : activeResultImage ?? activeBaseImage ?? null;
   const reasoningInsight = tryOnPlanToAgentInsight(plan);
+
+  const trimmedClothesUrl = clothesUrl.trim();
+  const garmentThumbnail = garmentFilePreview ?? (trimmedClothesUrl ? trimmedClothesUrl : null);
+  const garmentDetail = clothesGarmentFile?.name
+    ?? (trimmedClothesUrl ? "Pasted garment URL" : "Add garment URL or file");
+  const clothesIsApplying = isApplying && activeTab === "clothes";
+  const clothesSteps: ClothesStep[] = [
+    {
+      key: "body",
+      label: "Body",
+      state: bodyImage ? "done" : "pending",
+      detail: bodyImage ? "Full-body photo ready" : "Upload or capture a full-body photo",
+      thumbnail: bodyImage,
+    },
+    {
+      key: "garment",
+      label: "Garment",
+      state: garmentThumbnail ? "done" : "pending",
+      detail: garmentDetail,
+      thumbnail: garmentThumbnail,
+    },
+    {
+      key: "render",
+      label: "Perfect Corp",
+      state: clothesIsApplying ? "active" : clothesPreviewImage ? "done" : "pending",
+      detail: clothesIsApplying
+        ? activeStage ?? "Sending to Perfect Corp"
+        : clothesPreviewImage
+          ? "Render complete"
+          : "Tap Try On to start",
+    },
+    {
+      key: "result",
+      label: "Result",
+      state: clothesPreviewImage ? "done" : "pending",
+      detail: clothesPreviewImage ? clothesPreviewTitle : "Try-on image will appear here",
+      thumbnail: clothesPreviewImage,
+    },
+  ];
 
   useEffect(() => {
     if (!isHydrated || !selfie) return;
@@ -394,6 +498,16 @@ export default function TryOnPage() {
       cancelled = true;
     };
   }, [bodyImage]);
+
+  useEffect(() => {
+    if (!clothesGarmentFile) {
+      setGarmentFilePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(clothesGarmentFile);
+    setGarmentFilePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [clothesGarmentFile]);
 
   useEffect(() => {
     if (!selfieBlob) return;
@@ -790,11 +904,7 @@ export default function TryOnPage() {
         </div>
       )}
 
-      {activeTab === "clothes" && selfie && !bodyImage && (
-        <div className="banner-warn" role="status">
-          <strong className="font-semibold text-[var(--on-surface)]">Clothes mode:</strong> upload or capture a full-body image below. The large preview stays empty until a body source is set (your selfie alone is not used for garment VTO).
-        </div>
-      )}
+      {activeTab === "clothes" && <ClothesStepper steps={clothesSteps} />}
 
       {activeBaseImage && previewImage && (
         <div className="grid gap-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
@@ -813,11 +923,13 @@ export default function TryOnPage() {
         </div>
       )}
 
-      <AgentInsightCard
-        insight={reasoningInsight}
-        isLoading={isLoading}
-        onRecommendationTap={handleReasoningTap}
-      />
+      {activeTab !== "clothes" && (
+        <AgentInsightCard
+          insight={reasoningInsight}
+          isLoading={isLoading}
+          onRecommendationTap={handleReasoningTap}
+        />
+      )}
 
       <section className="glass-card p-5 sm:p-6">
         <div className="grid gap-3 md:grid-cols-4">
@@ -853,19 +965,12 @@ export default function TryOnPage() {
 
       {activeTab === "clothes" && (
         <section className="glass-card space-y-5 p-5 sm:p-6">
-          <div>
-            <p className="label-caps">Clothes</p>
-            <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-serif)" }}>
-              Full-body photo, then a garment
-            </h2>
-          </div>
-
           <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold">Full-body photo</p>
+                <p className="text-sm font-semibold">Step 1 — Body photo</p>
                 <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-                  Use a head-to-toe shot with even light and a simple background. Any resolution is accepted; larger photos usually produce cleaner try-on.
+                  Head-to-toe shot, even light, simple background. Any resolution is accepted.
                 </p>
               </div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[280px]">
@@ -919,8 +1024,8 @@ export default function TryOnPage() {
                 </button>
               </div>
             </div>
-            <p className="mt-3 text-sm" style={{ color: "var(--on-surface-muted)" }}>
-              Tip: straight pose, arms slightly away from your sides, and fitted clothing help detection.
+            <p className="mt-3 text-xs" style={{ color: "var(--on-surface-muted)" }}>
+              Straight pose, arms slightly away from your sides, fitted clothing.
             </p>
             {showBodyCamera && (
               <div className="mt-4 space-y-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
@@ -984,50 +1089,37 @@ export default function TryOnPage() {
               </div>
             )}
             {bodyImage && (
-              <div className="mt-4 grid gap-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-4 md:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="mt-4 grid gap-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-3 md:grid-cols-[140px_minmax(0,1fr)]">
                 <div className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/10">
                   <img src={bodyImage} alt="Full-body source" className="h-full w-full object-cover" />
                 </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold">Full-body source ready</p>
-                    <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-                      Clothes try-on will use this image until you replace or remove it. Portrait-based tabs still use your saved selfie.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <button type="button" className="btn-secondary w-full sm:w-auto" onClick={clearBodyImage}>
-                      Remove Body Image
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary w-full sm:w-auto"
-                      onClick={() => {
-                        setBodyImageStatus(null);
-                        setShowBodyCamera((current) => {
-                          if (current) {
-                            stopBodyCamera();
-                          }
-                          return !current;
-                        });
-                      }}
-                    >
-                      {showBodyCamera ? "Close Camera" : "Retake With Camera"}
-                    </button>
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className="btn-secondary text-sm" onClick={clearBodyImage}>
+                    Remove
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm"
+                    onClick={() => {
+                      setBodyImageStatus(null);
+                      setShowBodyCamera((current) => {
+                        if (current) {
+                          stopBodyCamera();
+                        }
+                        return !current;
+                      });
+                    }}
+                  >
+                    {showBodyCamera ? "Close camera" : "Retake"}
+                  </button>
                 </div>
-              </div>
-            )}
-            {!bodyImage && (
-              <div className="banner-warn mt-4" role="status">
-                Upload a full-body image before running clothes try-on.
               </div>
             )}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">Garment</p>
+              <p className="text-sm font-semibold">Step 2 — Garment</p>
               <label className="block text-sm font-medium">
                 Garment image URL
                 <input
@@ -1067,11 +1159,6 @@ export default function TryOnPage() {
                   </button>
                 </p>
               )}
-              <p className="text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
-                Paste a resolvable URL, <strong className="font-semibold text-[var(--on-surface)]">or upload</strong> a flat-lay or model crop of the garment. Then choose{" "}
-                <strong className="font-semibold text-[var(--on-surface)]">upper</strong>, <strong className="font-semibold text-[var(--on-surface)]">lower</strong>, or{" "}
-                <strong className="font-semibold text-[var(--on-surface)]">full outfit</strong> so the API maps the piece correctly.
-              </p>
 
               <label className="block text-sm font-medium">
                 Category
@@ -1116,7 +1203,7 @@ export default function TryOnPage() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">Also try · Search</p>
+              <p className="text-sm font-semibold">Or search products</p>
               <label className="block text-sm font-medium">
                 Search products
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -1135,12 +1222,6 @@ export default function TryOnPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <p className="text-sm leading-relaxed md:col-span-2 xl:col-span-3" style={{ color: "var(--on-surface-variant)" }}>
-              Tap <strong className="font-semibold text-[var(--on-surface)]">Try On</strong> on a tile to send that product image with your full-body photo. The merged result appears in the{" "}
-              <a href="#tryon-live-preview" className="font-semibold text-[var(--secondary)] underline-offset-2 hover:underline">
-                live preview
-              </a>.
-            </p>
             {clothesStatus && clothesResults.length === 0 && (
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm md:col-span-2 xl:col-span-3" style={{ color: "var(--on-surface-variant)" }}>
                 {clothesStatus}
@@ -1161,9 +1242,6 @@ export default function TryOnPage() {
                   <h3 className="mt-3 line-clamp-2 text-sm font-semibold">{product.title}</h3>
                   <p className="mt-1 text-xs" style={{ color: "var(--on-surface-muted)" }}>
                     {product.source} • {product.price}
-                  </p>
-                  <p className="mt-2 text-[11px] leading-snug" style={{ color: "var(--on-surface-muted)" }}>
-                    Uses this product image as the garment reference.
                   </p>
                   <button
                     type="button"
@@ -1188,15 +1266,23 @@ export default function TryOnPage() {
       {activeTab === "makeup" && (
         <section className="glass-card space-y-5 p-5 sm:p-6">
           <div>
-            <p className="label-caps">Makeup</p>
-            <h2 className="mt-2 text-2xl">Preset looks</h2>
+            <p className="label-caps">{plan?.persona === "masculine" ? "Grooming" : "Makeup"}</p>
+            <h2 className="mt-2 text-2xl">
+              {plan?.persona === "masculine" ? "Polish presets" : "Preset looks"}
+            </h2>
             <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-              {analysis ? `Loaded from your ${String(analysis.skin_tone?.undertone ?? "neutral")} undertone plan.` : "Loading your undertone-aware looks."}
+              {analysis
+                ? plan?.persona === "masculine"
+                  ? `Tuned for a masculine face and ${String(analysis.skin_tone?.undertone ?? "neutral")} undertone — subtle skin polish, brows, and lip tint.`
+                  : plan?.persona === "feminine"
+                    ? `Tuned for a feminine face and ${String(analysis.skin_tone?.undertone ?? "neutral")} undertone.`
+                    : `Loaded from your ${String(analysis.skin_tone?.undertone ?? "neutral")} undertone plan.`
+                : "Loading persona-aware looks."}
             </p>
           </div>
           {!plan?.makeup_presets?.length && (
             <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
-              Makeup recommendations are still loading.
+              Recommendations are still loading.
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1215,7 +1301,7 @@ export default function TryOnPage() {
                   disabled={isApplying || !selfieBlob}
                   onClick={() => void runTryOn(ToolName.TRY_ON_MAKEUP, preset.title, () => vtoApi.makeup(selfieBlob as Blob, preset.effects), "face")}
                 >
-                  Apply Look
+                  {plan?.persona === "masculine" ? "Apply Polish" : "Apply Look"}
                 </button>
               </article>
             ))}

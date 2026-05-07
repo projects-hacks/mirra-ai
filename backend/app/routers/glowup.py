@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from app.core.deps import read_image
-from app.data.makeup_presets import choose_makeup_presets
+from app.data.makeup_presets import choose_makeup_presets, normalize_persona
 from app.services.agent import agent_service
 from app.services.perfectcorp import PerfectCorpAPIError
 from app.tools import skin_tools
@@ -18,20 +18,48 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-HAIRSTYLE_REFERENCES: list[dict[str, str]] = [
+_MASCULINE_HAIRSTYLES: list[dict[str, str]] = [
     {
         "id": "textured-crop",
         "title": "Textured Crop",
-        "description": "Short structured shape with light volume on top (demo reference, masculine-presenting).",
+        "description": "Short structured shape with light volume on top — clean, modern silhouette.",
         "image_url": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1024&q=80&fm=jpg",
+    },
+    {
+        "id": "side-part",
+        "title": "Classic Side Part",
+        "description": "Polished side part — good for a balanced or oval face shape.",
+        "image_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1024&q=80&fm=jpg",
+    },
+]
+
+_FEMININE_HAIRSTYLES: list[dict[str, str]] = [
+    {
+        "id": "soft-layers",
+        "title": "Soft Layers",
+        "description": "Face-framing layers with gentle movement around the cheekbones.",
+        "image_url": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=1024&q=80&fm=jpg",
     },
     {
         "id": "natural-curls",
         "title": "Natural Curls",
-        "description": "Curl-focused reference; pair with a well-lit, forward-facing selfie.",
+        "description": "Defined curl pattern with volume — pair with a clear, front-facing selfie.",
         "image_url": "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=1024&q=80&fm=jpg",
     },
 ]
+
+
+def _hairstyles_for(persona: str) -> list[dict[str, str]]:
+    if persona == "masculine":
+        return _MASCULINE_HAIRSTYLES
+    if persona == "feminine":
+        return _FEMININE_HAIRSTYLES
+    # Neutral / unknown — show one of each so the user can self-select.
+    return [_MASCULINE_HAIRSTYLES[0], _FEMININE_HAIRSTYLES[0]]
+
+
+# Kept for backwards-compatibility with anything still importing the constant.
+HAIRSTYLE_REFERENCES: list[dict[str, str]] = _hairstyles_for("neutral")
 
 
 def _detail(
@@ -79,6 +107,19 @@ def _extract_undertone(skin_tone: dict[str, Any]) -> str:
         or skin_tone.get("skin_tone")
         or "neutral"
     )
+
+
+def _extract_gender(face_attrs: dict[str, Any]) -> str | None:
+    """Pull a gender label out of either the normalized or raw face payload."""
+    direct = face_attrs.get("gender")
+    if direct:
+        return str(direct)
+    results = face_attrs.get("results") if isinstance(face_attrs.get("results"), dict) else None
+    if isinstance(results, dict):
+        agegender = results.get("agegender")
+        if isinstance(agegender, dict) and agegender.get("gender"):
+            return str(agegender["gender"])
+    return None
 
 
 def _build_accessory_queries(face_shape: str, undertone: str) -> dict[str, str]:
@@ -162,13 +203,16 @@ def _normalize_skin_tone(skin_tone: dict[str, Any]) -> dict[str, Any]:
 def _enrich_plan(face_attrs: dict[str, Any], skin_tone: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
     face_shape = _extract_face_shape(face_attrs)
     undertone = _extract_undertone(skin_tone)
+    gender = _extract_gender(face_attrs)
+    persona = normalize_persona(gender)
 
     return {
         "face_attributes": face_attrs,
         "skin_tone": skin_tone,
         **plan,
-        "makeup_presets": choose_makeup_presets(undertone),
-        "hairstyles": HAIRSTYLE_REFERENCES,
+        "persona": persona,
+        "makeup_presets": choose_makeup_presets(undertone, gender),
+        "hairstyles": _hairstyles_for(persona),
         "accessory_queries": _build_accessory_queries(face_shape, undertone),
     }
 
