@@ -588,7 +588,8 @@ export const skinApi = {
     return response.history;
   },
 
-  insights: () => fetchWithFormData<SkinInsightsResponse>(ApiRoutes.SKIN_INSIGHTS, new FormData()),
+  /** JSON POST (empty object) — avoids empty multipart bodies that some proxies mishandle. */
+  insights: () => apiPost<SkinInsightsResponse>(ApiRoutes.SKIN_INSIGHTS, {}),
 
   summary: async (): Promise<SkinSummary[]> => {
     const history = await skinApi.history();
@@ -747,7 +748,9 @@ export const closetApi = {
   analytics: <T = unknown>() => fetchApi<T>("/api/closet/analytics"),
 
   extractMetadata: <T = unknown>(imageUrl: string) =>
-    apiPost<{ metadata?: T }>("/api/closet/extract-metadata", { imageUrl }),
+    apiPost<{ metadata?: T; success?: boolean }>("/api/closet/extract-metadata", {
+      image_url: imageUrl,
+    }),
 
   updateItem: <T = unknown>(itemId: string, patch: Record<string, unknown>) =>
     fetchApi<T>(`/api/closet/${itemId}`, {

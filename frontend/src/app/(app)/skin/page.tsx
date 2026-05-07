@@ -110,7 +110,11 @@ export default function SkinPage() {
         <div className="space-y-4">
           <SkinToneProfile skinTone={skinTone} />
           <WeatherCard weather={weather} isLoading={isLoading} />
-          <Link href="/skin/simulate" className="flex min-h-14 items-center justify-center gap-2 rounded-[1.25rem] bg-[#111827] px-5 py-4 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(17,24,39,0.14)]">
+          <Link
+            href="/skin/simulate"
+            prefetch={false}
+            className="flex min-h-14 items-center justify-center gap-2 rounded-[1.25rem] bg-[#111827] px-5 py-4 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(17,24,39,0.14)]"
+          >
             <Sparkles size={18} aria-hidden="true" />
             Simulate improvement
           </Link>

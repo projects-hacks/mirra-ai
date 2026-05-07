@@ -81,7 +81,8 @@
   --z-modal: 60;
   --z-toast: 70;
   --z-camera-kit: 80;
-  --camera-kit-stage-width: 420px;
+  /* Centered stage max width; on narrow phones use full width (see media query below). */
+  --camera-kit-stage-width: 520px;
 }
 
 /* ── Base ──────────────────────────────────────────── */
@@ -168,18 +169,23 @@ body:has(.ymk-wrapper) {
 .YMK-cameraKit,
 .ymk-cameraKit {
   position: fixed !important;
-  top: 0 !important;
-  bottom: 0 !important;
+  top: env(safe-area-inset-top, 0px) !important;
+  bottom: env(safe-area-inset-bottom, 0px) !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
   width: min(100vw, var(--camera-kit-stage-width)) !important;
-  height: 100dvh !important;
+  height: calc(
+    100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+  ) !important;
   max-width: none !important;
   max-height: none !important;
   z-index: var(--z-camera-kit) !important;
   margin: 0 !important;
+  padding: 0 !important;
   background: #050712 !important;
   box-shadow: 0 0 0 9999px rgba(5, 7, 18, 0.92) !important;
+  /* Let Perfect Corp HUD (oval, badges) paint past strict inner bounds when needed */
+  overflow: visible !important;
 }
 
 #YMK-wrapper iframe,
@@ -194,7 +200,18 @@ body:has(.ymk-wrapper) {
   height: 100% !important;
   border: 0 !important;
   display: block !important;
-  object-fit: cover !important;
+  /* cover crops the stream vs. the face oval; contain keeps the full guide visible */
+  object-fit: contain !important;
+}
+
+#YMK-wrapper video,
+#ymk-wrapper video,
+#YMK-container video,
+.YMK-wrapper video,
+.YMK-container video,
+.YMK-wrapper canvas,
+.YMK-container canvas {
+  object-fit: contain !important;
 }
 
 /* ── Typography ───────────────────────────────────── */
@@ -984,14 +1001,15 @@ textarea::placeholder {
   }
 }
 
-@media (min-width: 768px) and (max-width: 1279px) {
+/* Full-bleed stage on phones so the face oval and status chips are not clipped */
+@media (max-width: 639px) {
   :root {
-    --camera-kit-stage-width: 390px;
+    --camera-kit-stage-width: 100vw;
   }
 }
 
 @media (min-width: 1600px) {
   :root {
-    --camera-kit-stage-width: 440px;
+    --camera-kit-stage-width: 560px;
   }
 }

@@ -41,6 +41,10 @@ interface OutfitLog {
   outcome: string;
 }
 
+interface OutfitLogRow extends OutfitLog {
+  items?: unknown;
+}
+
 export default function ItemDetailModal({
   isOpen,
   itemId,
@@ -83,27 +87,57 @@ export default function ItemDetailModal({
           throw new Error('Not authenticated');
         }
 
-        // Fetch item details
+        const uid = session.user.id;
         const { data: itemData, error: itemError } = await supabase
           .from('closet_items')
           .select('*')
           .eq('id', itemId)
+          .eq('user_id', uid)
           .single();
 
         if (itemError) throw itemError;
         setItem(itemData);
         setEditedItem(itemData);
 
-        // Fetch outfit logs that include this item
         const { data: logsData, error: logsError } = await supabase
           .from('outfit_logs')
-          .select('id, occasion, created_at, outcome')
-          .contains('items', [{ id: itemId }])
+          .select('id, occasion, created_at, outcome, items')
+          .eq('user_id', uid)
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(80);
 
         if (logsError) throw logsError;
-        setOutfitLogs(logsData || []);
+
+        const logsIncludingItem = (logsData || []).filter((log: OutfitLogRow) => {
+          const raw = log.items;
+          if (!raw) return false;
+          let arr: unknown[] = [];
+          if (Array.isArray(raw)) {
+            arr = raw;
+          } else if (typeof raw === 'string') {
+            try {
+              const parsed = JSON.parse(raw) as unknown;
+              if (Array.isArray(parsed)) arr = parsed;
+            } catch {
+              return false;
+            }
+          }
+          return arr.some(
+            (entry) =>
+              entry &&
+              typeof entry === 'object' &&
+              (entry as { id?: string }).id === itemId
+          );
+        });
+
+        setOutfitLogs(
+          logsIncludingItem.slice(0, 10).map((log: OutfitLogRow): OutfitLog => ({
+            id: log.id,
+            occasion: log.occasion,
+            created_at: log.created_at,
+            outcome: log.outcome,
+          }))
+        );
       } catch (err) {
         console.error('Error fetching item details:', err);
         setError(err instanceof Error ? err.message : 'Failed to load item details');
@@ -245,13 +279,12 @@ export default function ItemDetailModal({
                   <img
                     src={item.image_url}
                     alt={item.name}
-                    className="w-full rounded-lg object-cover"
-                    style={{ maxHeight: '500px' }}
+                    className="w-full max-h-[min(42vh,360px)] rounded-lg object-contain md:max-h-[500px] md:object-cover"
                   />
                 ) : (
                   <div
-                    className="w-full rounded-lg flex items-center justify-center"
-                    style={{ height: '500px', background: 'var(--surface-variant)' }}
+                    className="flex min-h-[200px] w-full items-center justify-center rounded-lg md:h-[500px]"
+                    style={{ background: 'var(--surface-variant)' }}
                   >
                     <span className="material-symbols-outlined text-[128px]" style={{ color: 'var(--on-surface-variant)', opacity: 0.3 }}>
                       checkroom
@@ -261,7 +294,7 @@ export default function ItemDetailModal({
 
                 {/* Action Buttons */}
                 {!isEditing && (
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <button
                       onClick={handleToggleFavorite}
                       className="flex-1 px-4 py-2 rounded-lg border transition-colors"

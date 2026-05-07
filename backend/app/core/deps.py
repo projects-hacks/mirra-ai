@@ -6,6 +6,14 @@ from fastapi import HTTPException, Request, UploadFile
 from app.core.validation import ValidationError, validate
 
 
+def require_auth_user_id(request: Request) -> str:
+    """Return the verified Supabase user id from JWT middleware, or 401."""
+    uid = getattr(request.state, "user_id", None)
+    if not uid or uid == "anonymous":
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return uid
+
+
 async def read_image(upload: UploadFile, label: str = "Selfie image") -> bytes:
     """Read and validate an uploaded image payload."""
     image_bytes = await upload.read()

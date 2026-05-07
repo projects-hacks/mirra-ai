@@ -29,22 +29,39 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+def _cors_middleware_params() -> dict:
+    """CORS policy: default wide-open (*), since the SPA sends Authorization Bearer, not cookies."""
+    raw = (settings.CORS_ORIGIN or "").strip()
+    if raw == "*" or raw == "":
+        return {
+            "allow_origins": ["*"],
+            "allow_origin_regex": None,
+            "allow_credentials": False,
+        }
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    return {
+        "allow_origins": origins or ["http://localhost:3000"],
+        # Preview / alternate hosts without listing every Vercel deployment explicitly
+        "allow_origin_regex": r"https://.*\.vercel\.app|https://.*\.ondigitalocean\.app|http://localhost:\d+",
+        "allow_credentials": True,
+    }
+
+
+_cors = _cors_middleware_params()
+
 # JWT auth middleware — validates Bearer token on all non-public REST routes
-# Must be added BEFORE CORS middleware
 app.add_middleware(JWTAuthMiddleware)
 
-# CORS middleware should be added last in the middleware chain
+# CORS: allow all methods/headers; responses (including errors) get Access-Control-Allow-Origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-    ],
-    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.ondigitalocean\.app|http://localhost:\d+",
-    allow_credentials=True,
+    allow_origins=_cors["allow_origins"],
+    allow_origin_regex=_cors["allow_origin_regex"],
+    allow_credentials=_cors["allow_credentials"],
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
-    expose_headers=["Content-Length", "Content-Type"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Outermost: trust X-Forwarded-Proto / Host from the platform load balancer so

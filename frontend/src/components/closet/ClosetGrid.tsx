@@ -34,6 +34,12 @@ interface ClosetGridItem {
 
 type SortOption = "recent" | "worn" | "cpw" | "alpha" | "most_worn";
 
+const SORT_OPTIONS: readonly SortOption[] = ["recent", "worn", "cpw", "alpha", "most_worn"];
+
+function isSortOption(value: string): value is SortOption {
+  return (SORT_OPTIONS as readonly string[]).includes(value);
+}
+
 interface FilterState {
   color: string;
   occasion: string;
@@ -72,18 +78,43 @@ const ClosetGrid = memo(function ClosetGrid({
 
   // Load preferences from session storage
   useEffect(() => {
-    const savedSort = sessionStorage.getItem("closet_sort");
-    const savedFilters = sessionStorage.getItem("closet_filters");
-    
-    if (savedSort) setSortBy(savedSort as SortOption);
-    if (savedFilters) setFilters(JSON.parse(savedFilters));
+    try {
+      const savedSort = sessionStorage.getItem("closet_sort");
+      const savedFilters = sessionStorage.getItem("closet_filters");
+
+      if (savedSort && isSortOption(savedSort)) {
+        setSortBy(savedSort);
+      }
+
+      if (savedFilters) {
+        const parsed: unknown = JSON.parse(savedFilters);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          const o = parsed as Partial<FilterState>;
+          setFilters((prev) => ({
+            color: typeof o.color === "string" ? o.color : prev.color,
+            occasion: typeof o.occasion === "string" ? o.occasion : prev.occasion,
+            season: typeof o.season === "string" ? o.season : prev.season,
+            formalityMin:
+              typeof o.formalityMin === "number" && !Number.isNaN(o.formalityMin)
+                ? o.formalityMin
+                : prev.formalityMin,
+            formalityMax:
+              typeof o.formalityMax === "number" && !Number.isNaN(o.formalityMax)
+                ? o.formalityMax
+                : prev.formalityMax,
+          }));
+        }
+      }
+    } catch {
+      /* ignore corrupt or legacy sessionStorage */
+    }
   }, []);
 
   useEffect(() => {
     const syncColumns = () => {
       const width = window.innerWidth;
       if (width < 640) {
-        setColumnCount(2);
+        setColumnCount(1);
       } else if (width < 1024) {
         setColumnCount(3);
       } else {

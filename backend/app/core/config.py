@@ -57,7 +57,9 @@ class Settings(BaseSettings):
 
     # App
     PORT: int = 8000
-    CORS_ORIGIN: str = "http://localhost:3000"
+    # Use "*" to allow any browser origin (SPA uses Bearer tokens, not cookies).
+    # Set a comma-separated list (no *) to restrict origins and enable credentials.
+    CORS_ORIGIN: str = "*"
 
     class Config:
         env_file = ".env"

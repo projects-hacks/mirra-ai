@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import { getSupabase } from "@/lib/supabase";
+import { useAppState } from "@/components/providers/AppProvider";
 import { formatApiError, productsApi, skinApi, weatherApi, type SkinHistoryRow } from "@/lib/api";
 import {
   CONCERN_PRODUCT_QUERIES,
@@ -56,103 +58,101 @@ function normalizeInsight(result: unknown): AgentInsight | null {
   };
 }
 
+interface SkinAnalysisBundle {
+  history: SkinHistoryRow[];
+  skinTone: SkinToneData | null;
+  faceShape: Record<string, unknown> | null;
+  weather: WeatherInfo | null;
+  insight: AgentInsight | null;
+  productGroups: ProductRecommendationGroup[];
+  historyError: boolean;
+}
+
+async function loadSkinAnalysisData(userId: string): Promise<SkinAnalysisBundle> {
+  const userLocation = await resolveUserLocation(userId);
+
+  const supabase = getSupabase();
+  const bodyRequest = supabase
+    .from("body_model")
+    .select("skin_tone, face_shape")
+    .eq("user_id", userId)
+    .single() as unknown as Promise<BodyModelQueryResult>;
+
+  const [historyResult, weatherResult, bodyResult, insightResult] = await Promise.allSettled([
+    skinApi.history(),
+    weatherApi.current(userLocation),
+    bodyRequest,
+    skinApi.insights(),
+  ]);
+
+  const skinHistory = historyResult.status === "fulfilled" ? historyResult.value : [];
+  const { concerns } = buildSkinSummaryFromHistory(skinHistory);
+  const topConcerns = concerns.slice(0, 3);
+
+  let skinTone: SkinToneData | null = null;
+  let faceShape: Record<string, unknown> | null = null;
+  if (bodyResult.status === "fulfilled" && bodyResult.value.data) {
+    const body = bodyResult.value.data as BodyModelRow;
+    skinTone = parseMaybeJson<SkinToneData>(body.skin_tone);
+    faceShape = parseMaybeJson<Record<string, unknown>>(body.face_shape);
+  }
+
+  const productResults = await Promise.allSettled(
+    topConcerns.map(async (concern) => {
+      const query = CONCERN_PRODUCT_QUERIES[concern.key] ?? `${concern.label} skincare product`;
+      try {
+        const result = await productsApi.search(query);
+        const products = result.products ?? [];
+        return {
+          concern,
+          query,
+          products,
+          status: products.length ? "loaded" : "empty",
+        } satisfies ProductRecommendationGroup;
+      } catch (productError) {
+        return {
+          concern,
+          query,
+          products: [],
+          status: "error",
+          error: formatApiError(productError, "Product search failed."),
+        } satisfies ProductRecommendationGroup;
+      }
+    })
+  );
+
+  return {
+    history: skinHistory,
+    skinTone,
+    faceShape,
+    weather: weatherResult.status === "fulfilled" ? weatherResult.value : null,
+    insight: insightResult.status === "fulfilled" ? normalizeInsight(insightResult.value) : null,
+    productGroups: productResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []),
+    historyError: historyResult.status === "rejected",
+  };
+}
+
 export function useSkinAnalysis() {
-  const [history, setHistory] = useState<SkinHistoryRow[]>([]);
-  const [skinTone, setSkinTone] = useState<SkinToneData | null>(null);
-  const [faceShape, setFaceShape] = useState<Record<string, unknown> | null>(null);
-  const [weather, setWeather] = useState<WeatherInfo | null>(null);
-  const [insight, setInsight] = useState<AgentInsight | null>(null);
-  const [productGroups, setProductGroups] = useState<ProductRecommendationGroup[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAppState();
+  const userId = user?.id;
 
-  useEffect(() => {
-    let cancelled = false;
+  const { data, error, isLoading, mutate } = useSWR(
+    userId ? (["skin-analysis", userId] as const) : null,
+    ([, uid]) => loadSkinAnalysisData(uid),
+    { revalidateIfStale: false }
+  );
 
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-
-      const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setError("Sign in to view skin analysis.");
-        setIsLoading(false);
-        return;
-      }
-
-      const userLocation = await resolveUserLocation(session.user.id);
-
-      const bodyRequest = supabase
-        .from("body_model")
-        .select("skin_tone, face_shape")
-        .eq("user_id", session.user.id)
-        .single() as unknown as Promise<BodyModelQueryResult>;
-
-      const [historyResult, weatherResult, bodyResult, insightResult] = await Promise.allSettled([
-        skinApi.history(),
-        weatherApi.current(userLocation),
-        bodyRequest,
-        skinApi.insights(),
-      ]);
-
-      if (cancelled) return;
-
-      const skinHistory = historyResult.status === "fulfilled" ? historyResult.value : [];
-      const { concerns } = buildSkinSummaryFromHistory(skinHistory);
-      const topConcerns = concerns.slice(0, 3);
-
-      setHistory(skinHistory);
-      setWeather(weatherResult.status === "fulfilled" ? weatherResult.value : null);
-      setInsight(insightResult.status === "fulfilled" ? normalizeInsight(insightResult.value) : null);
-
-      if (bodyResult.status === "fulfilled" && bodyResult.value.data) {
-        const body = bodyResult.value.data as BodyModelRow;
-        setSkinTone(parseMaybeJson<SkinToneData>(body.skin_tone));
-        setFaceShape(parseMaybeJson<Record<string, unknown>>(body.face_shape));
-      }
-
-      const productResults = await Promise.allSettled(
-        topConcerns.map(async (concern) => {
-          const query = CONCERN_PRODUCT_QUERIES[concern.key] ?? `${concern.label} skincare product`;
-          try {
-            const result = await productsApi.search(query);
-            const products = result.products ?? [];
-            return {
-              concern,
-              query,
-              products,
-              status: products.length ? "loaded" : "empty",
-            } satisfies ProductRecommendationGroup;
-          } catch (productError) {
-            return {
-              concern,
-              query,
-              products: [],
-              status: "error",
-              error: formatApiError(productError, "Product search failed."),
-            } satisfies ProductRecommendationGroup;
-          }
-        })
-      );
-
-      if (!cancelled) {
-        setProductGroups(productResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []));
-        if (historyResult.status === "rejected") {
-          setError("Skin history is unavailable right now.");
-        }
-        setIsLoading(false);
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const history = data?.history ?? [];
+  const historyError = data?.historyError ?? false;
 
   const { concerns, summary } = useMemo(() => buildSkinSummaryFromHistory(history), [history]);
   const intensities = useMemo(() => deriveSimulationIntensities(history[0]?.scores), [history]);
+  const insight = data?.insight ?? null;
+  const weather = data?.weather ?? null;
+  const skinTone = data?.skinTone ?? null;
+  const faceShape = data?.faceShape ?? null;
+  const productGroups = data?.productGroups ?? [];
+
   const dailySuggestions = useMemo<SkinDailySuggestion[]>(() => {
     const items: SkinDailySuggestion[] = [];
 
@@ -186,6 +186,14 @@ export function useSkinAnalysis() {
     return items.slice(0, 4);
   }, [concerns, weather, insight]);
 
+  const errorMessage = error
+    ? formatApiError(error, "Skin analysis failed to load.")
+    : historyError
+      ? "Skin history is unavailable right now."
+      : null;
+
+  const loading = Boolean(userId) && (isLoading || (!data && !error));
+
   return {
     history,
     latestScan: history[0] ?? null,
@@ -199,7 +207,8 @@ export function useSkinAnalysis() {
     productGroups,
     dailySuggestions,
     intensities,
-    isLoading,
-    error,
+    isLoading: loading,
+    error: errorMessage,
+    mutate,
   };
 }

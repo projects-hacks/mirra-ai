@@ -6,9 +6,10 @@ Provides analytics endpoints for closet items including:
 - Wear patterns and trends
 - High CPW item identification
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from typing import Any
 
+from app.core.deps import require_auth_user_id, resolve_user_id
 from app.services.supabase_client import supabase
 from app.services.cost_per_wear_calculator import CostPerWearCalculator
 
@@ -17,7 +18,8 @@ router = APIRouter(prefix="/api/closet", tags=["closet-analytics"])
 
 @router.get("/analytics")
 async def get_closet_analytics(
-    user_id: str = Query(..., description="User ID")
+    request: Request,
+    user_id: str | None = Query(None, description="Optional; must match authenticated user"),
 ) -> dict[str, Any]:
     """Get comprehensive closet analytics.
 
@@ -37,8 +39,14 @@ async def get_closet_analytics(
         - most_worn_items: Top 5 most worn items
         - total_savings: Savings from wearing vs buying new
     """
+    auth_uid = require_auth_user_id(request)
+    resolved = resolve_user_id(request, user_id)
+    if resolved and resolved != auth_uid:
+        raise HTTPException(status_code=403, detail="Cannot access another user's analytics")
+    target_user_id = auth_uid
+
     # Fetch all closet items for user
-    response = supabase.table("closet_items").select("*").eq("user_id", user_id).execute()
+    response = supabase.table("closet_items").select("*").eq("user_id", target_user_id).execute()
 
     if not response.data:
         return {
@@ -91,7 +99,9 @@ async def get_closet_analytics(
     best_value_items = CostPerWearCalculator.get_best_value_items(items, limit=10)
 
     # Calculate savings (fetch outfit logs)
-    outfit_logs_response = supabase.table("outfit_logs").select("*").eq("user_id", user_id).execute()
+    outfit_logs_response = (
+        supabase.table("outfit_logs").select("*").eq("user_id", target_user_id).execute()
+    )
     outfit_logs = outfit_logs_response.data if outfit_logs_response.data else []
 
     savings_data = CostPerWearCalculator.calculate_savings(outfit_logs, avg_new_item_cost=50.0)

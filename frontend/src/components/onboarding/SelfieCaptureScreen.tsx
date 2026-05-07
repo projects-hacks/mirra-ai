@@ -74,8 +74,11 @@ export function SelfieCaptureScreen({
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="glass-card w-full max-w-3xl space-y-6 p-6 sm:p-8">
+    <div
+      className="flex min-h-screen items-center justify-center p-4"
+      style={{ background: "var(--bg)" }}
+    >
+      <div className="glass-card w-full max-w-3xl space-y-6 border border-white/15 bg-[#0f172a]/92 p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-8">
         {useNativeCamera ? (
           <div className="overflow-hidden rounded-[1.75rem] border border-white/30 bg-black/20">
             <video
@@ -94,7 +97,7 @@ export function SelfieCaptureScreen({
 
         <div className="space-y-2">
           <h2 className="text-center text-2xl font-bold text-white">Let&apos;s setup your profile</h2>
-          <p className="mx-auto max-w-xl text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="mx-auto max-w-xl text-center text-sm leading-relaxed text-white/85">
             {useNativeCamera
               ? "Center your face and capture when you're ready. This mode is only used when Perfect Corp Camera Kit is disabled for local development."
               : "We'll use the Perfect Corp Face SDK to perform a detailed scan of your skin health. Please ensure you are in a well-lit room."}
@@ -108,9 +111,12 @@ export function SelfieCaptureScreen({
             "Forehead and cheeks visible",
             "No glasses, hair, or hands covering features",
           ].map((item) => (
-            <div key={item} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm">
+            <div
+              key={item}
+              className="flex items-center gap-2 rounded-2xl border border-white/18 bg-white/10 px-3 py-2 text-left text-sm text-white/90"
+            >
               <CheckCircle2 size={16} className="shrink-0 text-emerald-400" aria-hidden="true" />
-              <span style={{ color: "var(--on-surface-variant)" }}>{item}</span>
+              <span>{item}</span>
             </div>
           ))}
         </div>

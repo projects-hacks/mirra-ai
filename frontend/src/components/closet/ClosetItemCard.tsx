@@ -54,7 +54,7 @@ const ClosetItemCard = memo(function ClosetItemCard({
   return (
     <button
       type="button"
-      className={`glass-panel rounded-DEFAULT overflow-hidden relative group cursor-pointer hover:scale-105 transition-transform duration-300 ${
+      className={`glass-panel rounded-xl overflow-hidden relative group cursor-pointer hover:scale-105 transition-transform duration-300 ${
         isSelected ? 'ring-2 ring-purple-500' : ''
       }`}
       onClick={handleClick}

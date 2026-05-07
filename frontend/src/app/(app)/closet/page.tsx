@@ -56,6 +56,11 @@ interface ClosetApiItem {
   brand?: string;
   price?: number;
   times_worn?: number;
+  last_worn?: string;
+  occasions?: string[];
+  seasons?: string[];
+  formality?: number;
+  created_at?: string;
 }
 
 interface ClosetApiResponse {
@@ -93,6 +98,11 @@ export default function ClosetPage() {
       brand: item.brand,
       purchasePrice: item.price,
       timesWorn: item.times_worn || 0,
+      lastWorn: item.last_worn,
+      occasions: item.occasions ?? [],
+      seasons: item.seasons ?? [],
+      formality: item.formality,
+      createdAt: item.created_at,
     }));
   }, []);
 
@@ -120,7 +130,7 @@ export default function ClosetPage() {
   } = useSWR<ClosetItem[]>(
     userId ? (["closet", userId] as const) : null,
     async ([, currentUserId]: readonly [string, string]) => {
-      const data = await fetchApi<ClosetApiResponse>(`/api/closet?user_id=${encodeURIComponent(currentUserId)}`);
+      const data = await fetchApi<ClosetApiResponse>("/api/closet");
       return transformClosetItems(data);
     }
   );
@@ -158,7 +168,6 @@ export default function ClosetPage() {
         await fetchApi("/api/closet", {
           method: "POST",
           body: JSON.stringify({
-            user_id: user.id,
             name: metadata.name,
             category: metadata.category,
             subcategory: metadata.subcategory,
@@ -369,7 +378,9 @@ export default function ClosetPage() {
         </div>
       </div>
 
-      <div className="page-shell space-y-6 pb-2 sm:pb-4">
+      <div
+        className={`page-shell space-y-6 sm:pb-4 ${selectionMode ? "pb-32" : "pb-2"}`}
+      >
 
       {/* Closet Statistics */}
       {items.length > 0 && <ClosetStatistics />}

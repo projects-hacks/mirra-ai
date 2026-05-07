@@ -212,11 +212,11 @@ async def get_skin_history(
 
 
 @router.post("/insights")
-async def get_skin_insights(
-    request: Request,
-    user_id: str | None = Form(default=None),
-) -> dict[str, Any]:
-    """Generate AI skin reasoning from latest scan, weather, and scan history."""
+async def get_skin_insights(request: Request) -> dict[str, Any]:
+    """Generate AI skin reasoning from latest scan, weather, and scan history.
+
+    User identity comes from the JWT (``request.state.user_id``); no body required.
+    """
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -228,7 +228,7 @@ async def get_skin_insights(
             ),
         )
 
-    resolved_user_id = resolve_user_id(request, user_id)
+    resolved_user_id = resolve_user_id(request, None)
     if not resolved_user_id:
         raise HTTPException(
             status_code=400,
@@ -279,9 +279,23 @@ async def get_skin_insights(
         except Exception:
             scan_weather = None
 
-    return await agent_service.generate_skin_insights(
-        scores=latest_scan.get("scores") or {},
-        skin_tone=skin_tone,
-        weather=scan_weather,
-        history=scans[1:],
-    )
+    try:
+        return await agent_service.generate_skin_insights(
+            scores=latest_scan.get("scores") or {},
+            skin_tone=skin_tone,
+            weather=scan_weather,
+            history=scans[1:],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Skin insights generation failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_detail(
+                "agent_error",
+                "Skin insights are temporarily unavailable. Try again in a moment.",
+                provider_message=str(exc),
+                source="skin_insights",
+            ),
+        ) from exc
