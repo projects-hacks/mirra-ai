@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  Brain,
   Check,
   CheckCircle2,
   CloudSun,
+  Cpu,
   History,
   Loader2,
   Palette,
@@ -73,9 +75,17 @@ export default function AgentInsightCard({
   if (isLoading) {
     return (
       <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
-        <div className="flex items-center gap-3">
-          <Loader2 size={18} className="animate-spin" />
-          <p className="text-sm text-white/70">Loading dashboard context...</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/78">
+            <Cpu size={14} aria-hidden="true" />
+            AI processing
+          </div>
+          <Loader2 size={16} className="animate-spin text-white/70" />
+        </div>
+        <div className="mt-4 space-y-3">
+          <div className="h-10 rounded-xl bg-white/10" />
+          <div className="h-10 rounded-xl bg-white/10" />
+          <div className="h-10 rounded-xl bg-white/10" />
         </div>
       </section>
     );
@@ -105,8 +115,14 @@ export default function AgentInsightCard({
     <section className="rounded-[1.25rem] bg-[#111827] p-5 text-white shadow-[0_18px_46px_rgba(17,24,39,0.18)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Mirra Agent</p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/78">
+            <Brain size={14} aria-hidden="true" />
+            AI reasoning active
+          </div>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">Reasoning trace</h2>
+          <p className="mt-2 text-xs text-white/60">
+            Mirra combines live skin signal, weather, and history to suggest your next best action.
+          </p>
         </div>
         <Route size={22} className="text-white/50" />
       </div>
@@ -133,6 +149,7 @@ export default function AgentInsightCard({
         className="mt-5 border-t border-white/12 pt-5 transition-all duration-500"
         style={{ opacity: stepsComplete ? 1 : 0.2 }}
       >
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/52">How AI helps now</p>
         <p className="text-base leading-7 text-white/86">{insight.insight}</p>
         <div className="mt-5 flex flex-wrap gap-2">
           {insight.recommendations.map((recommendation) => {
@@ -164,9 +181,17 @@ export default function AgentInsightCard({
             );
           })}
         </div>
-        <p className="mt-4 text-xs text-white/45">
-          Tools used: {insight.toolsUsed.length ? insight.toolsUsed.join(", ") : "dashboard context"}
-        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-white/45">Signals:</span>
+          {(insight.toolsUsed.length ? insight.toolsUsed : ["dashboard context"]).map((tool) => (
+            <span
+              key={tool}
+              className="rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-[0.68rem] text-white/72"
+            >
+              {tool}
+            </span>
+          ))}
+        </div>
       </div>
     </section>
   );

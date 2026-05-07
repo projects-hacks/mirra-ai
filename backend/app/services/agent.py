@@ -11,11 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.core import cache
 from app.core.config import settings
 from app.core.constants import CachePrefix
-from app.core.llm_config import (
-    GEMINI_API_BASE_URL,
-    GEMINI_MODEL_NAME,
-    GEMINI_TIMEOUT_SECONDS,
-)
+from app.core.llm_config import GEMINI_TIMEOUT_SECONDS
+from app.services.gemini_client import gemini_configured, gemini_generate_content
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +103,8 @@ def _validate_agent_response(payload: dict[str, Any]) -> dict[str, Any]:
 class AgentService:
     """Generate structured, explainable responses from upstream tool outputs."""
 
-    def __init__(self, api_key: str | None = None):
-        self.api_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_AI_STUDIO_KEY
+    def __init__(self) -> None:
+        """Vertex Gemini only; credentials via ADC (see GOOGLE_APPLICATION_CREDENTIALS)."""
 
     async def _get_cached_response(self, name: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         cache_key = f"{CachePrefix.AGENT}:{name}:{cache.hash_json(payload)}"
@@ -135,7 +132,7 @@ class AgentService:
         if cached:
             return cached
 
-        if not self.api_key:
+        if not gemini_configured():
             fallback = self._fallback_glowup_plan(face_attrs, skin_tone)
             await self._set_cached_response("glowup", cache_payload, fallback)
             return fallback
@@ -184,15 +181,9 @@ Requirements:
             },
         }
 
-        url = f"{GEMINI_API_BASE_URL}/models/{GEMINI_MODEL_NAME}:generateContent"
         try:
             async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
-                response = await client.post(
-                    url,
-                    params={"key": self.api_key},
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                )
+                response = await gemini_generate_content(client, payload)
                 response.raise_for_status()
                 content = _extract_text(response.json())
                 result = _validate_agent_response(_safe_json_loads(content))
@@ -223,7 +214,7 @@ Requirements:
         if cached:
             return cached
 
-        if not self.api_key:
+        if not gemini_configured():
             fallback = self._fallback_skin_insights(concern_scores, skin_tone, weather, history)
             await self._set_cached_response("skin_insights", cache_payload, fallback)
             return fallback
@@ -279,15 +270,9 @@ Requirements:
             },
         }
 
-        url = f"{GEMINI_API_BASE_URL}/models/{GEMINI_MODEL_NAME}:generateContent"
         try:
             async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
-                response = await client.post(
-                    url,
-                    params={"key": self.api_key},
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                )
+                response = await gemini_generate_content(client, payload)
                 response.raise_for_status()
                 content = _extract_text(response.json())
                 result = _validate_agent_response(_safe_json_loads(content))
@@ -315,7 +300,7 @@ Requirements:
         if cached:
             return cached
 
-        if not self.api_key:
+        if not gemini_configured():
             fallback = self._fallback_outfit_reasoning(matches, gaps, context)
             await self._set_cached_response("outfit_reasoning", cache_payload, fallback)
             return fallback
@@ -367,15 +352,9 @@ Requirements:
             },
         }
 
-        url = f"{GEMINI_API_BASE_URL}/models/{GEMINI_MODEL_NAME}:generateContent"
         try:
             async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
-                response = await client.post(
-                    url,
-                    params={"key": self.api_key},
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                )
+                response = await gemini_generate_content(client, payload)
                 response.raise_for_status()
                 content = _extract_text(response.json())
                 result = _validate_agent_response(_safe_json_loads(content))

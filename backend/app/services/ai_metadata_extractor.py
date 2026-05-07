@@ -1,4 +1,4 @@
-"""AI Metadata Extractor service using Gemini 3.1 Pro Vision API."""
+"""AI Metadata Extractor service using Gemini Vision on Vertex AI (ADC / service account)."""
 import asyncio
 import json
 import logging
@@ -8,8 +8,6 @@ import httpx
 
 from app.core.config import settings
 from app.core.llm_config import (
-    GEMINI_API_BASE_URL,
-    GEMINI_MODEL_NAME,
     GEMINI_TEMPERATURE,
     GEMINI_TOP_K,
     GEMINI_TOP_P,
@@ -19,6 +17,7 @@ from app.core.llm_config import (
     RETRY_BASE_DELAY_SECONDS,
     IMAGE_DOWNLOAD_TIMEOUT_SECONDS,
 )
+from app.services.gemini_client import gemini_generate_content
 from app.core.closet_constants import (
     get_all_categories,
     get_all_occasions,
@@ -106,10 +105,12 @@ class AIMetadataExtractor:
     """Extract closet item metadata from images using Gemini Vision API."""
     
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize the extractor with API key."""
-        self.api_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_AI_STUDIO_KEY
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is required for AI metadata extraction")
+        """Vertex only; ``api_key`` is ignored (kept for backward-compatible tests)."""
+        _ = api_key
+        if not (settings.GCP_PROJECT_ID or "").strip():
+            raise ValueError(
+                "GCP_PROJECT_ID or GOOGLE_CLOUD_PROJECT is required for Vertex Gemini"
+            )
     
     async def extract_metadata(
         self,
@@ -214,23 +215,9 @@ class AIMetadataExtractor:
             context_text = f"\n\nUser context: {json.dumps(user_context)}"
             payload["contents"][0]["parts"][0]["text"] += context_text
         
-        # Call Gemini API
-        url = f"{GEMINI_API_BASE_URL}/models/{GEMINI_MODEL_NAME}:generateContent"
-        headers = {
-            "Content-Type": "application/json"
-        }
-        params = {
-            "key": self.api_key
-        }
-        
         try:
             async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
-                response = await client.post(
-                    url,
-                    json=payload,
-                    headers=headers,
-                    params=params
-                )
+                response = await gemini_generate_content(client, payload)
                 
                 # Handle rate limiting
                 if response.status_code == 429:

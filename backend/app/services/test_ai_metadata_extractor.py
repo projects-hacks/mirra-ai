@@ -11,6 +11,18 @@ from app.services.ai_metadata_extractor import (
 from app.models.closet import ExtractedMetadata
 
 
+@pytest.fixture(autouse=True)
+def _vertex_project_for_tests(monkeypatch):
+    """Vertex Gemini requires a GCP project id on settings."""
+    from app.core import config
+    import app.services.ai_metadata_extractor as aim
+
+    monkeypatch.setattr(config.settings, "GCP_PROJECT_ID", "test-vertex-project")
+    aim._extractor = None
+    yield
+    aim._extractor = None
+
+
 @pytest.fixture
 def mock_api_key():
     """Mock API key for testing."""
@@ -90,18 +102,18 @@ def sample_metadata():
 class TestAIMetadataExtractor:
     """Test suite for AIMetadataExtractor."""
     
-    def test_init_with_api_key(self, mock_api_key):
-        """Test initialization with explicit API key."""
+    def test_init_with_legacy_api_key_param_ignored(self, mock_api_key):
+        """api_key parameter is ignored; Vertex uses GCP_PROJECT_ID + ADC."""
         extractor = AIMetadataExtractor(api_key=mock_api_key)
-        assert extractor.api_key == mock_api_key
-    
-    def test_init_without_api_key_raises_error(self):
-        """Test initialization without API key raises error."""
-        with patch('app.services.ai_metadata_extractor.settings') as mock_settings:
-            mock_settings.GEMINI_API_KEY = ""
-            mock_settings.GOOGLE_AI_STUDIO_KEY = ""
-            with pytest.raises(ValueError, match="GEMINI_API_KEY is required"):
-                AIMetadataExtractor()
+        assert extractor is not None
+
+    def test_init_without_gcp_project_raises_error(self, monkeypatch):
+        """Test initialization without GCP project raises error."""
+        from app.core import config
+
+        monkeypatch.setattr(config.settings, "GCP_PROJECT_ID", "")
+        with pytest.raises(ValueError, match="GCP_PROJECT_ID"):
+            AIMetadataExtractor()
     
     @pytest.mark.asyncio
     async def test_extract_metadata_success(
@@ -362,19 +374,19 @@ class TestExtractedMetadata:
 @pytest.mark.asyncio
 async def test_convenience_function(mock_api_key, sample_image_url, sample_gemini_response):
     """Test the convenience extract_metadata function."""
-    with patch('app.services.ai_metadata_extractor.settings') as mock_settings:
-        mock_settings.GEMINI_API_KEY = mock_api_key
-        
-        with patch('app.services.ai_metadata_extractor.AIMetadataExtractor.extract_metadata', new_callable=AsyncMock) as mock_extract:
-            expected_metadata = ExtractedMetadata(
-                category="dress",
-                primary_color="blue",
-                color_hex="#0000FF",
-                formality=0.5
-            )
-            mock_extract.return_value = expected_metadata
-            
-            result = await extract_metadata(sample_image_url)
-            
-            assert result == expected_metadata
-            mock_extract.assert_called_once_with(sample_image_url, None)
+    with patch(
+        "app.services.ai_metadata_extractor.AIMetadataExtractor.extract_metadata",
+        new_callable=AsyncMock,
+    ) as mock_extract:
+        expected_metadata = ExtractedMetadata(
+            category="dress",
+            primary_color="blue",
+            color_hex="#0000FF",
+            formality=0.5,
+        )
+        mock_extract.return_value = expected_metadata
+
+        result = await extract_metadata(sample_image_url)
+
+        assert result == expected_metadata
+        mock_extract.assert_called_once_with(sample_image_url, None)

@@ -987,10 +987,9 @@ There are two possible integration paths:
 
 If the key is from Google Cloud Console and is enabled for the Gemini Developer API, the current direct API-key client can work after environment naming cleanup. If the project uses Vertex AI, implement a separate Vertex client with service account or application default credentials.
 
-Recommended env cleanup:
+Recommended env (this app uses **Vertex only** for Gemini):
 
-- Use `GEMINI_API_KEY` for direct Gemini API.
-- Use `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and service account credentials for Vertex AI.
+- `GCP_PROJECT_ID` or `GOOGLE_CLOUD_PROJECT`, optional `GEMINI_MODEL_NAME`, and Application Default Credentials (typically `GOOGLE_APPLICATION_CREDENTIALS` pointing at a service account JSON with Vertex access).
 - Avoid frontend exposure.
 
 ## Operational Checklist
