@@ -473,8 +473,14 @@ export default function TryOnPage() {
     runner: () => Promise<VtoImageResponse>,
     source: "face" | "body" = "face"
   ) {
-    if (source === "face" && !selfieBlob) return;
-    if (source === "body" && !bodyBlob) return;
+    if (source === "face" && !selfieBlob) {
+      setError("Portrait try-on needs your saved selfie — capture one first.");
+      return;
+    }
+    if (source === "body" && !bodyBlob) {
+      setError("Clothes try-on needs a full-body photo. Upload or capture one in the Clothes section.");
+      return;
+    }
 
     setIsApplying(true);
     setActiveStage("Resolving reference image");
@@ -1084,6 +1090,13 @@ export default function TryOnPage() {
                 type="button"
                 className="btn-primary w-full sm:w-auto"
                 disabled={(!clothesUrl.trim() && !clothesGarmentFile) || isApplying || !bodyBlob}
+                title={
+                  !bodyBlob
+                    ? "Upload a full-body photo first — try-on sends it to the API with your garment."
+                    : !clothesUrl.trim() && !clothesGarmentFile
+                      ? "Paste a garment image URL or choose a garment file."
+                      : undefined
+                }
                 onClick={() => {
                   const opts: VtoClothesOptions = {
                     category: clothesCategory,

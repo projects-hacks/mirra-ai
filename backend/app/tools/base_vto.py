@@ -62,7 +62,7 @@ async def execute_vto(
     cache_key = f"{CachePrefix.VTO}:{task_type}:{selfie_hash}:{params_hash}"
 
     cached = await cache.get(cache_key)
-    if cached:
+    if isinstance(cached, dict) and cached.get("image_url"):
         return cached
 
     result = await perfectcorp.call_vto(
@@ -72,10 +72,16 @@ async def execute_vto(
         extra_params,
         ref_bytes=ref_bytes,
     )
+    if not isinstance(result, dict):
+        result = {}
+
     inner = result.get("result", result)
+    if not isinstance(inner, dict):
+        inner = {}
+
     image_url = extract_result_image_url(result)
 
-    vto_result = {
+    vto_result: dict[str, Any] = {
         "image_url": image_url,
         **{k: v for k, v in inner.items() if k != "result_image_url"},
     }

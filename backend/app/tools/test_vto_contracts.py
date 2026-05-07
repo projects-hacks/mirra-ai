@@ -89,3 +89,35 @@ async def test_vto_cache_key_includes_reference_url_and_params(monkeypatch):
 
     assert len(seen_keys) == 3
     assert len(set(seen_keys)) == 3
+
+
+@pytest.mark.asyncio
+async def test_execute_vto_survives_perfectcorp_result_field_as_list(monkeypatch):
+    """Poll payloads sometimes expose ``result`` as a non-dict; merging must not 500."""
+
+    async def fake_get(key: str):
+        return None
+
+    async def fake_set(key: str, value, ttl: int):
+        return None
+
+    async def fake_call_vto(task_type, selfie_bytes, ref_image_url, extra_params, *, ref_bytes=None):
+        return {
+            "task_status": "success",
+            "result": [{"some": "artifact"}],
+            "results": {"url": "https://cdn.example/from-results.jpg"},
+        }
+
+    from app.tools import base_vto
+
+    monkeypatch.setattr(base_vto.cache, "get", fake_get)
+    monkeypatch.setattr(base_vto.cache, "set", fake_set)
+    monkeypatch.setattr(base_vto.perfectcorp, "call_vto", fake_call_vto)
+
+    out = await execute_vto(
+        "cloth-v3",
+        b"selfie",
+        "https://cdn.example/garment.jpg",
+        {"garment_category": "upper_body"},
+    )
+    assert out.get("image_url") == "https://cdn.example/from-results.jpg"
