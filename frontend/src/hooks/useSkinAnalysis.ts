@@ -28,6 +28,12 @@ export interface ProductRecommendationGroup {
   error?: string;
 }
 
+export interface SkinDailySuggestion {
+  title: string;
+  detail: string;
+  source: "provider" | "weather" | "agent";
+}
+
 function parseMaybeJson<T>(value: T | string | null | undefined): T | null {
   if (!value) return null;
   if (typeof value !== "string") return value;
@@ -147,6 +153,38 @@ export function useSkinAnalysis() {
 
   const { concerns, summary } = useMemo(() => buildSkinSummaryFromHistory(history), [history]);
   const intensities = useMemo(() => deriveSimulationIntensities(history[0]?.scores), [history]);
+  const dailySuggestions = useMemo<SkinDailySuggestion[]>(() => {
+    const items: SkinDailySuggestion[] = [];
+
+    concerns.slice(0, 2).forEach((concern) => {
+      items.push({
+        title: `Focus ${concern.label}`,
+        detail: concern.score < 60
+          ? `${concern.label} is below 60/100. Prioritize targeted products and track changes in your next scan.`
+          : `${concern.label} is stable. Maintain your routine and avoid over-correcting.`,
+        source: "provider",
+      });
+    });
+
+    if (weather?.aiTip) {
+      items.push({
+        title: "Daily weather adjustment",
+        detail: weather.aiTip,
+        source: "weather",
+      });
+    }
+
+    if (insight?.recommendations?.length) {
+      const top = insight.recommendations[0];
+      items.push({
+        title: top.title,
+        detail: top.description,
+        source: "agent",
+      });
+    }
+
+    return items.slice(0, 4);
+  }, [concerns, weather, insight]);
 
   return {
     history,
@@ -159,6 +197,7 @@ export function useSkinAnalysis() {
     weather,
     insight,
     productGroups,
+    dailySuggestions,
     intensities,
     isLoading,
     error,

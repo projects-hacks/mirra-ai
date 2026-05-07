@@ -18,6 +18,38 @@ from app.tools import skin_tools
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+SKIN_CONCERN_LABELS: dict[str, str] = {
+    "moisture": "Moisture",
+    "acne": "Acne",
+    "wrinkle": "Wrinkles",
+    "pore": "Pores",
+    "redness": "Redness",
+    "dark_circle_v2": "Dark Circles",
+    "dark_circle": "Dark Circles",
+    "eye_bag": "Eye Bags",
+    "firmness": "Firmness",
+    "oiliness": "Oiliness",
+    "texture": "Texture",
+    "radiance": "Radiance",
+    "age_spot": "Spots",
+}
+
+SKIN_CONCERN_SUGGESTIONS: dict[str, str] = {
+    "moisture": "Use a hydrating serum and lock it with a barrier moisturizer.",
+    "acne": "Use a gentle salicylic acid cleanser and avoid over-exfoliating.",
+    "wrinkle": "Use retinoid at night and consistent SPF during the day.",
+    "pore": "Use niacinamide and keep exfoliation regular but gentle.",
+    "redness": "Use calming ingredients like centella and reduce harsh actives.",
+    "dark_circle_v2": "Prioritize sleep consistency and use a caffeine eye product.",
+    "dark_circle": "Prioritize sleep consistency and use a caffeine eye product.",
+    "eye_bag": "Reduce salt at night and apply a cooling eye gel in the morning.",
+    "firmness": "Add peptide-based products and daily SPF protection.",
+    "oiliness": "Use lightweight, non-comedogenic hydration and balance cleansing.",
+    "texture": "Add a low-frequency AHA/BHA exfoliant and hydrate well.",
+    "radiance": "Add vitamin C in the morning and maintain hydration.",
+    "age_spot": "Use dark-spot targeting ingredients and strict sun protection.",
+}
+
 
 def _detail(
     category: str,
@@ -48,6 +80,43 @@ def _provider_error_to_http(exc: PerfectCorpAPIError, source: str) -> HTTPExcept
     )
 
 
+def _extract_ui_score(value: Any) -> float | None:
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, dict):
+        candidate = value.get("ui_score") or value.get("score") or value.get("raw_score")
+        if isinstance(candidate, int | float):
+            return float(candidate)
+    return None
+
+
+def _build_skin_suggestions(scores: dict[str, Any]) -> list[dict[str, Any]]:
+    scored: list[tuple[str, float]] = []
+    for key, value in scores.items():
+        numeric = _extract_ui_score(value)
+        if numeric is None:
+            continue
+        if key == "all":
+            continue
+        scored.append((key, numeric))
+
+    scored.sort(key=lambda item: item[1])
+    top = scored[:3]
+    suggestions: list[dict[str, Any]] = []
+    for key, score in top:
+        label = SKIN_CONCERN_LABELS.get(key, key.replace("_", " ").title())
+        suggestions.append(
+            {
+                "concern": key,
+                "label": label,
+                "score": round(score),
+                "priority": "high" if score < 60 else "medium",
+                "tip": SKIN_CONCERN_SUGGESTIONS.get(key, "Keep this concern in your daily routine."),
+            }
+        )
+    return suggestions
+
+
 @router.post("/analyze", response_model=SkinAnalyzeResponseModel)
 async def analyze_skin(
     request: Request,
@@ -62,7 +131,7 @@ async def analyze_skin(
         return {
             "scores": scores,
             "skin_age": scores.get("skin_age"),
-            "suggestions": [],
+            "suggestions": _build_skin_suggestions(scores),
         }
     except PerfectCorpAPIError as exc:
         raise _provider_error_to_http(exc, "skin_analysis") from exc

@@ -7,6 +7,7 @@ import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import SkinSummaryCard from "@/components/dashboard/SkinSummaryCard";
 import ProductRecommendations from "@/components/skin/ProductRecommendations";
 import SkinConcernGrid from "@/components/skin/SkinConcernGrid";
+import SkinGuidanceBoard from "@/components/skin/SkinGuidanceBoard";
 import SkinToneProfile from "@/components/skin/SkinToneProfile";
 import WeatherCard from "@/components/dashboard/WeatherCard";
 import { useSkinAnalysis } from "@/hooks/useSkinAnalysis";
@@ -20,6 +21,7 @@ export default function SkinPage() {
     weather,
     insight,
     productGroups,
+    dailySuggestions,
     isLoading,
     error,
   } = useSkinAnalysis();
@@ -114,6 +116,14 @@ export default function SkinPage() {
           </Link>
         </div>
       </section>
+
+      <SkinGuidanceBoard
+        concerns={concerns}
+        insight={insight}
+        productGroups={productGroups}
+        suggestions={dailySuggestions}
+        isLoading={isLoading}
+      />
 
       <ProductRecommendations groups={productGroups} isLoading={isLoading} />
     </div>

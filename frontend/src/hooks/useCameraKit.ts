@@ -139,8 +139,11 @@ function applyImportantStyle(element: HTMLElement, property: string, value: stri
 function styleCameraKitRoot(element: HTMLElement) {
   element.dataset.mirraCameraKitRoot = "true";
   applyImportantStyle(element, "position", "fixed");
-  applyImportantStyle(element, "inset", "0");
-  applyImportantStyle(element, "width", "100vw");
+  applyImportantStyle(element, "top", "0");
+  applyImportantStyle(element, "bottom", "0");
+  applyImportantStyle(element, "left", "50%");
+  applyImportantStyle(element, "transform", "translateX(-50%)");
+  applyImportantStyle(element, "width", "min(100vw, var(--camera-kit-stage-width, 420px))");
   applyImportantStyle(element, "height", "100dvh");
   applyImportantStyle(element, "max-width", "none");
   applyImportantStyle(element, "max-height", "none");
@@ -148,12 +151,14 @@ function styleCameraKitRoot(element: HTMLElement) {
   applyImportantStyle(element, "z-index", "80");
   applyImportantStyle(element, "background", "#050712");
   applyImportantStyle(element, "overflow", "hidden");
+  applyImportantStyle(element, "box-shadow", "0 0 0 9999px rgba(5, 7, 18, 0.92)");
 
   element.querySelectorAll<HTMLElement>("iframe, video, canvas").forEach((child) => {
     applyImportantStyle(child, "width", "100%");
     applyImportantStyle(child, "height", "100%");
     applyImportantStyle(child, "max-width", "none");
     applyImportantStyle(child, "max-height", "none");
+    applyImportantStyle(child, "object-fit", "cover");
   });
 }
 
