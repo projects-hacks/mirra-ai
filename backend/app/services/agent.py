@@ -11,7 +11,11 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.core import cache
 from app.core.config import settings
 from app.core.constants import CachePrefix
-from app.core.llm_config import GEMINI_SKIN_INSIGHTS_TIMEOUT_SECONDS, GEMINI_TIMEOUT_SECONDS
+from app.core.llm_config import (
+    GEMINI_MAX_OUTPUT_TOKENS,
+    GEMINI_SKIN_INSIGHTS_TIMEOUT_SECONDS,
+    GEMINI_TIMEOUT_SECONDS,
+)
 from app.services.gemini_client import gemini_configured, gemini_generate_content
 
 logger = logging.getLogger(__name__)
@@ -176,7 +180,7 @@ Requirements:
                 "temperature": 0.4,
                 "topP": 0.95,
                 "topK": 40,
-                "maxOutputTokens": 1024,
+                "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
                 "responseMimeType": "application/json",
             },
         }
@@ -265,7 +269,7 @@ Requirements:
                 "temperature": 0.35,
                 "topP": 0.95,
                 "topK": 40,
-                "maxOutputTokens": 768,
+                "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
                 "responseMimeType": "application/json",
             },
         }
@@ -348,7 +352,7 @@ Requirements:
                 "temperature": 0.35,
                 "topP": 0.95,
                 "topK": 40,
-                "maxOutputTokens": 1024,
+                "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
                 "responseMimeType": "application/json",
             },
         }
