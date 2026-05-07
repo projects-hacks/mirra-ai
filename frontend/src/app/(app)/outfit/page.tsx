@@ -367,6 +367,7 @@ export default function OutfitPage() {
         payload: { imageUrl, toolName: ToolName.TRY_ON_CLOTHES, timestamp: Date.now() },
       });
       setOutfitPreviewImage(imageUrl);
+      dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });
@@ -401,6 +402,8 @@ export default function OutfitPage() {
       const ref = productGarmentRef(product);
       if (!ref) {
         setError("This product has no image or link we can use for try-on.");
+        dispatch({ type: "SET_PROCESSING", payload: false });
+        dispatch({ type: "SET_CURRENT_TOOL", payload: null });
         return;
       }
       const result = await vtoApi.clothes(bodyBlob, ref, vtoCategory);
@@ -412,6 +415,7 @@ export default function OutfitPage() {
         payload: { imageUrl, toolName: ToolName.TRY_ON_CLOTHES, timestamp: Date.now() },
       });
       setOutfitPreviewImage(imageUrl);
+      dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
     } catch (tryError) {
       dispatch({ type: "SET_PROCESSING", payload: false });

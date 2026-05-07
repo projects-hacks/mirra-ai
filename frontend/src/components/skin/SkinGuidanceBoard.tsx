@@ -20,7 +20,7 @@ export default function SkinGuidanceBoard({
   isLoading = false,
 }: Readonly<SkinGuidanceBoardProps>) {
   const concernCount = concerns.length;
-  const aiReady = Boolean(insight);
+  const aiReady = Boolean(insight?.insight?.trim());
   const productCount = productGroups.reduce((sum, group) => sum + group.products.length, 0);
 
   return (

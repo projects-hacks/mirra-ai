@@ -74,10 +74,17 @@ export function useImageTransition(
 
       } catch (err) {
         if (!isMounted) return;
-        
+
+        // Preload can fail for cross-origin URLs that still render in <img>.
+        // Still swap the displayed URL so try-on results are not stuck on the base photo.
         setError(err instanceof Error ? err.message : 'Failed to load image');
-        setIsLoading(false);
-        setIsTransitioning(false);
+        setIsTransitioning(true);
+        setTimeout(() => {
+          if (!isMounted) return;
+          setDisplayImage(nextImage);
+          setIsTransitioning(false);
+          setIsLoading(false);
+        }, TRANSITION_DURATION);
       }
     };
 

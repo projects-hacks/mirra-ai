@@ -9,7 +9,7 @@ import {
   CONCERN_PRODUCT_QUERIES,
   deriveSimulationIntensities,
 } from "@/lib/skinScoring";
-import { buildSkinSummaryFromHistory } from "@/lib/skinSummary";
+import { buildDashboardInsight, buildSkinSummaryFromHistory } from "@/lib/skinSummary";
 import { resolveUserLocation } from "@/lib/userContext";
 import type { AgentInsight, Product, SkinConcern, SkinToneData, WeatherInfo } from "@/types";
 
@@ -86,8 +86,20 @@ async function loadSkinAnalysisData(userId: string): Promise<SkinAnalysisBundle>
   ]);
 
   const skinHistory = historyResult.status === "fulfilled" ? historyResult.value : [];
-  const { concerns } = buildSkinSummaryFromHistory(skinHistory);
+  const { concerns, summary } = buildSkinSummaryFromHistory(skinHistory);
   const topConcerns = concerns.slice(0, 3);
+  const weather = weatherResult.status === "fulfilled" ? weatherResult.value : null;
+
+  let insight: AgentInsight | null =
+    insightResult.status === "fulfilled" ? normalizeInsight(insightResult.value) : null;
+  // /api/skin/insights can fail (timeout, 5xx, schema mismatch) while history + products still load.
+  // Promise.allSettled hides that failure; use the same heuristic insight as the dashboard so UX is not stuck on "Pending".
+  if ((!insight || !insight.insight.trim()) && summary.trend !== "no_data") {
+    const fromScanContext = buildDashboardInsight(summary, weather);
+    if (fromScanContext) {
+      insight = fromScanContext;
+    }
+  }
 
   let skinTone: SkinToneData | null = null;
   let faceShape: Record<string, unknown> | null = null;
@@ -125,8 +137,8 @@ async function loadSkinAnalysisData(userId: string): Promise<SkinAnalysisBundle>
     history: skinHistory,
     skinTone,
     faceShape,
-    weather: weatherResult.status === "fulfilled" ? weatherResult.value : null,
-    insight: insightResult.status === "fulfilled" ? normalizeInsight(insightResult.value) : null,
+    weather,
+    insight,
     productGroups: productResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []),
     historyError: historyResult.status === "rejected",
   };

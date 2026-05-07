@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Shirt, Smartphone, Sparkles, SwitchCamera, Upload, UserRound } from "lucide-react";
+import { CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Shirt, Smartphone, Sparkles, SwitchCamera, Upload } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { tryOnPlanToAgentInsight } from "@/lib/agentAdapters";
 import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoClothesOptions, type VtoImageResponse } from "@/lib/api";
@@ -232,113 +232,6 @@ function PreviewPanel({
   );
 }
 
-function GarmentFlowStrip({
-  bodyImage,
-  garment,
-  garmentIntentText,
-  resultImage,
-}: Readonly<{
-  bodyImage: string | null;
-  garment: { imageUrl: string | null; label: string } | null;
-  /** Non-empty clothes URL field — user intends to paste try-on. */
-  garmentIntentText?: string | null;
-  resultImage: string | null;
-}>) {
-  const intent = (garmentIntentText ?? "").trim();
-  const step1Done = Boolean(bodyImage);
-  const step2Done = Boolean(garment?.label) || Boolean(intent);
-  const step3Done = Boolean(resultImage);
-
-  return (
-    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--on-surface-muted)]">How garment try-on flows</p>
-      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
-        The service needs <strong className="font-semibold text-[var(--on-surface)]">your photo</strong>, then{" "}
-        <strong className="font-semibold text-[var(--on-surface)]">a garment image</strong>. The{" "}
-        <a href="#tryon-live-preview" className="font-semibold text-[var(--secondary)] underline-offset-2 hover:underline">
-          live preview
-        </a>{" "}
-        at the top of this page stacks the result over your body shot.
-      </p>
-
-      <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-3">
-        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--on-surface-muted)]">
-            {step1Done ? <CheckCircle2 className="text-emerald-400" size={16} /> : <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[10px]">1</span>}
-            Body
-          </div>
-          <div className="mt-3 flex min-h-[5.5rem] items-center justify-center overflow-hidden rounded-xl bg-black/25">
-            {bodyImage ? (
-              <img src={bodyImage} alt="" className="h-20 w-full object-cover object-top sm:h-24" />
-            ) : (
-              <div className="flex flex-col items-center gap-1 px-2 py-4 text-center">
-                <UserRound className="text-white/35" size={28} />
-                <span className="text-[11px] leading-snug text-white/55">Upload or capture below</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="hidden items-center justify-center text-white/35 sm:flex sm:shrink-0">
-          <ArrowRight size={22} />
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--on-surface-muted)]">
-            {step2Done ? <CheckCircle2 className="text-emerald-400" size={16} /> : <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[10px]">2</span>}
-            Garment
-          </div>
-          <div className="mt-3 flex min-h-[5.5rem] items-center justify-center overflow-hidden rounded-xl bg-black/25">
-            {garment?.imageUrl ? (
-              <img src={garment.imageUrl} alt="" className="max-h-24 w-full object-contain" />
-            ) : intent ? (
-              <div className="flex flex-col items-center justify-center gap-1 px-2 py-2 text-center">
-                <Shirt className="text-[var(--secondary)]/70" size={24} />
-                <span className="line-clamp-2 break-all text-[10px] font-medium text-[var(--on-surface-variant)]">{intent}</span>
-                <span className="text-[10px] text-white/50">Tap “Try Pasted URL” when ready</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-1 px-2 py-4 text-center">
-                <Shirt className="text-white/35" size={28} />
-                <span className="text-[11px] leading-snug text-white/55">
-                  Paste a URL or pick a product card
-                </span>
-              </div>
-            )}
-          </div>
-          {garment?.label && (
-            <p className="mt-2 line-clamp-2 text-center text-[11px] font-medium text-[var(--on-surface-variant)]">{garment.label}</p>
-          )}
-          {!garment?.label && intent && (
-            <p className="mt-2 text-center text-[11px] text-[var(--on-surface-muted)]">Garment link ready</p>
-          )}
-        </div>
-
-        <div className="hidden items-center justify-center text-white/35 sm:flex sm:shrink-0">
-          <ArrowRight size={22} />
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--on-surface-muted)]">
-            {step3Done ? <CheckCircle2 className="text-emerald-400" size={16} /> : <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[10px]">3</span>}
-            Result
-          </div>
-          <div className="mt-3 flex min-h-[5.5rem] items-center justify-center overflow-hidden rounded-xl bg-black/25">
-            {resultImage ? (
-              <img src={resultImage} alt="" className="h-20 w-full object-cover object-top sm:h-24" />
-            ) : (
-              <div className="flex flex-col items-center gap-1 px-2 py-4 text-center">
-                <Sparkles className="text-[var(--primary)]/55" size={28} />
-                <span className="text-[11px] leading-snug text-white/55">Shows in preview after try-on</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function StudioStatus({
   isApplying,
   stage,
@@ -352,7 +245,7 @@ function StudioStatus({
 }>) {
   return (
     <section className="glass-card p-5">
-      <p className="label-caps">Render State</p>
+      <p className="label-caps">Status</p>
       <div className="mt-4 space-y-3">
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3">
           {isApplying ? (
@@ -364,9 +257,6 @@ function StudioStatus({
             <p className="text-sm font-semibold">{isApplying ? stage ?? "Rendering try-on" : "Preview ready"}</p>
             <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{currentTitle}</p>
           </div>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
-          Product links are resolved on the backend before Perfect Corp sees them, so product pages and temporary thumbnails can be converted into image references.
         </div>
         {savedMessage && (
           <div className="banner-success text-xs" role="status">
@@ -430,10 +320,6 @@ export default function TryOnPage() {
   const [clothesSearch, setClothesSearch] = useState("linen button-up shirt");
   const [clothesResults, setClothesResults] = useState<Product[]>([]);
   const [clothesStatus, setClothesStatus] = useState<string | null>(null);
-  /** Last garment applied or attempted (for flow visualization). */
-  const [clothesGarmentDisplay, setClothesGarmentDisplay] = useState<{ imageUrl: string | null; label: string } | null>(
-    null
-  );
 
   const [accessoryKind, setAccessoryKind] = useState<AccessoryKind>("earrings");
   const [accessorySearch, setAccessorySearch] = useState("gold sculptural hoop earrings");
@@ -587,18 +473,10 @@ export default function TryOnPage() {
     tool: ToolName,
     title: string,
     runner: () => Promise<VtoImageResponse>,
-    source: "face" | "body" = "face",
-    garmentDisplay?: { imageUrl: string | null }
+    source: "face" | "body" = "face"
   ) {
     if (source === "face" && !selfieBlob) return;
     if (source === "body" && !bodyBlob) return;
-
-    if (source === "body") {
-      setClothesGarmentDisplay({
-        imageUrl: garmentDisplay?.imageUrl ?? null,
-        label: title,
-      });
-    }
 
     setIsApplying(true);
     setActiveStage("Resolving reference image");
@@ -627,6 +505,7 @@ export default function TryOnPage() {
         type: "SET_VTO_RESULT",
         payload: { imageUrl, toolName: tool, timestamp: Date.now() },
       });
+      dispatch({ type: "SET_PROCESSING", payload: false });
       dispatch({ type: "SET_CURRENT_TOOL", payload: null });
       setActiveStage("Ready to save");
     } catch (tryError) {
@@ -684,7 +563,6 @@ export default function TryOnPage() {
     if (activeTab === "clothes") {
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
-      setClothesGarmentDisplay(null);
     } else {
       setFacePreviewImage(null);
       setFacePreviewTitle("Original Selfie");
@@ -733,7 +611,6 @@ export default function TryOnPage() {
       persistBodyImage(nextDataUrl);
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
-      setClothesGarmentDisplay(null);
       if (activeTab === "clothes") {
         setIsResetToOriginal(true);
       }
@@ -775,7 +652,6 @@ export default function TryOnPage() {
       persistBodyImage(captured);
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
-      setClothesGarmentDisplay(null);
       setIsResetToOriginal(true);
       stopBodyCamera();
       setShowBodyCamera(false);
@@ -845,7 +721,6 @@ export default function TryOnPage() {
     setBodyImageStatus("Removed the current full-body image.");
     setClothesPreviewImage(null);
     setClothesPreviewTitle("Full-Body Source");
-    setClothesGarmentDisplay(null);
     setIsResetToOriginal(true);
     setShowBodyCamera(false);
     stopBodyCamera();
@@ -890,27 +765,13 @@ export default function TryOnPage() {
   return (
     <div className="page-shell max-w-full space-y-6">
       <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
-        <p className="label-caps">Phase 7</p>
+        <p className="label-caps">Try-On Studio</p>
         <h1 className="mt-3 text-3xl font-semibold" style={{ fontFamily: "var(--font-serif)" }}>
-          Try-On Studio
+          Preview makeup, hair, accessories, and clothes
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 sm:text-base" style={{ color: "var(--on-surface-variant)" }}>
-          Clothes try-on uses a dedicated full-body image. Makeup, hair, earrings, and necklace stay on your portrait selfie.
+          Clothes need a full-body photo; face tabs use your saved selfie. Results stack in the live preview at the top.
         </p>
-        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--on-surface-muted)]">Demo checklist</p>
-          <ol className="mt-3 list-inside list-decimal space-y-2 text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
-            <li>
-              <strong className="font-semibold text-[var(--on-surface)]">Clothes:</strong> open the Clothes tab, upload or capture a full-body photo (short side at least 480px; portrait is recommended). Search or paste a garment URL, then try on.
-            </li>
-            <li>
-              <strong className="font-semibold text-[var(--on-surface)]">Face tabs:</strong> switch to Makeup, Hair, or Accessories — they always use your saved selfie, not the body shot.
-            </li>
-            <li>
-              <strong className="font-semibold text-[var(--on-surface)]">Save:</strong> after a result appears in the preview, use Save To Diary at the bottom (proof card).
-            </li>
-          </ol>
-        </div>
       </section>
 
       {error && (
@@ -988,26 +849,19 @@ export default function TryOnPage() {
 
       {activeTab === "clothes" && (
         <section className="glass-card space-y-5 p-5 sm:p-6">
-          <GarmentFlowStrip
-            bodyImage={bodyImage}
-            garment={clothesGarmentDisplay}
-            garmentIntentText={clothesGarmentFile ? clothesGarmentFile.name : clothesUrl}
-            resultImage={clothesPreviewImage}
-          />
-
           <div>
-            <p className="label-caps">Step-by-step · Clothes</p>
+            <p className="label-caps">Clothes</p>
             <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-serif)" }}>
-              Add your body shot, then choose the garment
+              Full-body photo, then a garment
             </h2>
           </div>
 
           <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold">Step 1 · Full-body source image</p>
+                <p className="text-sm font-semibold">Full-body photo</p>
                 <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-                  Perfect Corp clothes try-on needs a full-body photo: head to toe visible, straight pose, arms slightly away from the body, even lighting, and a plain background.
+                  Use a head-to-toe shot with even light and a simple background (portrait works best; short side at least 480px).
                 </p>
               </div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[280px]">
@@ -1061,15 +915,9 @@ export default function TryOnPage() {
                 </button>
               </div>
             </div>
-            <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3" style={{ color: "var(--on-surface-variant)" }}>
-              <p>• Head to toe visible</p>
-              <p>• Straight pose facing camera</p>
-              <p>• Arms slightly away from body</p>
-              <p>• Even lighting</p>
-              <p>• Plain background</p>
-              <p>• Short side ≥ 480px (720px+ ideal)</p>
-              <p>• Fitted clothing helps body detection</p>
-            </div>
+            <p className="mt-3 text-sm" style={{ color: "var(--on-surface-muted)" }}>
+              Tip: straight pose, arms slightly away from your sides, and fitted clothing help detection.
+            </p>
             {showBodyCamera && (
               <div className="mt-4 space-y-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
                 <div className="overflow-hidden rounded-[1.25rem] border border-white/10">
@@ -1175,7 +1023,7 @@ export default function TryOnPage() {
 
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">Step 2 · Garment</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">Garment</p>
               <label className="block text-sm font-medium">
                 Garment image URL
                 <input
@@ -1249,7 +1097,6 @@ export default function TryOnPage() {
                     clothesGarmentFile ? "Uploaded garment" : "Custom garment",
                     () => vtoApi.clothes(bodyBlob as Blob, opts),
                     "body",
-                    { imageUrl: null },
                   );
                 }}
               >
@@ -1278,7 +1125,7 @@ export default function TryOnPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <p className="text-sm leading-relaxed md:col-span-2 xl:col-span-3" style={{ color: "var(--on-surface-variant)" }}>
-              Each tile is a <strong className="font-semibold text-[var(--on-surface)]">garment reference image</strong>. Try On pairs it with your full-body photo from step 1; the composite appears in the{" "}
+              Tap <strong className="font-semibold text-[var(--on-surface)]">Try On</strong> on a tile to send that product image with your full-body photo. The merged result appears in the{" "}
               <a href="#tryon-live-preview" className="font-semibold text-[var(--secondary)] underline-offset-2 hover:underline">
                 live preview
               </a>.
@@ -1305,7 +1152,7 @@ export default function TryOnPage() {
                     {product.source} • {product.price}
                   </p>
                   <p className="mt-2 text-[11px] leading-snug" style={{ color: "var(--on-surface-muted)" }}>
-                    Pairs this product photo with your step 1 full-body shot; see the merge in the live preview.
+                    Uses this product image as the garment reference.
                   </p>
                   <button
                     type="button"
@@ -1316,7 +1163,6 @@ export default function TryOnPage() {
                       product.title,
                       () => vtoApi.clothes(bodyBlob as Blob, tryRef, clothesCategory),
                       "body",
-                      { imageUrl: thumb || null },
                     )}
                   >
                     Try On
