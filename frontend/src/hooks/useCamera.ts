@@ -67,6 +67,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       return;
     }
 
+    const ac = new AbortController();
     let cancelled = false;
 
     async function initCamera() {
@@ -99,13 +100,29 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
         });
 
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          const video = videoRef.current;
+          video.srcObject = stream;
+
+          const tryMarkReady = () => {
+            if (cancelled || ac.signal.aborted) return;
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              setIsReady(true);
+              debugFlow("native-camera", "video has frame dimensions", {
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+              });
+            }
+          };
+
+          video.addEventListener("loadeddata", tryMarkReady, { signal: ac.signal });
+          video.addEventListener("loadedmetadata", tryMarkReady, { signal: ac.signal });
+
+          await video.play();
           debugFlow("native-camera", "video play success", {
-            videoWidth: videoRef.current.videoWidth,
-            videoHeight: videoRef.current.videoHeight,
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
           });
-          setIsReady(true);
+          tryMarkReady();
         }
       } catch (err) {
         debugFlow("native-camera", "startNativeCamera error", err);
@@ -125,10 +142,11 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       }
     }
 
-    initCamera();
+    void initCamera();
 
     return () => {
       cancelled = true;
+      ac.abort();
       debugFlow("native-camera", "cleanup");
       ymkRef.current?.destroy();
       ymkRef.current = null;
@@ -144,19 +162,29 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   useEffect(() => {
     const video = videoRef.current;
     const stream = streamRef.current;
-    
+
     // Check if we need to attach the stream (either it's different, or we haven't tracked it yet)
     if (video && stream && (!streamAttachedRef.current || video.srcObject !== stream)) {
       video.srcObject = stream;
       streamAttachedRef.current = true;
       debugFlow("native-camera", "attach stream to mounted video");
-      video.play()
+
+      const tryMarkReady = () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          setIsReady(true);
+        }
+      };
+      video.addEventListener("loadeddata", tryMarkReady, { once: true });
+      video.addEventListener("loadedmetadata", tryMarkReady, { once: true });
+
+      video
+        .play()
         .then(() => {
           debugFlow("native-camera", "delayed video play success", {
             videoWidth: video.videoWidth,
             videoHeight: video.videoHeight,
           });
-          setIsReady(true);
+          tryMarkReady();
         })
         .catch((error) => {
           debugFlow("native-camera", "delayed video play error", error);
@@ -187,6 +215,13 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
 
     const vw = video.videoWidth;
     const vh = video.videoHeight;
+    if (!vw || !vh) {
+      debugFlow("native-camera", "capture skipped — video dimensions not ready yet", {
+        videoWidth: vw,
+        videoHeight: vh,
+      });
+      return null;
+    }
 
     let targetWidth = vw;
     const targetHeight = vh;
@@ -221,8 +256,8 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     const dataUrl = canvas.toDataURL("image/jpeg", CAMERA.JPEG_QUALITY);
 
     // Validate minimum dimensions
-    if (video.videoWidth < CAMERA.MIN_WIDTH) {
-      console.warn(`Camera resolution too low: ${video.videoWidth}px`);
+    if (vw < CAMERA.MIN_WIDTH) {
+      console.warn(`Camera resolution too low: ${vw}px`);
     }
 
     debugFlow("native-camera", "capture complete", {

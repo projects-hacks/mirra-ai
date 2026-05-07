@@ -217,6 +217,18 @@ Run this first. If any item fails, fix before deep QA.
 - Clothes VTO runs without full-body image (wrong behavior).
 - Face tabs break after switching from clothes.
 
+### Presenter script (2–3 minutes)
+
+Use this order so the audience always sees a live result:
+
+1. **Before recording:** Have a **portrait selfie** already in the app (from `/capture` or skin scan). Optionally **prepare one full-body JPG** on your machine (short edge **≥ 480px**, **720px+ ideal**; portrait preferred; plain background) so upload is instant.
+2. **Open `/try-on`.** Point at the **Demo checklist** in the hero if you need on-screen cues.
+3. **Clothes:** Stay on the default **Clothes** tab. **Upload** the full-body image. Wait for “Full-body source ready”. **Search** clothes (e.g. “linen button-up shirt”) or **paste a direct garment image URL**, pick Upper/Lower/Full, tap **Try On**. The large preview should update (body image underlay + result).
+4. **Face:** Switch to **Makeup** (or **Hair** / **Accessories**). Say explicitly: *“These use the portrait selfie, not the body photo.”* Run **one** effect (e.g. one makeup preset or one accessory). Preview should switch to the **selfie** base.
+5. **Save:** Scroll to **Save To Diary** and save if your demo includes Look Diary.
+
+If **clothes** returns an error: confirm the body image has a large enough short edge (**≥ 480px**), consider **portrait** framing for best detection (landscape is allowed), and that the garment URL resolves to an image. If **makeup** returns 400, the backend may be rejecting the effects payload—use **Hair** or **Accessories** as backup for the demo.
+
 ---
 
 ## Flow I: Look Diary + Outfit History

@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Smartphone, Sparkles, SwitchCamera, Upload } from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Shirt, Smartphone, Sparkles, SwitchCamera, Upload, UserRound } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { tryOnPlanToAgentInsight } from "@/lib/agentAdapters";
 import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
@@ -136,24 +136,36 @@ function getImageSize(dataUrl: string): Promise<{ width: number; height: number 
   });
 }
 
-async function validateBodyImage(dataUrl: string): Promise<string | null> {
+const BODY_IMAGE_MIN_SHORT_SIDE = 480;
+const BODY_IMAGE_SOFT_SHORT_SIDE = 720;
+
+async function validateBodyImage(dataUrl: string): Promise<{ error: string | null; hint: string | null }> {
   const { width, height } = await getImageSize(dataUrl);
   const longSide = Math.max(width, height);
   const shortSide = Math.min(width, height);
 
   if (longSide > 4096) {
-    return "Resize the full-body image so its longest side is 4096px or less.";
+    return { error: "Resize the full-body image so its longest side is 4096px or less.", hint: null };
   }
 
-  if (shortSide < 720) {
-    return "Use a sharper full-body image. The short side should be at least 720px.";
+  if (shortSide < BODY_IMAGE_MIN_SHORT_SIDE) {
+    return {
+      error: `This photo is too small. Use an image where the shorter side is at least ${BODY_IMAGE_MIN_SHORT_SIDE}px.`,
+      hint: null,
+    };
   }
+
+  const hints: string[] = [];
 
   if (height <= width) {
-    return "Use a portrait full-body photo with the subject framed head to toe.";
+    hints.push("Portrait (taller than wide) usually gives the best full-body fit; landscape is still accepted.");
   }
 
-  return null;
+  if (shortSide < BODY_IMAGE_SOFT_SHORT_SIDE) {
+    hints.push(`Short side is under ${BODY_IMAGE_SOFT_SHORT_SIDE}px — results may be softer; re-shoot if VTO looks weak.`);
+  }
+
+  return { error: null, hint: hints.length ? hints.join(" ") : null };
 }
 
 function productImageIsLikelyUsable(product: Product): boolean {
@@ -164,35 +176,169 @@ function PreviewPanel({
   originalImage,
   currentImage,
   currentTitle,
+  mode = "face",
 }: Readonly<{
   originalImage: string;
   currentImage: string;
   currentTitle: string;
+  mode?: "face" | "clothes";
 }>) {
   const { displayImage, isTransitioning } = useImageTransition(originalImage, currentImage);
+  const topLayerUrl = displayImage ?? currentImage;
+  const isClothes = mode === "clothes";
+  const showingComposite = isClothes && topLayerUrl !== originalImage;
 
   return (
-    <section className="glass-card overflow-hidden">
+    <section id="tryon-live-preview" className="glass-card overflow-hidden scroll-mt-[calc(var(--nav-height)+1rem)]">
       <div className="border-b border-white/10 px-5 py-4">
-        <p className="label-caps">Studio Preview</p>
-        <h2 className="mt-2 text-2xl">Live Look</h2>
+        <p className="label-caps">{isClothes ? "Clothes try-on" : "Studio preview"}</p>
+        <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-serif)" }}>
+          {isClothes ? "Your body + garment" : "Live look"}
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
+          {isClothes
+            ? showingComposite
+              ? "The top layer is the AI composite: your chosen piece applied on the full-body photo below it."
+              : "This is your base full-body shot. Pick a garment below, then try on — the result appears as a new layer here."
+            : "Your portrait stays as the base; makeup, hair, or accessories render on top."}
+        </p>
       </div>
       <div className="relative aspect-[4/5] bg-black/10">
-        <img src={originalImage} alt="Original selfie" className="absolute inset-0 h-full w-full object-cover opacity-100" />
         <img
-          src={displayImage ?? currentImage}
+          src={originalImage}
+          alt={isClothes ? "Your full-body base photo" : "Original portrait base"}
+          className="absolute inset-0 h-full w-full object-cover opacity-100"
+        />
+        <img
+          src={topLayerUrl}
           alt={currentTitle}
           className={`absolute inset-0 h-full w-full object-cover transition duration-300 ${isTransitioning ? "opacity-65" : "opacity-100"}`}
         />
-        <span className="absolute left-4 top-4 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-          Original underlay
+        <span className="absolute left-4 top-4 max-w-[85%] rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+          {isClothes ? "Base · full-body photo" : "Original · base layer"}
         </span>
+        {isClothes && showingComposite && (
+          <span className="absolute right-4 top-4 rounded-full bg-[var(--primary)]/90 px-3 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur">
+            Composite · try-on result
+          </span>
+        )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-4 text-white">
           <p className="text-sm font-semibold">{currentTitle}</p>
-          <p className="mt-1 text-xs text-white/80">The latest VTO result stays here while you switch categories.</p>
+          <p className="mt-1 text-xs text-white/80">
+            {isClothes
+              ? "Scroll down to change the garment or upload a new body photo."
+              : "The latest VTO result stays here while you switch categories."}
+          </p>
         </div>
       </div>
     </section>
+  );
+}
+
+function GarmentFlowStrip({
+  bodyImage,
+  garment,
+  garmentIntentText,
+  resultImage,
+}: Readonly<{
+  bodyImage: string | null;
+  garment: { imageUrl: string | null; label: string } | null;
+  /** Non-empty clothes URL field — user intends to paste try-on. */
+  garmentIntentText?: string | null;
+  resultImage: string | null;
+}>) {
+  const intent = (garmentIntentText ?? "").trim();
+  const step1Done = Boolean(bodyImage);
+  const step2Done = Boolean(garment?.label) || Boolean(intent);
+  const step3Done = Boolean(resultImage);
+
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--on-surface-muted)]">How garment try-on flows</p>
+      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
+        The service needs <strong className="font-semibold text-[var(--on-surface)]">your photo</strong>, then{" "}
+        <strong className="font-semibold text-[var(--on-surface)]">a garment image</strong>. The{" "}
+        <a href="#tryon-live-preview" className="font-semibold text-[var(--secondary)] underline-offset-2 hover:underline">
+          live preview
+        </a>{" "}
+        at the top of this page stacks the result over your body shot.
+      </p>
+
+      <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-between sm:gap-3">
+        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--on-surface-muted)]">
+            {step1Done ? <CheckCircle2 className="text-emerald-400" size={16} /> : <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[10px]">1</span>}
+            Body
+          </div>
+          <div className="mt-3 flex min-h-[5.5rem] items-center justify-center overflow-hidden rounded-xl bg-black/25">
+            {bodyImage ? (
+              <img src={bodyImage} alt="" className="h-20 w-full object-cover object-top sm:h-24" />
+            ) : (
+              <div className="flex flex-col items-center gap-1 px-2 py-4 text-center">
+                <UserRound className="text-white/35" size={28} />
+                <span className="text-[11px] leading-snug text-white/55">Upload or capture below</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="hidden items-center justify-center text-white/35 sm:flex sm:shrink-0">
+          <ArrowRight size={22} />
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--on-surface-muted)]">
+            {step2Done ? <CheckCircle2 className="text-emerald-400" size={16} /> : <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[10px]">2</span>}
+            Garment
+          </div>
+          <div className="mt-3 flex min-h-[5.5rem] items-center justify-center overflow-hidden rounded-xl bg-black/25">
+            {garment?.imageUrl ? (
+              <img src={garment.imageUrl} alt="" className="max-h-24 w-full object-contain" />
+            ) : intent ? (
+              <div className="flex flex-col items-center justify-center gap-1 px-2 py-2 text-center">
+                <Shirt className="text-[var(--secondary)]/70" size={24} />
+                <span className="line-clamp-2 break-all text-[10px] font-medium text-[var(--on-surface-variant)]">{intent}</span>
+                <span className="text-[10px] text-white/50">Tap “Try Pasted URL” when ready</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1 px-2 py-4 text-center">
+                <Shirt className="text-white/35" size={28} />
+                <span className="text-[11px] leading-snug text-white/55">
+                  Paste a URL or pick a product card
+                </span>
+              </div>
+            )}
+          </div>
+          {garment?.label && (
+            <p className="mt-2 line-clamp-2 text-center text-[11px] font-medium text-[var(--on-surface-variant)]">{garment.label}</p>
+          )}
+          {!garment?.label && intent && (
+            <p className="mt-2 text-center text-[11px] text-[var(--on-surface-muted)]">Garment link ready</p>
+          )}
+        </div>
+
+        <div className="hidden items-center justify-center text-white/35 sm:flex sm:shrink-0">
+          <ArrowRight size={22} />
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-white/10 bg-black/15 p-3 sm:p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--on-surface-muted)]">
+            {step3Done ? <CheckCircle2 className="text-emerald-400" size={16} /> : <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/30 text-[10px]">3</span>}
+            Result
+          </div>
+          <div className="mt-3 flex min-h-[5.5rem] items-center justify-center overflow-hidden rounded-xl bg-black/25">
+            {resultImage ? (
+              <img src={resultImage} alt="" className="h-20 w-full object-cover object-top sm:h-24" />
+            ) : (
+              <div className="flex flex-col items-center gap-1 px-2 py-4 text-center">
+                <Sparkles className="text-[var(--primary)]/55" size={28} />
+                <span className="text-[11px] leading-snug text-white/55">Shows in preview after try-on</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -211,7 +357,7 @@ function StudioStatus({
     <section className="glass-card p-5">
       <p className="label-caps">Render State</p>
       <div className="mt-4 space-y-3">
-        <div className="flex items-center gap-3 rounded-2xl bg-white/55 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3">
           {isApplying ? (
             <LoaderCircle className="animate-spin text-[var(--primary)]" size={18} />
           ) : (
@@ -222,7 +368,7 @@ function StudioStatus({
             <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{currentTitle}</p>
           </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/35 px-4 py-3 text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
           Product links are resolved on the backend before Perfect Corp sees them, so product pages and temporary thumbnails can be converted into image references.
         </div>
         {savedMessage && (
@@ -236,15 +382,20 @@ function StudioStatus({
 }
 
 const TABS: Array<{ id: TryOnTab; title: string; subtitle: string }> = [
-  { id: "clothes", title: "Clothes", subtitle: "Paste a garment URL or search products." },
+  { id: "clothes", title: "Clothes", subtitle: "Full-body photo + garment image → composite preview at top." },
   { id: "makeup", title: "Makeup", subtitle: "Apply preset looks from the GlowUp data." },
   { id: "hair", title: "Hair", subtitle: "Transfer a reference hairstyle." },
   { id: "accessories", title: "Accessories", subtitle: "Try on earrings or necklaces from search." },
 ];
 
+const tryOnInputClass =
+  "min-h-11 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-[var(--on-surface)] outline-none placeholder:text-[var(--on-surface-muted)]";
+const tryOnInputBlockClass = `mt-2 w-full ${tryOnInputClass}`;
+
 export default function TryOnPage() {
   const dispatch = useAppDispatch();
   const { selfie, isHydrated } = useAppState();
+  const prevSelfieRef = useRef<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<TryOnTab>("clothes");
   const [selfieBlob, setSelfieBlob] = useState<Blob | null>(null);
@@ -280,6 +431,10 @@ export default function TryOnPage() {
   const [clothesSearch, setClothesSearch] = useState("linen button-up shirt");
   const [clothesResults, setClothesResults] = useState<Product[]>([]);
   const [clothesStatus, setClothesStatus] = useState<string | null>(null);
+  /** Last garment applied or attempted (for flow visualization). */
+  const [clothesGarmentDisplay, setClothesGarmentDisplay] = useState<{ imageUrl: string | null; label: string } | null>(
+    null
+  );
 
   const [accessoryKind, setAccessoryKind] = useState<AccessoryKind>("earrings");
   const [accessorySearch, setAccessorySearch] = useState("gold sculptural hoop earrings");
@@ -308,6 +463,19 @@ export default function TryOnPage() {
     ? activeBaseImage ?? null
     : activeResultImage ?? activeBaseImage ?? null;
   const reasoningInsight = tryOnPlanToAgentInsight(plan);
+
+  useEffect(() => {
+    if (!isHydrated || !selfie) return;
+    if (prevSelfieRef.current !== null && prevSelfieRef.current !== selfie) {
+      setPlan(null);
+      setAnalysis(null);
+      setFacePreviewImage(null);
+      setFacePreviewTitle("Original Selfie");
+      setStudioNotice(null);
+      setError(null);
+    }
+    prevSelfieRef.current = selfie;
+  }, [isHydrated, selfie]);
 
   useEffect(() => {
     if (!selfie) return;
@@ -345,7 +513,7 @@ export default function TryOnPage() {
   }, [bodyImage]);
 
   useEffect(() => {
-    if (!selfieBlob || plan) return;
+    if (!selfieBlob) return;
     const sourceSelfie = selfieBlob;
     let cancelled = false;
 
@@ -414,16 +582,24 @@ export default function TryOnPage() {
     return () => {
       cancelled = true;
     };
-  }, [plan, selfieBlob]);
+  }, [selfieBlob]);
 
   async function runTryOn(
     tool: ToolName,
     title: string,
     runner: () => Promise<VtoImageResponse>,
-    source: "face" | "body" = "face"
+    source: "face" | "body" = "face",
+    garmentDisplay?: { imageUrl: string | null }
   ) {
     if (source === "face" && !selfieBlob) return;
     if (source === "body" && !bodyBlob) return;
+
+    if (source === "body") {
+      setClothesGarmentDisplay({
+        imageUrl: garmentDisplay?.imageUrl ?? null,
+        label: title,
+      });
+    }
 
     setIsApplying(true);
     setActiveStage("Resolving reference image");
@@ -509,6 +685,7 @@ export default function TryOnPage() {
     if (activeTab === "clothes") {
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
+      setClothesGarmentDisplay(null);
     } else {
       setFacePreviewImage(null);
       setFacePreviewTitle("Original Selfie");
@@ -543,18 +720,21 @@ export default function TryOnPage() {
 
     try {
       const nextDataUrl = await fileToDataUrl(file);
-      const validationMessage = await validateBodyImage(nextDataUrl);
-      if (validationMessage) {
-        setBodyImageStatus(validationMessage);
+      const { error: validationError, hint } = await validateBodyImage(nextDataUrl);
+      if (validationError) {
+        setBodyImageStatus(validationError);
         return;
       }
       const nextBlob = await imageStringToBlob(nextDataUrl);
       setBodyImage(nextDataUrl);
       setBodyBlob(nextBlob);
-      setBodyImageStatus("Full-body image ready for clothes try-on.");
+      setBodyImageStatus(
+        hint ? `Full-body image ready for clothes try-on. ${hint}` : "Full-body image ready for clothes try-on."
+      );
       persistBodyImage(nextDataUrl);
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
+      setClothesGarmentDisplay(null);
       if (activeTab === "clothes") {
         setIsResetToOriginal(true);
       }
@@ -564,26 +744,39 @@ export default function TryOnPage() {
   }
 
   async function handleBodyCameraCapture() {
-    const captured = captureBodyImage();
+    const tryCapture = () => captureBodyImage();
+    let captured = tryCapture();
     if (!captured) {
-      setBodyImageStatus("Camera is not ready yet. Try again in a moment.");
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+      captured = tryCapture();
+    }
+
+    if (!captured) {
+      setBodyImageStatus(
+        "Could not read the camera frame yet. Wait until the live preview is sharp, then tap again. If this keeps happening, allow camera access or use Upload from gallery."
+      );
       return;
     }
 
     try {
-      const validationMessage = await validateBodyImage(captured);
-      if (validationMessage) {
-        setBodyImageStatus(validationMessage);
+      const { error: validationError, hint } = await validateBodyImage(captured);
+      if (validationError) {
+        setBodyImageStatus(validationError);
         return;
       }
 
       const nextBlob = await imageStringToBlob(captured);
       setBodyImage(captured);
       setBodyBlob(nextBlob);
-      setBodyImageStatus("Full-body capture is ready for clothes try-on.");
+      setBodyImageStatus(
+        hint ? `Full-body capture is ready for clothes try-on. ${hint}` : "Full-body capture is ready for clothes try-on."
+      );
       persistBodyImage(captured);
       setClothesPreviewImage(null);
       setClothesPreviewTitle("Full-Body Source");
+      setClothesGarmentDisplay(null);
       setIsResetToOriginal(true);
       stopBodyCamera();
       setShowBodyCamera(false);
@@ -653,6 +846,7 @@ export default function TryOnPage() {
     setBodyImageStatus("Removed the current full-body image.");
     setClothesPreviewImage(null);
     setClothesPreviewTitle("Full-Body Source");
+    setClothesGarmentDisplay(null);
     setIsResetToOriginal(true);
     setShowBodyCamera(false);
     stopBodyCamera();
@@ -672,11 +866,22 @@ export default function TryOnPage() {
             Start with a selfie
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-            The studio needs a saved portrait selfie for makeup, hair, earrings, and necklace. Clothes try-on also needs a separate full-body image.
+            The studio needs a saved portrait selfie for makeup, hair, earrings, and necklace. Clothes try-on uses a separate full-body photo (portrait orientation, head to toe).
+          </p>
+          <p className="mt-4 max-w-2xl text-sm leading-6" style={{ color: "var(--on-surface-muted)" }}>
+            Demo path: capture a selfie on <Link href="/capture" className="text-[var(--secondary)] underline-offset-2 hover:underline">/capture</Link>
+            {" "}or finish a skin scan so the app saves your portrait, then open Try-On again.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/capture" className="btn-primary">Capture Selfie</Link>
-            <Link href="/dashboard" className="btn-secondary">Back To Dashboard</Link>
+            <Link href="/capture" className="btn-primary">
+              Capture selfie
+            </Link>
+            <Link href="/skin" className="btn-secondary">
+              Skin scan
+            </Link>
+            <Link href="/dashboard" className="btn-secondary">
+              Dashboard
+            </Link>
           </div>
         </div>
       </section>
@@ -693,6 +898,20 @@ export default function TryOnPage() {
         <p className="mt-3 max-w-3xl text-sm leading-6 sm:text-base" style={{ color: "var(--on-surface-variant)" }}>
           Clothes try-on uses a dedicated full-body image. Makeup, hair, earrings, and necklace stay on your portrait selfie.
         </p>
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--on-surface-muted)]">Demo checklist</p>
+          <ol className="mt-3 list-inside list-decimal space-y-2 text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
+            <li>
+              <strong className="font-semibold text-[var(--on-surface)]">Clothes:</strong> open the Clothes tab, upload or capture a full-body photo (short side at least 480px; portrait is recommended). Search or paste a garment URL, then try on.
+            </li>
+            <li>
+              <strong className="font-semibold text-[var(--on-surface)]">Face tabs:</strong> switch to Makeup, Hair, or Accessories — they always use your saved selfie, not the body shot.
+            </li>
+            <li>
+              <strong className="font-semibold text-[var(--on-surface)]">Save:</strong> after a result appears in the preview, use Save To Diary at the bottom (proof card).
+            </li>
+          </ol>
+        </div>
       </section>
 
       {error && (
@@ -707,9 +926,20 @@ export default function TryOnPage() {
         </div>
       )}
 
+      {activeTab === "clothes" && selfie && !bodyImage && (
+        <div className="banner-warn" role="status">
+          <strong className="font-semibold text-[var(--on-surface)]">Clothes mode:</strong> upload or capture a full-body image below. The large preview stays empty until a body source is set (your selfie alone is not used for garment VTO).
+        </div>
+      )}
+
       {activeBaseImage && previewImage && (
         <div className="grid gap-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
-          <PreviewPanel originalImage={activeBaseImage} currentImage={previewImage} currentTitle={currentTitle} />
+          <PreviewPanel
+            originalImage={activeBaseImage}
+            currentImage={previewImage}
+            currentTitle={currentTitle}
+            mode={activeTab === "clothes" ? "clothes" : "face"}
+          />
           <StudioStatus
             isApplying={isApplying}
             stage={activeStage}
@@ -732,17 +962,14 @@ export default function TryOnPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${activeTab === tab.id ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-black/8 bg-white/65"}`}
+              className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${activeTab === tab.id ? "border-[var(--primary)] bg-[var(--primary)]/12 shadow-[0_0_0_1px_rgba(139,92,246,0.28)]" : "border-white/10 bg-white/[0.04]"}`}
             >
-              <h2
-                className="text-base font-semibold"
-                style={{ color: activeTab === tab.id ? "var(--on-surface)" : "var(--on-card)" }}
-              >
+              <h2 className="text-base font-semibold text-[var(--on-surface)]">
                 {tab.title}
               </h2>
               <p
                 className="mt-2 text-sm leading-5"
-                style={{ color: activeTab === tab.id ? "var(--on-surface-variant)" : "var(--on-card-variant)" }}
+                style={{ color: "var(--on-surface-variant)" }}
               >
                 {tab.subtitle}
               </p>
@@ -762,15 +989,24 @@ export default function TryOnPage() {
 
       {activeTab === "clothes" && (
         <section className="glass-card space-y-5 p-5 sm:p-6">
+          <GarmentFlowStrip
+            bodyImage={bodyImage}
+            garment={clothesGarmentDisplay}
+            garmentIntentText={clothesUrl}
+            resultImage={clothesPreviewImage}
+          />
+
           <div>
-            <p className="label-caps">Clothes</p>
-            <h2 className="mt-2 text-2xl">Paste a garment URL or search</h2>
+            <p className="label-caps">Step-by-step · Clothes</p>
+            <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-serif)" }}>
+              Add your body shot, then choose the garment
+            </h2>
           </div>
 
           <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold">Full-body source image</p>
+                <p className="text-sm font-semibold">Step 1 · Full-body source image</p>
                 <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
                   Perfect Corp clothes try-on needs a full-body photo: head to toe visible, straight pose, arms slightly away from the body, even lighting, and a plain background.
                 </p>
@@ -832,6 +1068,7 @@ export default function TryOnPage() {
               <p>• Arms slightly away from body</p>
               <p>• Even lighting</p>
               <p>• Plain background</p>
+              <p>• Short side ≥ 480px (720px+ ideal)</p>
               <p>• Fitted clothing helps body detection</p>
             </div>
             {showBodyCamera && (
@@ -939,17 +1176,20 @@ export default function TryOnPage() {
 
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">Step 2 · Garment</p>
               <label className="block text-sm font-medium">
                 Garment image URL
                 <input
                   value={clothesUrl}
                   onChange={(event) => setClothesUrl(event.target.value)}
                   placeholder="https://example.com/product.jpg"
-                  className="mt-2 min-h-11 w-full rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
+                  className={tryOnInputBlockClass}
                 />
               </label>
               <p className="text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
-                Paste a product page or direct image URL. The backend resolves it into a direct image before sending it to Perfect Corp.
+                Paste a product or <strong className="font-semibold text-[var(--on-surface)]">direct garment image</strong> URL. The backend resolves it before VTO. Then choose{" "}
+                <strong className="font-semibold text-[var(--on-surface)]">upper</strong>, <strong className="font-semibold text-[var(--on-surface)]">lower</strong>, or{" "}
+                <strong className="font-semibold text-[var(--on-surface)]">full outfit</strong> so the API maps the piece correctly.
               </p>
 
               <label className="block text-sm font-medium">
@@ -957,7 +1197,7 @@ export default function TryOnPage() {
                 <select
                   value={clothesCategory}
                   onChange={(event) => setClothesCategory(event.target.value as "upper" | "lower" | "full")}
-                  className="mt-2 min-h-11 w-full rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
+                  className={tryOnInputBlockClass}
                 >
                   <option value="upper">Upper</option>
                   <option value="lower">Lower</option>
@@ -975,7 +1215,8 @@ export default function TryOnPage() {
                     ToolName.TRY_ON_CLOTHES,
                     "Custom garment",
                     () => vtoApi.clothes(bodyBlob as Blob, trimmedUrl, clothesCategory),
-                    "body"
+                    "body",
+                    { imageUrl: null }
                   );
                 }}
               >
@@ -984,6 +1225,7 @@ export default function TryOnPage() {
             </div>
 
             <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--on-surface-muted)]">Also try · Search</p>
               <label className="block text-sm font-medium">
                 Search products
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -991,7 +1233,7 @@ export default function TryOnPage() {
                     value={clothesSearch}
                     onChange={(event) => setClothesSearch(event.target.value)}
                     placeholder="silk blouse"
-                    className="min-h-11 flex-1 rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
+                    className={`min-h-11 flex-1 ${tryOnInputClass}`}
                   />
                   <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => void searchClothes()}>
                     <Search size={16} />
@@ -1002,6 +1244,12 @@ export default function TryOnPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <p className="text-sm leading-relaxed md:col-span-2 xl:col-span-3" style={{ color: "var(--on-surface-variant)" }}>
+              Each tile is a <strong className="font-semibold text-[var(--on-surface)]">garment reference image</strong>. Try On pairs it with your full-body photo from step 1; the composite appears in the{" "}
+              <a href="#tryon-live-preview" className="font-semibold text-[var(--secondary)] underline-offset-2 hover:underline">
+                live preview
+              </a>.
+            </p>
             {clothesStatus && clothesResults.length === 0 && (
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm md:col-span-2 xl:col-span-3" style={{ color: "var(--on-surface-variant)" }}>
                 {clothesStatus}
@@ -1016,11 +1264,20 @@ export default function TryOnPage() {
                 <p className="mt-1 text-xs" style={{ color: "var(--on-surface-muted)" }}>
                   {product.source} • {product.price}
                 </p>
+                <p className="mt-2 text-[11px] leading-snug" style={{ color: "var(--on-surface-muted)" }}>
+                  Pairs this product photo with your step 1 full-body shot; see the merge in the live preview.
+                </p>
                 <button
                   type="button"
                   className="btn-primary mt-3 w-full text-sm"
                   disabled={!productImageIsLikelyUsable(product) || isApplying || !bodyBlob}
-                  onClick={() => void runTryOn(ToolName.TRY_ON_CLOTHES, product.title, () => vtoApi.clothes(bodyBlob as Blob, product.imageUrl, clothesCategory), "body")}
+                  onClick={() => void runTryOn(
+                    ToolName.TRY_ON_CLOTHES,
+                    product.title,
+                    () => vtoApi.clothes(bodyBlob as Blob, product.imageUrl, clothesCategory),
+                    "body",
+                    { imageUrl: product.imageUrl }
+                  )}
                 >
                   Try On
                 </button>
@@ -1057,7 +1314,7 @@ export default function TryOnPage() {
                 <button
                   type="button"
                   className="btn-primary mt-4 w-full text-sm"
-                  disabled={isApplying}
+                  disabled={isApplying || !selfieBlob}
                   onClick={() => void runTryOn(ToolName.TRY_ON_MAKEUP, preset.title, () => vtoApi.makeup(selfieBlob as Blob, preset.effects), "face")}
                 >
                   Apply Look
@@ -1093,7 +1350,7 @@ export default function TryOnPage() {
                   <button
                     type="button"
                     className="btn-primary mt-4 w-full text-sm"
-                    disabled={isApplying}
+                    disabled={isApplying || !selfieBlob}
                     onClick={() => void runTryOn(ToolName.CHANGE_HAIRSTYLE, style.title, () => vtoApi.hair(selfieBlob as Blob, style.image_url), "face")}
                   >
                     Try Hairstyle
@@ -1127,7 +1384,7 @@ export default function TryOnPage() {
                     setAccessorySearch(query);
                     void searchAccessories(query, nextKind);
                   }}
-                  className="mt-2 min-h-11 w-full rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
+                  className={tryOnInputBlockClass}
                 >
                   <option value="earrings">Earrings</option>
                   <option value="necklace">Necklace</option>
@@ -1141,7 +1398,7 @@ export default function TryOnPage() {
                     value={accessorySearch}
                     onChange={(event) => setAccessorySearch(event.target.value)}
                     placeholder="gold sculptural hoop earrings"
-                    className="min-h-11 flex-1 rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm outline-none"
+                    className={`min-h-11 flex-1 ${tryOnInputClass}`}
                   />
                   <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => void searchAccessories()}>
                     <Search size={16} />
@@ -1169,7 +1426,7 @@ export default function TryOnPage() {
                 <button
                   type="button"
                   className="btn-primary mt-3 w-full text-sm"
-                  disabled={isApplying}
+                  disabled={isApplying || !selfieBlob}
                   onClick={() => void runTryOn(
                     accessoryKind === "earrings" ? ToolName.TRY_ON_EARRINGS : ToolName.TRY_ON_NECKLACE,
                     product.title,
