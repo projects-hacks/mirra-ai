@@ -343,11 +343,11 @@ export default function ClosetPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="page-shell">
+    <div className="max-w-full space-y-6">
+      <div className="page-shell max-w-full">
         <ClosetSubNav />
       </div>
-      <div className="page-shell flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="page-shell flex max-w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
           <span className="ui-title" style={{ color: "var(--on-surface)" }}>
             {items.length}

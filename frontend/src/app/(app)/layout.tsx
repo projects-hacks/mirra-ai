@@ -86,7 +86,10 @@ export default function AppLayout({
   }
 
   return (
-    <div className="min-h-[100dvh]" style={{ background: "var(--bg)", color: "var(--on-surface)" }}>
+    <div
+      className="min-h-[100dvh] max-w-[100vw] overflow-x-hidden"
+      style={{ background: "var(--bg)", color: "var(--on-surface)" }}
+    >
       <AppHeader title={title} user={user} />
 
       <main className="bottom-nav-offset pb-8 pt-4">

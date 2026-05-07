@@ -684,7 +684,7 @@ export default function TryOnPage() {
   }
 
   return (
-    <div className="page-shell space-y-6">
+    <div className="page-shell max-w-full space-y-6">
       <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
         <p className="label-caps">Phase 7</p>
         <h1 className="mt-3 text-3xl font-semibold" style={{ fontFamily: "var(--font-serif)" }}>

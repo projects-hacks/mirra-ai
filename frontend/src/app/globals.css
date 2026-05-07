@@ -575,10 +575,13 @@ textarea::placeholder {
 
 .page-shell {
   width: min(100%, var(--content-max));
+  max-width: 100%;
   margin-inline: auto;
   --page-pad: clamp(1rem, 2vw, 2rem);
   padding-left: max(var(--page-pad), var(--safe-left));
   padding-right: max(var(--page-pad), var(--safe-right));
+  /* Prevent wide children (grids, horizontal rails) from causing page-level horizontal scroll */
+  overflow-x: clip;
 }
 
 .page-header-shell {
@@ -650,12 +653,14 @@ textarea::placeholder {
 
 .page-loading {
   width: min(100%, var(--content-max));
+  max-width: 100%;
   margin-inline: auto;
   --page-pad: clamp(1rem, 2vw, 2rem);
   padding-left: max(var(--page-pad), var(--safe-left));
   padding-right: max(var(--page-pad), var(--safe-right));
   padding-top: 1rem;
   padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 1.5rem);
+  overflow-x: clip;
 }
 
 .skeleton-card {

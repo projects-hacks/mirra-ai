@@ -475,7 +475,7 @@ export default function OutfitPage() {
   }
 
   return (
-    <div className="page-shell space-y-6">
+    <div className="page-shell max-w-full space-y-6">
       <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const nextRecommendedTitle = nextRecommendedAction?.title ?? "Review skin insights";
 
   return (
-    <div className="page-shell space-y-4 sm:space-y-6">
+    <div className="page-shell max-w-full space-y-4 sm:space-y-6">
       {error && (
         <div className="banner-error" role="alert">
           {error}
@@ -35,7 +35,7 @@ export default function DashboardPage() {
 
       <section className="overflow-hidden rounded-[1.5rem] border border-black/8 bg-[linear-gradient(135deg,#111827_0%,#1f2937_54%,#3a2e27_100%)] p-5 text-white shadow-[0_18px_50px_rgba(17,24,39,0.2)] sm:p-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.5fr)] lg:items-end">
-          <div>
+          <div className="min-w-0">
             <p className="eyebrow text-[0.72rem] text-white/55">Dashboard</p>
             <h2 className="section-display mt-3 max-w-2xl text-3xl text-white sm:text-4xl">
               Your next best appearance move
@@ -68,7 +68,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="min-w-0">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
               <Sparkles size={16} className="text-white/65" aria-hidden="true" />
               <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : skinSummary?.overallScore ?? "--"}</p>
@@ -84,22 +85,31 @@ export default function DashboardPage() {
               <p className="metric-display mt-3 text-xl">{isLoading ? "--" : weather ? formatTemperature(weather.temp) : "--"}</p>
               <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Local</p>
             </div>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-start">
-        <SkinSummaryCard summary={skinSummary} isLoading={isLoading} />
-        <AgentInsightCard
-          insight={insight}
-          isLoading={isLoading}
-          onRecommendationTap={(action) => router.push(action)}
-        />
+        <div className="min-w-0">
+          <SkinSummaryCard summary={skinSummary} isLoading={isLoading} />
+        </div>
+        <div className="min-w-0">
+          <AgentInsightCard
+            insight={insight}
+            isLoading={isLoading}
+            onRecommendationTap={(action) => router.push(action)}
+          />
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.55fr)] lg:items-start">
-        <RecentLooksRow looks={recentLooks} />
-        <WeatherCard weather={weather} isLoading={isLoading} />
+        <div className="min-w-0">
+          <RecentLooksRow looks={recentLooks} />
+        </div>
+        <div className="min-w-0">
+          <WeatherCard weather={weather} isLoading={isLoading} />
+        </div>
       </section>
     </div>
   );

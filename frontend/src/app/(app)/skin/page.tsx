@@ -28,7 +28,7 @@ export default function SkinPage() {
   const hasScan = concerns.length > 0 || Boolean(summary?.lastScanDate);
 
   return (
-    <div className="page-shell space-y-4 sm:space-y-6">
+    <div className="page-shell max-w-full space-y-4 sm:space-y-6">
       {error && (
         <div className="banner-error" role="alert">
           {error}

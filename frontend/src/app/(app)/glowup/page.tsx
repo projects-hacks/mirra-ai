@@ -175,8 +175,8 @@ function PreviewShell({
   const { displayImage, isTransitioning } = useImageTransition(originalImage, currentImage);
 
   return (
-    <section className="glass-card overflow-hidden">
-      <div className="border-b border-white/10 px-5 py-4">
+    <section className="glass-card overflow-hidden max-w-full">
+      <div className="border-b border-white/10 px-4 py-4 sm:px-5">
         <p className="label-caps">Final Comparison</p>
         <h2 className="mt-2 text-2xl">GlowUp Preview</h2>
         <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
@@ -184,18 +184,18 @@ function PreviewShell({
         </p>
       </div>
 
-      <div className="grid gap-0 md:grid-cols-2">
-        <div className="relative aspect-[4/5] bg-black/10">
-          <img src={originalImage} alt="Original selfie" className="h-full w-full object-cover" />
+      <div className="grid min-w-0 gap-0 md:grid-cols-2">
+        <div className="relative aspect-[4/5] min-h-0 min-w-0 bg-black/10">
+          <img src={originalImage} alt="Original selfie" className="h-full w-full max-w-full object-cover" />
           <span className="absolute left-4 top-4 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white backdrop-blur">
             Before
           </span>
         </div>
-        <div className="relative aspect-[4/5] bg-black/10">
+        <div className="relative aspect-[4/5] min-h-0 min-w-0 bg-black/10">
           <img
             src={displayImage ?? currentImage}
             alt={title}
-            className={`h-full w-full object-cover transition duration-300 ${isTransitioning ? "opacity-70" : "opacity-100"}`}
+            className={`h-full w-full max-w-full object-cover transition duration-300 ${isTransitioning ? "opacity-70" : "opacity-100"}`}
           />
           <span className="absolute left-4 top-4 rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-slate-900 backdrop-blur">
             After
@@ -228,51 +228,51 @@ function AccessoryRow({
   statusMessage?: string | null;
 }>) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-end justify-between gap-4">
-        <div>
+    <div className="min-w-0 space-y-3">
+      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="mt-1 break-words text-sm leading-snug" style={{ color: "var(--on-surface-variant)" }}>
             Query: {query}
           </p>
         </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-3">
         {isLoading && (
-          <div className="flex min-h-32 min-w-full items-center gap-3 rounded-[1.5rem] border border-white/10 bg-white/5 px-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
-            <LoaderCircle className="animate-spin" size={18} />
+          <div className="col-span-full flex min-h-32 items-center gap-3 rounded-[1.5rem] border border-white/10 bg-white/5 px-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+            <LoaderCircle className="animate-spin shrink-0" size={18} />
             Loading product options...
           </div>
         )}
         {!isLoading && statusMessage && products.length === 0 && (
-          <div className="min-w-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <div className="col-span-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
             {statusMessage}
           </div>
         )}
         {!isLoading && products.length === 0 && !statusMessage && (
-          <div className="min-w-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+          <div className="col-span-full rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
             No product images are available for this query yet. Try refreshing the GlowUp plan after product search is healthy.
           </div>
         )}
         {products.map((product) => (
           <article
             key={`${title}-${product.link}`}
-            className="min-w-[180px] max-w-[220px] rounded-[1.5rem] border border-white/15 bg-white/5 p-3 sm:min-w-[220px]"
+            className="flex min-w-0 flex-col rounded-[1.5rem] border border-white/15 bg-white/5 p-3"
           >
             <div className="aspect-square overflow-hidden rounded-[1.1rem] bg-black/10">
               <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" />
             </div>
-            <h4 className="mt-3 line-clamp-2 text-sm font-semibold">{product.title}</h4>
-            <div className="mt-2 flex items-center justify-between gap-2 text-xs" style={{ color: "var(--on-surface-variant)" }}>
-              <span>{product.source}</span>
-              <span>{product.price}</span>
+            <h4 className="mt-3 line-clamp-2 text-sm font-semibold leading-snug">{product.title}</h4>
+            <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs" style={{ color: "var(--on-surface-variant)" }}>
+              <span className="min-w-0 truncate">{product.source}</span>
+              <span className="shrink-0 font-medium">{product.price}</span>
             </div>
-            <div className="mt-3 flex gap-2">
-              <button type="button" onClick={() => onTryOn(product)} className="btn-primary flex-1 text-xs" disabled={isApplying}>
+            <div className="mt-3 flex min-w-0 gap-2">
+              <button type="button" onClick={() => onTryOn(product)} className="btn-primary min-h-11 flex-1 text-xs" disabled={isApplying}>
                 Try On
               </button>
-              <a href={product.link} target="_blank" rel="noreferrer" className="btn-secondary text-xs">
+              <a href={product.link} target="_blank" rel="noreferrer" className="btn-secondary inline-flex min-h-11 shrink-0 items-center justify-center px-3 text-xs">
                 Shop
               </a>
             </div>
@@ -504,6 +504,12 @@ export default function GlowupPage() {
   );
   const reasoningInsight = useMemo(() => glowupPlanToAgentInsight(plan), [plan]);
 
+  /** Remount step sections when selfie source changes so cards / scroll state stay in sync with the new face. */
+  const glowupLayoutKey = useMemo(
+    () => (selfie ? `glowup-${String(selfie.length)}-${selfie.slice(0, 28)}` : "glowup-no-selfie"),
+    [selfie]
+  );
+
   const applyResult = useCallback((tool: ToolName, title: string, imageUrl: string) => {
     setCurrentTitle(title);
     setCurrentImage(imageUrl);
@@ -717,7 +723,7 @@ export default function GlowupPage() {
   }
 
   return (
-    <div className="page-shell space-y-6">
+    <div className="page-shell max-w-full space-y-6">
       <input
         ref={importInputHeaderRef}
         type="file"
@@ -821,9 +827,12 @@ export default function GlowupPage() {
         onRecommendationTap={handleReasoningTap}
       />
 
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-6">
-          <div className="glass-card p-5">
+      <section
+        key={glowupLayoutKey}
+        className="relative isolate grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start xl:gap-8"
+      >
+        <div className="min-w-0 space-y-6">
+          <div className="glass-card p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/15 text-[var(--primary)]">
                 <Sparkles size={20} />
@@ -877,7 +886,7 @@ export default function GlowupPage() {
             ) : null}
           </div>
 
-          <div id="glowup-makeup-section" className="glass-card p-5">
+          <div id="glowup-makeup-section" className="glass-card p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f59e0b]/15 text-[#f59e0b]">
                 <WandSparkles size={20} />
@@ -890,20 +899,20 @@ export default function GlowupPage() {
             <p className="mt-3 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
               Based on your {formatted.faceShape.toLowerCase()} face and {formatted.undertone.toLowerCase()} undertone, these are the strongest first looks.
             </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
               {(plan?.makeup_presets ?? []).map((preset) => (
                 <article
                   key={preset.id}
-                  className={`rounded-[1.5rem] border p-4 transition ${activePresetId === preset.id ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-white/10 bg-white/5"}`}
+                  className={`min-w-0 rounded-[1.5rem] border p-4 transition ${activePresetId === preset.id ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-white/10 bg-white/5"}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold">{preset.title}</h3>
-                      <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg font-semibold leading-snug">{preset.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
                         {preset.description}
                       </p>
                     </div>
-                    <span className="max-w-full rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] break-words text-right">
+                    <span className="shrink-0 self-start rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase leading-tight tracking-[0.12em] sm:max-w-[12rem] sm:text-right">
                       {preset.best_for.join(" / ")}
                     </span>
                   </div>
@@ -914,11 +923,11 @@ export default function GlowupPage() {
               ))}
             </div>
             {makeupRecommendations.length > 0 && (
-              <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+              <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-3 sm:p-4">
                 <p className="label-caps">AI Direction</p>
                 <div className="mt-2 space-y-2">
                   {makeupRecommendations.map((item) => (
-                    <p key={`${item.category}-${item.title}`} className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+                    <p key={`${item.category}-${item.title}`} className="text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
                       <span className="font-medium" style={{ color: "var(--on-surface)" }}>{item.title}:</span> {item.why}
                     </p>
                   ))}
@@ -928,8 +937,8 @@ export default function GlowupPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div id="glowup-hair-section" className="glass-card p-5">
+        <div className="min-w-0 space-y-6">
+          <div id="glowup-hair-section" className="glass-card p-4 sm:p-5">
             <p className="label-caps">Step 3</p>
             <h2 className="mt-2 text-2xl">Hairstyle Transfer</h2>
             <p className="mt-3 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
@@ -967,7 +976,7 @@ export default function GlowupPage() {
             )}
           </div>
 
-          <div id="glowup-accessories-section" className="glass-card p-5">
+          <div id="glowup-accessories-section" className="glass-card p-4 sm:p-5">
             <p className="label-caps">Step 4</p>
             <h2 className="mt-2 text-2xl">Accessories</h2>
             <p className="mt-3 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
