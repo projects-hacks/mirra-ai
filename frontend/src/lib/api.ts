@@ -550,6 +550,26 @@ function formWithSelfie(selfie: Blob): FormData {
   return form;
 }
 
+export type VtoClothesOptions = {
+  category?: string;
+  /** Public / resolvable garment or product URL */
+  garmentUrl?: string;
+  /** Local garment photo — sent instead of URL */
+  garmentFile?: Blob;
+};
+
+function appendClothesFormFields(form: FormData, opts: VtoClothesOptions) {
+  const category = opts.category ?? "upper";
+  form.append("garment_category", category);
+  const url = opts.garmentUrl?.trim() ?? "";
+  if (opts.garmentFile) {
+    form.append("garment", opts.garmentFile, "garment.jpg");
+  }
+  if (url) {
+    form.append("garment_url", url);
+  }
+}
+
 function normalizeWeather(data: BackendWeatherResponse): WeatherInfo {
   const humidity = Number(data.humidity ?? 0);
   const temp = Number(data.temp_f ?? data.temp ?? 0);
@@ -600,10 +620,22 @@ export const skinApi = {
 };
 
 export const vtoApi = {
-  clothes: (selfie: Blob, garmentUrl: string, category = "upper") => {
+  clothes: (selfie: Blob, garmentUrlOrOpts: string | VtoClothesOptions, categoryLegacy = "upper") => {
     const form = formWithSelfie(selfie);
-    form.append("garment_url", garmentUrl);
-    form.append("garment_category", category);
+    if (typeof garmentUrlOrOpts === "string") {
+      form.append("garment_url", garmentUrlOrOpts);
+      form.append("garment_category", categoryLegacy);
+    } else {
+      const url = garmentUrlOrOpts.garmentUrl?.trim() ?? "";
+      const file = garmentUrlOrOpts.garmentFile;
+      if (!url && !file) {
+        throw new Error("Clothes try-on requires a garment URL or garment image file.");
+      }
+      appendClothesFormFields(form, {
+        ...garmentUrlOrOpts,
+        category: garmentUrlOrOpts.category ?? categoryLegacy,
+      });
+    }
     return fetchWithFormData<VtoImageResponse>(ApiRoutes.VTO_CLOTHES, form).then(normalizeVtoImageResponse);
   },
 

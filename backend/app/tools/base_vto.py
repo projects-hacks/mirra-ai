@@ -33,18 +33,29 @@ def extract_result_image_url(result: dict[str, Any]) -> str | None:
 async def execute_vto(
     task_type: str,
     selfie_bytes: bytes,
-    ref_image_url: str,
+    ref_image_url: str | None = None,
     extra_params: dict[str, Any] | None = None,
     cache_suffix: str = "",
+    *,
+    ref_bytes: bytes | None = None,
 ) -> dict:
     """Execute any Perfect Corp VTO call with Redis caching.
 
-    All VTO tasks require a selfie (uploaded as src_file_id) and a
-    reference image URL (garment, earring, hairstyle, etc.).
+    Supply either ``ref_image_url`` (public URL) or ``ref_bytes`` (uploaded reference file).
     """
+    if ref_bytes is None and not (ref_image_url or "").strip():
+        raise ValueError("execute_vto requires ref_image_url or ref_bytes")
+
     selfie_hash = cache.hash_bytes(selfie_bytes)
+    ref_fingerprint: str
+    if ref_bytes is not None:
+        ref_fingerprint = cache.hash_bytes(ref_bytes)
+    else:
+        ref_fingerprint = (ref_image_url or "").strip()[-64:]
+
     params_hash = cache.hash_json({
-        "ref_image_url": ref_image_url,
+        "ref": ref_fingerprint,
+        "ref_mode": "bytes" if ref_bytes is not None else "url",
         "extra_params": extra_params or {},
         "cache_suffix": cache_suffix,
     })
@@ -54,7 +65,13 @@ async def execute_vto(
     if cached:
         return cached
 
-    result = await perfectcorp.call_vto(task_type, selfie_bytes, ref_image_url, extra_params)
+    result = await perfectcorp.call_vto(
+        task_type,
+        selfie_bytes,
+        None if ref_bytes is not None else (ref_image_url or "").strip(),
+        extra_params,
+        ref_bytes=ref_bytes,
+    )
     inner = result.get("result", result)
     image_url = extract_result_image_url(result)
 

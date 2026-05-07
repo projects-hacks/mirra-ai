@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from app.models.perfectcorp_types import VTOImageResponseModel
 from app.services import perfectcorp
 from app.core.deps import read_image
-from app.core.validation import ImageOrientationPolicy
+from app.core.validation import ImageOrientationPolicy, ValidationError, prepare_image_bytes
 from app.services.product_image_resolver import ProductImageResolverError, resolve_product_image
 from app.tools import fashion_tools, beauty_tools, accessory_tools, hair_tools
 from app.tools.makeup_effect_normalize import normalize_makeup_effects
@@ -133,14 +133,61 @@ async def try_on(req: TryOnRequest):
 @router.post("/clothes", response_model=VTOImageResponseModel)
 async def try_on_clothes(
     selfie: UploadFile = File(...),
-    garment_url: str = Form(...),
+    garment_url: str = Form(default=""),
+    garment: UploadFile | None = File(default=None),
     garment_category: str = Form(default="upper"),
 ) -> dict[str, Any]:
     selfie_bytes = await read_image(
         selfie,
         orientation=ImageOrientationPolicy.ALLOW_LANDSCAPE,
     )
-    resolved_url = await _resolve_reference_url(garment_url)
+    url = (garment_url or "").strip()
+    garment_bytes: bytes | None = None
+    resolved_url: str | None = None
+
+    if garment is not None:
+        raw = await garment.read()
+        if not raw:
+            raise HTTPException(
+                status_code=400,
+                detail=_detail(
+                    perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                    "The garment image file was empty.",
+                    source="clothes",
+                ),
+            )
+        if url:
+            raise HTTPException(
+                status_code=400,
+                detail=_detail(
+                    perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                    "Send either garment_url or a garment file, not both.",
+                    source="clothes",
+                ),
+            )
+        try:
+            garment_bytes = prepare_image_bytes(raw, ImageOrientationPolicy.ALLOW_LANDSCAPE)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=_detail(
+                    perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                    str(exc),
+                    source="clothes",
+                ),
+            ) from exc
+    elif url:
+        resolved_url = await _resolve_reference_url(url)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=_detail(
+                perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                "Provide garment_url (link to a garment or product image) or upload garment as a file.",
+                source="clothes",
+            ),
+        )
+
     provider_category = CLOTHES_CATEGORY_MAP.get(garment_category)
     if not provider_category:
         raise HTTPException(
@@ -155,7 +202,12 @@ async def try_on_clothes(
 
     try:
         return _normalize_image_response(
-            await fashion_tools.try_on_clothes(selfie_bytes, resolved_url, provider_category),
+            await fashion_tools.try_on_clothes(
+                selfie_bytes,
+                garment_url=resolved_url,
+                garment_bytes=garment_bytes,
+                garment_category=provider_category,
+            ),
             "clothes",
         )
     except Exception as exc:

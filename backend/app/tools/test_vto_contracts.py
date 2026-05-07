@@ -60,7 +60,7 @@ async def test_vto_cache_key_includes_reference_url_and_params(monkeypatch):
     async def fake_set(key: str, value, ttl: int):
         return None
 
-    async def fake_call_vto(task_type, selfie_bytes, ref_image_url, extra_params):
+    async def fake_call_vto(task_type, selfie_bytes, ref_image_url, extra_params, *, ref_bytes=None):
         return {"results": {"url": f"https://cdn.example/{extra_params['garment_category']}.jpg"}}
 
     monkeypatch.setattr(base_vto.cache, "get", fake_get)

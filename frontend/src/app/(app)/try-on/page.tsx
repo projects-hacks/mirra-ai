@@ -6,8 +6,9 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Shirt, Smartphone, Sparkles, SwitchCamera, Upload, UserRound } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { tryOnPlanToAgentInsight } from "@/lib/agentAdapters";
-import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
+import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoClothesOptions, type VtoImageResponse } from "@/lib/api";
 import { ToolName } from "@/lib/constants";
+import { normalizeHttpUrl, productGarmentRef, productGarmentRefIsUsable } from "@/lib/productRefs";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
 import { useImageTransition } from "@/hooks/useImageTransition";
 import { useCamera } from "@/hooks/useCamera";
@@ -166,10 +167,6 @@ async function validateBodyImage(dataUrl: string): Promise<{ error: string | nul
   }
 
   return { error: null, hint: hints.length ? hints.join(" ") : null };
-}
-
-function productImageIsLikelyUsable(product: Product): boolean {
-  return product.imageUrl.startsWith("http://") || product.imageUrl.startsWith("https://");
 }
 
 function PreviewPanel({
@@ -427,6 +424,8 @@ export default function TryOnPage() {
   const [bodyCameraFacing, setBodyCameraFacing] = useState<"user" | "environment">("environment");
 
   const [clothesUrl, setClothesUrl] = useState("");
+  /** Local garment JPEG/PNG — sent as multipart ``garment``; no URL required. */
+  const [clothesGarmentFile, setClothesGarmentFile] = useState<File | null>(null);
   const [clothesCategory, setClothesCategory] = useState<"upper" | "lower" | "full">("upper");
   const [clothesSearch, setClothesSearch] = useState("linen button-up shirt");
   const [clothesResults, setClothesResults] = useState<Product[]>([]);
@@ -992,7 +991,7 @@ export default function TryOnPage() {
           <GarmentFlowStrip
             bodyImage={bodyImage}
             garment={clothesGarmentDisplay}
-            garmentIntentText={clothesUrl}
+            garmentIntentText={clothesGarmentFile ? clothesGarmentFile.name : clothesUrl}
             resultImage={clothesPreviewImage}
           />
 
@@ -1181,13 +1180,43 @@ export default function TryOnPage() {
                 Garment image URL
                 <input
                   value={clothesUrl}
-                  onChange={(event) => setClothesUrl(event.target.value)}
+                  onChange={(event) => {
+                    setClothesUrl(event.target.value);
+                    setClothesGarmentFile(null);
+                  }}
                   placeholder="https://example.com/product.jpg"
                   className={tryOnInputBlockClass}
                 />
               </label>
+              <label className="block text-sm font-medium">
+                Or upload a garment photo
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic"
+                  className={`mt-2 block w-full text-sm ${tryOnInputClass}`}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      setClothesGarmentFile(file);
+                      setClothesUrl("");
+                    }
+                  }}
+                />
+              </label>
+              {clothesGarmentFile && (
+                <p className="text-xs" style={{ color: "var(--on-surface-muted)" }}>
+                  Using file: {clothesGarmentFile.name}{" "}
+                  <button
+                    type="button"
+                    className="ml-2 font-semibold text-[var(--secondary)] underline-offset-2 hover:underline"
+                    onClick={() => setClothesGarmentFile(null)}
+                  >
+                    Clear
+                  </button>
+                </p>
+              )}
               <p className="text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
-                Paste a product or <strong className="font-semibold text-[var(--on-surface)]">direct garment image</strong> URL. The backend resolves it before VTO. Then choose{" "}
+                Paste a resolvable URL, <strong className="font-semibold text-[var(--on-surface)]">or upload</strong> a flat-lay or model crop of the garment. Then choose{" "}
                 <strong className="font-semibold text-[var(--on-surface)]">upper</strong>, <strong className="font-semibold text-[var(--on-surface)]">lower</strong>, or{" "}
                 <strong className="font-semibold text-[var(--on-surface)]">full outfit</strong> so the API maps the piece correctly.
               </p>
@@ -1208,19 +1237,23 @@ export default function TryOnPage() {
               <button
                 type="button"
                 className="btn-primary w-full sm:w-auto"
-                disabled={!clothesUrl.trim() || isApplying || !bodyBlob}
+                disabled={(!clothesUrl.trim() && !clothesGarmentFile) || isApplying || !bodyBlob}
                 onClick={() => {
-                  const trimmedUrl = clothesUrl.trim();
+                  const opts: VtoClothesOptions = {
+                    category: clothesCategory,
+                    garmentUrl: clothesUrl.trim() || undefined,
+                    garmentFile: clothesGarmentFile ?? undefined,
+                  };
                   void runTryOn(
                     ToolName.TRY_ON_CLOTHES,
-                    "Custom garment",
-                    () => vtoApi.clothes(bodyBlob as Blob, trimmedUrl, clothesCategory),
+                    clothesGarmentFile ? "Uploaded garment" : "Custom garment",
+                    () => vtoApi.clothes(bodyBlob as Blob, opts),
                     "body",
-                    { imageUrl: null }
+                    { imageUrl: null },
                   );
                 }}
               >
-                Try Pasted URL
+                Try garment (URL or file)
               </button>
             </div>
 
@@ -1255,34 +1288,42 @@ export default function TryOnPage() {
                 {clothesStatus}
               </div>
             )}
-            {clothesResults.map((product) => (
-              <article key={product.link} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-3">
-                <div className="aspect-square overflow-hidden rounded-[1rem] bg-black/10">
-                  <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" />
-                </div>
-                <h3 className="mt-3 line-clamp-2 text-sm font-semibold">{product.title}</h3>
-                <p className="mt-1 text-xs" style={{ color: "var(--on-surface-muted)" }}>
-                  {product.source} • {product.price}
-                </p>
-                <p className="mt-2 text-[11px] leading-snug" style={{ color: "var(--on-surface-muted)" }}>
-                  Pairs this product photo with your step 1 full-body shot; see the merge in the live preview.
-                </p>
-                <button
-                  type="button"
-                  className="btn-primary mt-3 w-full text-sm"
-                  disabled={!productImageIsLikelyUsable(product) || isApplying || !bodyBlob}
-                  onClick={() => void runTryOn(
-                    ToolName.TRY_ON_CLOTHES,
-                    product.title,
-                    () => vtoApi.clothes(bodyBlob as Blob, product.imageUrl, clothesCategory),
-                    "body",
-                    { imageUrl: product.imageUrl }
-                  )}
-                >
-                  Try On
-                </button>
-              </article>
-            ))}
+            {clothesResults.map((product) => {
+              const thumb = normalizeHttpUrl(product.imageUrl);
+              const tryRef = productGarmentRef(product);
+              return (
+                <article key={product.link} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-3">
+                  <div className="flex aspect-square items-center justify-center overflow-hidden rounded-[1rem] bg-black/10">
+                    {thumb ? (
+                      <img src={thumb} alt={product.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <Shirt className="text-white/25" size={48} strokeWidth={1.25} />
+                    )}
+                  </div>
+                  <h3 className="mt-3 line-clamp-2 text-sm font-semibold">{product.title}</h3>
+                  <p className="mt-1 text-xs" style={{ color: "var(--on-surface-muted)" }}>
+                    {product.source} • {product.price}
+                  </p>
+                  <p className="mt-2 text-[11px] leading-snug" style={{ color: "var(--on-surface-muted)" }}>
+                    Pairs this product photo with your step 1 full-body shot; see the merge in the live preview.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 w-full text-sm"
+                    disabled={!productGarmentRefIsUsable(product) || isApplying || !bodyBlob}
+                    onClick={() => void runTryOn(
+                      ToolName.TRY_ON_CLOTHES,
+                      product.title,
+                      () => vtoApi.clothes(bodyBlob as Blob, tryRef, clothesCategory),
+                      "body",
+                      { imageUrl: thumb || null },
+                    )}
+                  >
+                    Try On
+                  </button>
+                </article>
+              );
+            })}
           </div>
         </section>
       )}

@@ -266,13 +266,25 @@ async def call_api(task_type: str, image_bytes: bytes, params: dict[str, Any] | 
 async def call_vto(
     task_type: str,
     selfie_bytes: bytes,
-    ref_image_url: str,
+    ref_image_url: str | None = None,
     extra_params: dict[str, Any] | None = None,
+    *,
+    ref_bytes: bytes | None = None,
 ) -> dict:
-    """Convenience wrapper for VTO tasks that need selfie + reference image.
+    """VTO with reference via public URL or uploaded bytes (second file → ``ref_file_id``)."""
+    extra_params = extra_params or {}
+    version = _api_version(task_type)
 
-    - Uploads selfie as src_file_id
-    - Passes ref_file_url directly (public URL of garment/accessory/hairstyle)
-    """
-    params = {"ref_file_url": ref_image_url, **(extra_params or {})}
-    return await call_api(task_type, selfie_bytes, params)
+    async with httpx.AsyncClient(timeout=60) as client:
+        src_id = await upload_image(task_type, selfie_bytes, client)
+        if ref_bytes is not None:
+            ref_id = await upload_image(task_type, ref_bytes, client)
+            task_payload = {"src_file_id": src_id, "ref_file_id": ref_id, **extra_params}
+        else:
+            url = (ref_image_url or "").strip()
+            if not url:
+                raise ValueError("ref_image_url is required when ref_bytes is not set")
+            task_payload = {"src_file_id": src_id, "ref_file_url": url, **extra_params}
+
+        task_id = await _create_task(client, task_type, task_payload, version)
+        return await _poll_task_result(client, task_type, task_id, version)

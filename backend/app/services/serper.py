@@ -76,10 +76,10 @@ async def _search_serper(query: str, max_price: float | None = None) -> Dict:
                 "price": r.get("price", ""),
                 "source": r.get("source", ""),
                 "link": r.get("link", ""),
-                "imageUrl": r.get("imageUrl", ""),
+                "imageUrl": _normalize_shopping_image_url(r.get("imageUrl", "")),
                 "rating": r.get("rating"),
             }
-            for r in results[:5]  # Top 5 results
+            for r in results[:10]
         ]
         
         return {
@@ -88,6 +88,14 @@ async def _search_serper(query: str, max_price: float | None = None) -> Dict:
             "source": "serper",
             "count": len(products),
         }
+
+
+def _normalize_shopping_image_url(raw: object) -> str:
+    """Serper sometimes returns protocol-relative URLs; Perfect Corp needs absolute https."""
+    u = str(raw or "").strip()
+    if u.startswith("//"):
+        return f"https:{u}"
+    return u
 
 
 def _parse_price(price_str: str) -> float:

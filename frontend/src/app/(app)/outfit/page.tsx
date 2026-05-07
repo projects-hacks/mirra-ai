@@ -22,6 +22,7 @@ import { outfitAgentInsightFromApi } from "@/lib/agentAdapters";
 import { Occasion } from "@/lib/closet-constants";
 import { ToolName } from "@/lib/constants";
 import { resolveUserLocation } from "@/lib/userContext";
+import { normalizeHttpUrl, productGarmentRef } from "@/lib/productRefs";
 import { useAuth } from "@/hooks/useAuth";
 import type { AgentInsight, Product, WeatherInfo } from "@/types";
 
@@ -345,7 +346,8 @@ export default function OutfitPage() {
       .flatMap(([, items]) => items)
       .find((item) => item.imageUrl && !["shoes", "accessory", "jewelry", "bag", "hat", "scarf", "belt"].includes(item.category.toLowerCase()));
 
-    if (!topApparel?.imageUrl) {
+    const lookRef = topApparel ? normalizeHttpUrl(topApparel.imageUrl) : "";
+    if (!topApparel || !lookRef.startsWith("http")) {
       setError("No garment image is available to preview from this outfit.");
       return;
     }
@@ -356,7 +358,7 @@ export default function OutfitPage() {
     dispatch({ type: "SET_CURRENT_TOOL", payload: ToolName.TRY_ON_CLOTHES });
 
     try {
-      const result = await vtoApi.clothes(bodyBlob, topApparel.imageUrl, inferGarmentCategory(topApparel.category));
+      const result = await vtoApi.clothes(bodyBlob, lookRef, inferGarmentCategory(topApparel.category));
       const imageUrl = extractImageUrl(result);
       if (!imageUrl) throw new Error("Try-on preview came back without an image.");
 
@@ -396,7 +398,12 @@ export default function OutfitPage() {
     dispatch({ type: "SET_CURRENT_TOOL", payload: ToolName.TRY_ON_CLOTHES });
 
     try {
-      const result = await vtoApi.clothes(bodyBlob, product.imageUrl, vtoCategory);
+      const ref = productGarmentRef(product);
+      if (!ref) {
+        setError("This product has no image or link we can use for try-on.");
+        return;
+      }
+      const result = await vtoApi.clothes(bodyBlob, ref, vtoCategory);
       const imageUrl = extractImageUrl(result);
       if (!imageUrl) throw new Error("Product try-on did not return an image.");
 
