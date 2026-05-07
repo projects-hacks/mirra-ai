@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request, UploadFile
 
-from app.core.validation import ValidationError, validate
+from app.core.validation import ImageOrientationPolicy, ValidationError, prepare_image_bytes
 
 
 def require_auth_user_id(request: Request) -> str:
@@ -14,16 +14,20 @@ def require_auth_user_id(request: Request) -> str:
     return uid
 
 
-async def read_image(upload: UploadFile, label: str = "Selfie image") -> bytes:
-    """Read and validate an uploaded image payload."""
+async def read_image(
+    upload: UploadFile,
+    label: str = "Selfie image",
+    *,
+    orientation: ImageOrientationPolicy = ImageOrientationPolicy.FACE_AUTO,
+) -> bytes:
+    """Read an upload, normalize EXIF/orientation, and return JPEG bytes for the VTO pipeline."""
     image_bytes = await upload.read()
     if not image_bytes:
         raise HTTPException(status_code=400, detail=f"{label} is required")
     try:
-        validate(image_bytes)
+        return prepare_image_bytes(image_bytes, orientation)
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return image_bytes
 
 
 def resolve_user_id(request: Request, user_id: str | None) -> str | None:

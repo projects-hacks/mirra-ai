@@ -1,8 +1,8 @@
 // Mirra PWA Service Worker - Enterprise Implementation
-// Version: 2.1.1
+// Version: 2.1.4
 // Strategy: Network-first for dynamic content, Cache-first for static assets
 
-const CACHE_VERSION = "v2.1.3";
+const CACHE_VERSION = "v2.1.4";
 const CACHE_NAMES = {
   static: `mirra-static-${CACHE_VERSION}`,
   dynamic: `mirra-dynamic-${CACHE_VERSION}`,
@@ -71,8 +71,18 @@ globalThis.addEventListener("fetch", (event) => {
 
 /** Determine if a request should bypass the service worker entirely */
 function shouldBypassCache(request, url) {
+  if (request.method !== "GET") return true;
+
+  // Next.js App Router — do not intercept flight/RSC fetches or the SW may replace
+  // failed network responses with a synthetic 503 and break client navigations.
+  const accept = request.headers.get("Accept") || "";
+  if (accept.includes("text/x-component")) return true;
+  if (request.headers.get("RSC") === "1") return true;
+  if (request.headers.get("Next-Router-State-Tree")) return true;
+  if (request.headers.get("Next-Router-Prefetch") === "1") return true;
+  if (url.searchParams.has("_rsc")) return true;
+
   return (
-    request.method !== "GET" ||
     // HTML / client navigations — do not intercept (Next.js RSC + avoids SW fetch failures on soft nav).
     request.mode === "navigate" ||
     url.pathname.startsWith("/_next/") ||

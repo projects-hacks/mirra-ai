@@ -9,8 +9,10 @@ from pydantic import BaseModel
 from app.models.perfectcorp_types import VTOImageResponseModel
 from app.services import perfectcorp
 from app.core.deps import read_image
+from app.core.validation import ImageOrientationPolicy
 from app.services.product_image_resolver import ProductImageResolverError, resolve_product_image
 from app.tools import fashion_tools, beauty_tools, accessory_tools, hair_tools
+from app.tools.makeup_effect_normalize import normalize_makeup_effects
 from app.tools.base_vto import extract_result_image_url
 
 router = APIRouter()
@@ -134,7 +136,10 @@ async def try_on_clothes(
     garment_url: str = Form(...),
     garment_category: str = Form(default="upper"),
 ) -> dict[str, Any]:
-    selfie_bytes = await read_image(selfie)
+    selfie_bytes = await read_image(
+        selfie,
+        orientation=ImageOrientationPolicy.ALLOW_LANDSCAPE,
+    )
     resolved_url = await _resolve_reference_url(garment_url)
     provider_category = CLOTHES_CATEGORY_MAP.get(garment_category)
     if not provider_category:
@@ -182,6 +187,16 @@ async def try_on_makeup(
                 perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
                 "The makeup configuration must be a list of effects.",
                 provider_message="effects must be a JSON array",
+                source="makeup",
+            ),
+        )
+    if not normalize_makeup_effects(parsed_effects):
+        raise HTTPException(
+            status_code=400,
+            detail=_detail(
+                perfectcorp.MirraErrorCategory.INVALID_INPUT.value,
+                "At least one valid makeup effect is required.",
+                provider_message="effects array contained no usable effect objects",
                 source="makeup",
             ),
         )
