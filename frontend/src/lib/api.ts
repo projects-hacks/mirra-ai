@@ -87,6 +87,8 @@ export interface ResolvedProductImage {
 export interface OutfitMatchResponse {
   matches?: Record<string, unknown[]>;
   gaps?: unknown[];
+  gap_fill_queries?: Record<string, string>;
+  agent_insight?: Record<string, unknown>;
   context?: Record<string, unknown>;
   [key: string]: unknown;
 }

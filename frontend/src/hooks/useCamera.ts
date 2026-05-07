@@ -30,6 +30,9 @@ interface UseCameraOptions {
   cropToPortrait?: boolean;
   mirrorCapture?: boolean;
   facingMode?: "user" | "environment";
+  /** Ideal capture size hints for getUserMedia (device may ignore or approximate). */
+  idealWidth?: number;
+  idealHeight?: number;
 }
 
 /**
@@ -43,6 +46,8 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     cropToPortrait = true,
     mirrorCapture = true,
     facingMode = CAMERA.FACING_MODE,
+    idealWidth = 1280,
+    idealHeight = 720,
   } = options;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -75,8 +80,8 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: idealWidth },
+            height: { ideal: idealHeight },
           },
           audio: false,
         });
@@ -131,7 +136,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       streamRef.current = null;
       setIsReady(false);
     };
-  }, [enabled, facingMode]);
+  }, [enabled, facingMode, idealWidth, idealHeight]);
 
   const streamAttachedRef = useRef(false);
 

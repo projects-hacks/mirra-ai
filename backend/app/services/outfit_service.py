@@ -3,10 +3,58 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.agent import agent_service
 from app.services.context_builder import build_match_context
-from app.services.matching_engine import matching_engine
+from app.services.matching_engine import MatchContext, matching_engine
 from app.services.proof_card_generator import proof_card_generator
 from app.services.supabase_client import supabase
+
+
+def shopping_queries_for_gaps(gaps: list[str], context: MatchContext) -> dict[str, str]:
+    """Map matcher gap sentences to Google Shopping style queries (Serper).
+
+    Raw gaps like \"No shoes for work\" are human-readable but poor search keywords.
+    Queries stay gender-neutral for inclusive demos; occasion + formality + season
+    still anchor Serper results.
+    """
+    occasion = context.occasion.value
+    formality = (context.formality or "smart casual").lower()
+    season = context.season.value
+    queries: dict[str, str] = {}
+
+    for gap in gaps:
+        gl = gap.lower()
+        if "empty" in gl and "closet" in gl:
+            queries[gap] = f"wardrobe capsule essentials minimalist {occasion} {season}"
+            continue
+        if "shoes" in gl or "boot" in gl or "sneaker" in gl:
+            if "low-scoring" in gl:
+                queries[gap] = f"{occasion} shoes {formality} leather closed toe {season}"
+            else:
+                queries[gap] = f"professional {occasion} shoes office {formality} closed toe"
+            continue
+        if "dress" in gl:
+            queries[gap] = f"{occasion} {formality} dress {season}"
+            continue
+        if "bottom" in gl or "pants" in gl or "jeans" in gl or "skirt" in gl:
+            queries[gap] = f"{occasion} {formality} pants trousers {season}"
+            continue
+        if "top" in gl or "shirt" in gl or "blouse" in gl or "sweater" in gl:
+            queries[gap] = f"{occasion} {formality} shirt blouse top {season}"
+            continue
+        if "accessor" in gl or "jewelry" in gl or "jewellery" in gl:
+            queries[gap] = f"{occasion} {formality} jewelry earrings necklace minimalist"
+            continue
+        # Fallback: strip narrative prefix
+        condensed = (
+            gap.replace("No ", "")
+            .replace("Low-scoring ", "")
+            .replace(" (consider alternatives)", "")
+            .strip()
+        )
+        queries[gap] = f"buy {condensed} {occasion}"
+
+    return queries
 
 
 async def match_closet(
@@ -32,9 +80,24 @@ async def match_closet(
         closet_items = response.data if response.data else []
 
         if not closet_items:
+            empty_gaps = ["Your closet is empty. Add items to get personalized matches."]
+            gap_fill = shopping_queries_for_gaps(empty_gaps, context)
+            agent_insight = await agent_service.generate_outfit_reasoning(
+                {},
+                empty_gaps,
+                {
+                    "occasion": context.occasion.value,
+                    "weather": f"{context.weather_temp}°F, {context.weather_condition}",
+                    "season": context.season.value,
+                    "formality": context.formality,
+                    "shopping_queries": gap_fill,
+                },
+            )
             return {
                 "matches": {},
-                "gaps": ["Your closet is empty. Add items to get personalized matches."],
+                "gaps": empty_gaps,
+                "gap_fill_queries": gap_fill,
+                "agent_insight": agent_insight,
                 "context": {
                     "occasion": context.occasion.value,
                     "weather": f"{context.weather_temp}°F, {context.weather_condition}",
@@ -61,9 +124,25 @@ async def match_closet(
             for category, matches_list in matches.items()
         }
 
+        gap_fill_queries = shopping_queries_for_gaps(gaps, context)
+        ctx_dict = {
+            "occasion": context.occasion.value,
+            "weather": f"{context.weather_temp}°F, {context.weather_condition}",
+            "season": context.season.value,
+            "formality": context.formality,
+            "shopping_queries": gap_fill_queries,
+        }
+        agent_insight = await agent_service.generate_outfit_reasoning(
+            formatted_matches,
+            gaps,
+            ctx_dict,
+        )
+
         return {
             "matches": formatted_matches,
             "gaps": gaps,
+            "gap_fill_queries": gap_fill_queries,
+            "agent_insight": agent_insight,
             "context": {
                 "occasion": context.occasion.value,
                 "weather": f"{context.weather_temp}°F, {context.weather_condition}",
@@ -80,6 +159,8 @@ def generate_proof_card(user_id: str | None, args: dict[str, Any]) -> dict[str, 
     """Generate and persist a proof card for a selected outfit."""
     if not user_id:
         return {"error": "User authentication required for proof card generation"}
+    if not supabase:
+        return {"error": "Supabase is not configured; cannot persist proof cards."}
 
     try:
         look_name = args.get("look_name", "Your Look")
@@ -89,16 +170,17 @@ def generate_proof_card(user_id: str | None, args: dict[str, Any]) -> dict[str, 
 
         vto_result = {"image_url": vto_image_url} if vto_image_url else None
 
+        # Avoid .single(): many users have no body_model row; PostgREST returns an error for 0 rows.
         user_profile = None
-        result = (
+        bm_result = (
             supabase.table("body_model")
             .select("color_palette, skin_scores")
             .eq("user_id", user_id)
-            .single()
+            .limit(1)
             .execute()
         )
-        if result.data:
-            user_profile = result.data
+        if bm_result.data:
+            user_profile = bm_result.data[0]
 
         closet_items = [item for item in selected_items if item.get("owned", False)]
         context = {

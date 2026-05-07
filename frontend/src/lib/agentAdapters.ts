@@ -51,3 +51,39 @@ export function tryOnPlanToAgentInsight(plan: GlowupPlan | null): AgentInsight |
     toolsUsed: plan.tool_calls_made ?? [],
   };
 }
+
+/** Outfit `/match` returns `agent_insight` from Gemini (or fallback) — normalize for AgentInsightCard. */
+export function outfitAgentInsightFromApi(payload: unknown): AgentInsight | null {
+  if (!payload || typeof payload !== "object") return null;
+  const raw = payload as Record<string, unknown>;
+  const stepsRaw = raw.steps;
+  const recRaw = raw.recommendations;
+  const steps = Array.isArray(stepsRaw)
+    ? stepsRaw.map((s) => {
+        const step = s as Record<string, unknown>;
+        const icon = typeof step.icon === "string" ? step.icon : "check";
+        const allowed = ["scan", "weather", "history", "palette", "face", "sparkle", "closet", "gap", "check"];
+        return {
+          icon: (allowed.includes(icon) ? icon : "check") as AgentInsight["steps"][0]["icon"],
+          text: String(step.text ?? ""),
+          status: (typeof step.status === "string" ? step.status : "complete") as AgentInsight["steps"][0]["status"],
+        };
+      })
+    : [];
+  const recommendations = Array.isArray(recRaw)
+    ? recRaw.map((r) => {
+        const item = r as Record<string, unknown>;
+        return {
+          title: String(item.title ?? ""),
+          description: String(item.description ?? item.why ?? ""),
+          action: typeof item.action === "string" ? item.action : undefined,
+        };
+      })
+    : [];
+  return {
+    steps,
+    insight: String(raw.insight ?? ""),
+    recommendations,
+    toolsUsed: Array.isArray(raw.tool_calls_made) ? raw.tool_calls_made.map(String) : [],
+  };
+}

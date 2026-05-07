@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Sparkles, Upload } from "lucide-react";
+import { CheckCircle2, Download, LoaderCircle, RotateCcw, Save, Search, Smartphone, Sparkles, SwitchCamera, Upload } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { tryOnPlanToAgentInsight } from "@/lib/agentAdapters";
 import { extractImageUrl, formatApiError, glowupApi, outfitApi, productsApi, vtoApi, type VtoImageResponse } from "@/lib/api";
@@ -272,6 +272,8 @@ export default function TryOnPage() {
   const [bodyBlob, setBodyBlob] = useState<Blob | null>(null);
   const [bodyImageStatus, setBodyImageStatus] = useState<string | null>(null);
   const [showBodyCamera, setShowBodyCamera] = useState(false);
+  /** Rear (environment) camera is default so you can step back for a full-body shot on a phone. */
+  const [bodyCameraFacing, setBodyCameraFacing] = useState<"user" | "environment">("environment");
 
   const [clothesUrl, setClothesUrl] = useState("");
   const [clothesCategory, setClothesCategory] = useState<"upper" | "lower" | "full">("upper");
@@ -294,7 +296,9 @@ export default function TryOnPage() {
     enabled: showBodyCamera,
     cropToPortrait: false,
     mirrorCapture: false,
-    facingMode: "user",
+    facingMode: bodyCameraFacing,
+    idealWidth: 1920,
+    idealHeight: 1080,
   });
 
   const activeBaseImage = activeTab === "clothes" ? bodyImage : selfie;
@@ -525,8 +529,10 @@ export default function TryOnPage() {
   }
 
   async function handleBodyImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) {
-      setBodyImageStatus("Use a JPG or PNG full-body image.");
+    const looksLikeImage =
+      file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
+    if (!looksLikeImage) {
+      setBodyImageStatus("Choose an image file (JPG, PNG, WebP, HEIC, or similar).");
       return;
     }
 
@@ -769,37 +775,56 @@ export default function TryOnPage() {
                   Perfect Corp clothes try-on needs a full-body photo: head to toe visible, straight pose, arms slightly away from the body, even lighting, and a plain background.
                 </p>
               </div>
-              <label className="btn-secondary w-full cursor-pointer sm:w-auto">
-                <Upload size={16} className="mr-2 inline" />
-                Upload Full-Body Image
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) {
-                      void handleBodyImageUpload(file);
-                    }
-                    event.currentTarget.value = "";
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[280px]">
+                <label className="btn-secondary w-full cursor-pointer">
+                  <Upload size={16} className="mr-2 inline" />
+                  Upload from gallery
+                  <input
+                    type="file"
+                    accept="image/*,.heic,.heif"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) {
+                        void handleBodyImageUpload(file);
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                <label className="btn-secondary w-full cursor-pointer">
+                  <Smartphone size={16} className="mr-2 inline" />
+                  Take photo (phone camera)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) {
+                        void handleBodyImageUpload(file);
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  onClick={() => {
+                    setBodyImageStatus(null);
+                    setShowBodyCamera((current) => {
+                      if (current) {
+                        stopBodyCamera();
+                      }
+                      return !current;
+                    });
                   }}
-                />
-              </label>
-              <button
-                type="button"
-                className="btn-secondary w-full sm:w-auto"
-                onClick={() => {
-                  setBodyImageStatus(null);
-                  setShowBodyCamera((current) => {
-                    if (current) {
-                      stopBodyCamera();
-                    }
-                    return !current;
-                  });
-                }}
-              >
-                {showBodyCamera ? "Close Camera" : "Capture With Camera"}
-              </button>
+                >
+                  {showBodyCamera ? "Close in-browser camera" : "Capture in browser"}
+                </button>
+              </div>
             </div>
             <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3" style={{ color: "var(--on-surface-variant)" }}>
               <p>• Head to toe visible</p>
@@ -820,13 +845,38 @@ export default function TryOnPage() {
                     muted
                   />
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-                    Capture a portrait full-body frame with the subject visible head to toe.
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                        bodyCameraFacing === "environment"
+                          ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--on-surface)]"
+                          : "border-white/20 bg-white/5"
+                      }`}
+                      onClick={() => setBodyCameraFacing("environment")}
+                    >
+                      <SwitchCamera size={14} className="mr-1.5 inline opacity-80" />
+                      Back camera
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                        bodyCameraFacing === "user"
+                          ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--on-surface)]"
+                          : "border-white/20 bg-white/5"
+                      }`}
+                      onClick={() => setBodyCameraFacing("user")}
+                    >
+                      Front camera
+                    </button>
+                  </div>
+                  <p className="text-sm sm:max-w-md" style={{ color: "var(--on-surface-variant)" }}>
+                    Hold the phone vertically, use <strong className="font-semibold opacity-95">back camera</strong> to step back for head-to-toe framing, or switch to front if you need a selfie-style setup.
                   </p>
                   <button
                     type="button"
-                    className="btn-primary w-full sm:w-auto"
+                    className="btn-primary w-full sm:w-auto sm:shrink-0"
                     disabled={!isBodyCameraReady}
                     onClick={() => void handleBodyCameraCapture()}
                   >

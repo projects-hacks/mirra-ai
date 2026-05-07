@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CloudSun, LoaderCircle, Shirt, Sparkles, Wand2 } from "lucide-react";
 import ProofCard from "@/components/cards/ProofCard";
+import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import { useToast } from "@/components/ui/Toast";
 import { useAppDispatch, useAppState } from "@/components/providers/AppProvider";
 import {
@@ -17,11 +18,12 @@ import {
   vtoApi,
   weatherApi,
 } from "@/lib/api";
+import { outfitAgentInsightFromApi } from "@/lib/agentAdapters";
 import { Occasion } from "@/lib/closet-constants";
 import { ToolName } from "@/lib/constants";
 import { resolveUserLocation } from "@/lib/userContext";
 import { useAuth } from "@/hooks/useAuth";
-import type { Product, WeatherInfo } from "@/types";
+import type { AgentInsight, Product, WeatherInfo } from "@/types";
 
 type OccasionOption = {
   value: string;
@@ -43,11 +45,13 @@ type MatchItem = {
 type MatchResponse = {
   matches: Record<string, MatchItem[]>;
   gaps: string[];
+  gap_fill_queries?: Record<string, string>;
+  agent_insight?: Record<string, unknown>;
   context?: {
     occasion?: string;
     weather?: string;
     season?: string;
-    formality?: number;
+    formality?: number | string;
     color_analysis?: string;
   };
 };
@@ -81,6 +85,29 @@ function inferGarmentCategory(category: string): "upper" | "lower" | "full" {
   const normalized = category.toLowerCase();
   if (["dress"].includes(normalized)) return "full";
   if (["pants", "jeans", "shorts", "skirt"].includes(normalized)) return "lower";
+  return "upper";
+}
+
+/** Clothes VTO only supports garments; shoes and most accessories need the product link instead. */
+function gapSupportsClothesVto(gap: string): "upper" | "lower" | "full" | null {
+  const g = gap.toLowerCase();
+  if (
+    g.includes("shoe") ||
+    g.includes("sneaker") ||
+    g.includes("boot") ||
+    g.includes("accessor") ||
+    g.includes("jewelry") ||
+    g.includes("jewellery") ||
+    g.includes("bag") ||
+    g.includes("belt") ||
+    g.includes("hat") ||
+    g.includes("scarf")
+  ) {
+    return null;
+  }
+  if (g.includes("dress")) return "full";
+  if (g.includes("bottom")) return "lower";
+  if (g.includes("top")) return "upper";
   return "upper";
 }
 
@@ -183,6 +210,8 @@ export default function OutfitPage() {
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResponse | null>(null);
   const [gapProducts, setGapProducts] = useState<Record<string, Product[]>>({});
+  const [gapSearchQueries, setGapSearchQueries] = useState<Record<string, string>>({});
+  const [outfitInsight, setOutfitInsight] = useState<AgentInsight | null>(null);
   const [gapStatuses, setGapStatuses] = useState<Record<string, string>>({});
   const [selectedGapProducts, setSelectedGapProducts] = useState<Record<string, Product>>({});
   const [proofCard, setProofCard] = useState<ProofCardShape | null>(null);
@@ -246,6 +275,8 @@ export default function OutfitPage() {
     setProofCardApproved(false);
     setError(null);
     setOutfitPreviewImage(null);
+    setOutfitInsight(null);
+    setGapSearchQueries({});
     setIsLoading(true);
 
     try {
@@ -258,13 +289,19 @@ export default function OutfitPage() {
       ]);
 
       setWeather(weatherInfo);
-      setMatchResult(match as MatchResponse);
+      const m = match as MatchResponse;
+      setMatchResult(m);
 
-      const gapList = ((match as MatchResponse).gaps ?? []).slice(0, 3);
+      const fillMap = m.gap_fill_queries ?? {};
+      setGapSearchQueries(fillMap);
+      setOutfitInsight(outfitAgentInsightFromApi(m.agent_insight ?? null));
+
+      const gapList = (m.gaps ?? []).slice(0, 3);
       if (gapList.length > 0) {
         const productEntries = await Promise.allSettled(
           gapList.map(async (gap) => {
-            const response = await productsApi.search(gap);
+            const q = fillMap[gap] ?? gap;
+            const response = await productsApi.search(q);
             return [gap, response.products.slice(0, 4)] as const;
           })
         );
@@ -342,7 +379,12 @@ export default function OutfitPage() {
     setSelectedGapProducts((prev) => ({ ...prev, [gap]: product }));
   }
 
-  async function handleTryGapProduct(product: Product) {
+  async function handleTryGapProduct(gap: string, product: Product) {
+    const vtoCategory = gapSupportsClothesVto(gap);
+    if (!vtoCategory) {
+      showToast("Clothes preview only works for tops, bottoms, and dresses. Use Shop for shoes and accessories.", "info");
+      return;
+    }
     if (!bodyBlob) {
       setError("Add a full-body image in Try-On Studio before previewing clothes from Outfit Builder.");
       return;
@@ -354,7 +396,7 @@ export default function OutfitPage() {
     dispatch({ type: "SET_CURRENT_TOOL", payload: ToolName.TRY_ON_CLOTHES });
 
     try {
-      const result = await vtoApi.clothes(bodyBlob, product.imageUrl, "upper");
+      const result = await vtoApi.clothes(bodyBlob, product.imageUrl, vtoCategory);
       const imageUrl = extractImageUrl(result);
       if (!imageUrl) throw new Error("Product try-on did not return an image.");
 
@@ -514,6 +556,10 @@ export default function OutfitPage() {
         </section>
       )}
 
+      {selectedOccasion && (isLoading || outfitInsight) && (
+        <AgentInsightCard insight={outfitInsight} isLoading={isLoading && !outfitInsight} />
+      )}
+
       {selectedOccasion && weather && (
         <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="glass-card p-5">
@@ -570,7 +616,7 @@ export default function OutfitPage() {
             <p className="label-caps">Step 3</p>
             <h2 className="mt-2 text-2xl">Fill the gaps</h2>
             <p className="mt-2 text-sm leading-6" style={{ color: "var(--on-surface-variant)" }}>
-              The matcher found a few missing pieces. Pick one if you want it included in the proof card.
+              The matcher found a few missing pieces. Products are loaded with a refined shopping query (Serper). Try On works for apparel gaps only.
             </p>
           </div>
 
@@ -580,9 +626,11 @@ export default function OutfitPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold">{gap}</h3>
-                    <p className="mt-1 text-sm" style={{ color: "var(--on-surface-variant)" }}>
-                      Shop options pulled from product search.
-                    </p>
+                    {gapSearchQueries[gap] && (
+                      <p className="mt-1 text-xs leading-5" style={{ color: "var(--on-surface-variant)" }}>
+                        Shopping query: <span className="font-medium opacity-95">{gapSearchQueries[gap]}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -594,6 +642,7 @@ export default function OutfitPage() {
                   )}
                   {(gapProducts[gap] ?? []).map((product) => {
                     const isSelected = selectedGapProducts[gap]?.link === product.link;
+                    const canTryOn = Boolean(bodyBlob && gapSupportsClothesVto(gap));
                     return (
                       <article
                         key={`${gap}-${product.link}`}
@@ -611,9 +660,18 @@ export default function OutfitPage() {
                           <button type="button" className="btn-secondary flex-1 text-xs" onClick={() => handleSelectGapProduct(gap, product)}>
                             {isSelected ? "Selected" : "Add To Look"}
                           </button>
-                          <button type="button" className="btn-primary text-xs" onClick={() => void handleTryGapProduct(product)} disabled={isTryingOn || !bodyBlob}>
+                          <button
+                            type="button"
+                            className="btn-primary text-xs disabled:opacity-45"
+                            title={!gapSupportsClothesVto(gap) ? "Clothes try-on only" : !bodyBlob ? "Add a full-body image in Try-On Studio" : undefined}
+                            onClick={() => void handleTryGapProduct(gap, product)}
+                            disabled={isTryingOn || !canTryOn}
+                          >
                             Try On
                           </button>
+                          <a href={product.link} target="_blank" rel="noreferrer" className="btn-secondary px-2 text-xs">
+                            Shop
+                          </a>
                         </div>
                       </article>
                     );

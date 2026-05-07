@@ -331,12 +331,13 @@ Return this exact JSON schema:
       "action": "string"
     }}
   ],
-  "tool_calls_made": ["closet-match", "weather", "products"]
+  "tool_calls_made": ["closet-match", "weather", "serper-shopping"]
 }}
 
 Requirements:
 - Explain why the selected closet items work.
 - Call out missing pieces plainly when gaps exist.
+- If CONTEXT includes shopping_queries, briefly reference those search strings so the user sees how product options were retrieved.
 - Include 2 to 4 recommendations.
 - Do not include markdown.
 """
@@ -517,7 +518,7 @@ Requirements:
                     "action": "/outfit",
                 },
             ],
-            "tool_calls_made": ["closet-match", *(["products"] if gaps else [])],
+            "tool_calls_made": ["closet-match", *(["serper-shopping"] if gaps else [])],
         }
 
 
