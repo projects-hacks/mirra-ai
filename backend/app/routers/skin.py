@@ -1,6 +1,7 @@
 """Skin REST endpoints built directly on top of existing skin tools."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -280,7 +281,20 @@ async def get_skin_insights(request: Request) -> dict[str, Any]:
             scan_weather = None
 
     try:
-        return await agent_service.generate_skin_insights(
+        return await asyncio.wait_for(
+            agent_service.generate_skin_insights(
+                scores=latest_scan.get("scores") or {},
+                skin_tone=skin_tone,
+                weather=scan_weather,
+                history=scans[1:],
+            ),
+            timeout=48.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "skin_insights exceeded 48s budget (proxy timeout prevention); returning heuristic fallback"
+        )
+        return agent_service.skin_insights_fallback_response(
             scores=latest_scan.get("scores") or {},
             skin_tone=skin_tone,
             weather=scan_weather,

@@ -22,7 +22,8 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".heic")
 SUPPORTED_OUTPUT_TYPES = {"image/jpeg", "image/png"}
 REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; MirraProductResolver/1.0)",
-    "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    # Prefer raster formats CDNs can return as real JPEG/PNG (avoids WebP/AVIF decode gaps for refs).
+    "Accept": "image/jpeg,image/png,image/webp;q=0.9,image/*;q=0.7,*/*;q=0.5",
 }
 MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
 MAX_REDIRECTS = 5

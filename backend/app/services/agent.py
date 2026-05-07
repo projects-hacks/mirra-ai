@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.core import cache
 from app.core.config import settings
 from app.core.constants import CachePrefix
-from app.core.llm_config import GEMINI_TIMEOUT_SECONDS
+from app.core.llm_config import GEMINI_SKIN_INSIGHTS_TIMEOUT_SECONDS, GEMINI_TIMEOUT_SECONDS
 from app.services.gemini_client import gemini_configured, gemini_generate_content
 
 logger = logging.getLogger(__name__)
@@ -265,13 +265,13 @@ Requirements:
                 "temperature": 0.35,
                 "topP": 0.95,
                 "topK": 40,
-                "maxOutputTokens": 1024,
+                "maxOutputTokens": 768,
                 "responseMimeType": "application/json",
             },
         }
 
         try:
-            async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(timeout=GEMINI_SKIN_INSIGHTS_TIMEOUT_SECONDS) as client:
                 response = await gemini_generate_content(client, payload)
                 response.raise_for_status()
                 content = _extract_text(response.json())
@@ -484,6 +484,16 @@ Requirements:
             ],
             "tool_calls_made": ["skin-analysis", *(["weather"] if weather else []), *(["history"] if has_history else [])],
         }
+
+    def skin_insights_fallback_response(
+        self,
+        scores: dict[str, Any],
+        skin_tone: dict[str, Any] | None,
+        weather: dict[str, Any] | None,
+        history: list[dict[str, Any]] | None,
+    ) -> dict[str, Any]:
+        """Public wrapper for heuristic skin guidance (used when LLM is skipped or time budget is exceeded)."""
+        return self._fallback_skin_insights(scores, skin_tone, weather, history)
 
     def _fallback_outfit_reasoning(
         self,

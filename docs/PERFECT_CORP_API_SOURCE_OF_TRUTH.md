@@ -322,42 +322,39 @@ Endpoints:
 Inputs:
 
 - `src_file_id` or `src_file_url`
-- `effects`: array of makeup effect objects.
+- `version`: optional string, default `"1.0"` (effect spec version).
+- `effects`: array of makeup effect objects. Each object **`category` is a snake_case string** matching the Perfect Corp Makeup task schema (not display names with spaces).
 
-Effect shape:
+Minimal examples — real payloads are stricter per category (required palette keys differ).
 
 ```json
 {
   "category": "blush",
-  "pattern": { "name": "2colors6" },
+  "pattern": { "name": "1color1" },
   "palettes": [
     { "color": "#FF0000", "texture": "matte", "colorIntensity": 50 }
   ]
 }
 ```
 
-Known category families from docs:
+**API `category` values (const strings):**
 
-- skin smoothing
-- blush
-- bronzer
-- concealer
-- contour
-- eyebrows
-- eyeliner
-- eye shadow
-- eyelashes
-- foundation
-- highlighter
-- lip color
-- lip liner
+- `skin_smooth` — top-level `skinSmoothStrength`, `skinSmoothColorIntensity` (0–100); not a palette effect.
+- `blush` — `pattern.name` must be a **`label` from** [blush.json](https://plugins-media.makeupar.com/wcm-saas/patterns/blush.json). `palettes` count must match pattern `colorNum`. Texture enum: `matte`, `satin`, `shimmer` (satin/shimmer add required fields per docs).
+- `bronzer`, `contour`, `highlighter` — pattern catalogs: [bronzer](https://plugins-media.makeupar.com/wcm-saas/patterns/bronzer.json), [contour](https://plugins-media.makeupar.com/wcm-saas/patterns/contour.json), [highlighter](https://plugins-media.makeupar.com/wcm-saas/patterns/highlighter.json).
+- `concealer` — palettes require `colorUnderEyeIntensity`, `coverageLevel`, etc.
+- `eyebrows` — `pattern` includes `type` (`shape` / `color`) and shape sliders; palette textures: `matte`, `shimmer`.
+- `eye_liner` — [eyeliner.json](https://plugins-media.makeupar.com/wcm-saas/patterns/eyeliner.json); palette textures: `matte`, `shimmer`, `metallic`.
+- `eye_shadow` — [eyeshadow.json](https://plugins-media.makeupar.com/wcm-saas/patterns/eyeshadow.json); same palette texture enum as eye liner.
+- `eyelashes` — [eyelashes.json](https://plugins-media.makeupar.com/wcm-saas/patterns/eyelashes.json).
+- `foundation` — palettes require `glowIntensity`, `coverageIntensity`, not only `colorIntensity`.
+- `highlighter` — palettes require glow + shimmer fields (`glowIntensity`, `shimmerIntensity`, `shimmerDensity`, `shimmerSize`, …).
+- `lip_color` — `shape.name` from [lipshape.json](https://plugins-media.makeupar.com/wcm-saas/shapes/lipshape.json), `style.type` (`full` / `ombre` / `twoTone`), `morphology` optional; palette textures: `matte`, `gloss`, `holographic`, `metallic`, `satin`, `sheer`, `shimmer` with category-specific required extras (`gloss`, `transparencyIntensity`, shimmer fields, …).
+- `lip_liner` — [lipliner.json](https://plugins-media.makeupar.com/wcm-saas/patterns/lipliner.json); palette textures: `matte`, `satin`, plus `thickness`, `smoothness`.
 
-Texture/finish examples:
+**Mirra backend:** UI presets may use friendly names (`lipstick`, `eyeshadow`, `eyeliner`, …). The server **normalizes** these to the API snake_case categories and fills required palette fields before calling Perfect Corp. Pattern names in presets must be valid catalog `label` values unless using Mirra defaults.
 
-- matte
-- shimmer
-- satin
-- metallic
+**Image constraints (makeup-vto):** long side &lt; 1920, face width ≥ 100px, &lt; 10 MB, jpg/jpeg/png (see Perfect Corp Makeup VTO error table in their reference).
 
 Mirra UI:
 
