@@ -141,29 +141,40 @@ function styleCameraKitRoot(element: HTMLElement) {
   applyImportantStyle(element, "position", "fixed");
   applyImportantStyle(element, "top", "env(safe-area-inset-top, 0px)");
   applyImportantStyle(element, "bottom", "env(safe-area-inset-bottom, 0px)");
-  applyImportantStyle(element, "left", "50%");
-  applyImportantStyle(element, "transform", "translateX(-50%)");
-  applyImportantStyle(element, "width", "min(100vw, var(--camera-kit-stage-width, 520px))");
+  applyImportantStyle(element, "left", "0");
+  applyImportantStyle(element, "right", "0");
+  applyImportantStyle(element, "transform", "none");
+  applyImportantStyle(element, "width", "100vw");
+  applyImportantStyle(element, "max-width", "100vw");
   applyImportantStyle(
     element,
     "height",
     "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))"
   );
-  applyImportantStyle(element, "max-width", "none");
   applyImportantStyle(element, "max-height", "none");
   applyImportantStyle(element, "margin", "0");
   applyImportantStyle(element, "padding", "0");
+  applyImportantStyle(element, "box-sizing", "border-box");
   applyImportantStyle(element, "z-index", "80");
   applyImportantStyle(element, "background", "#050712");
-  applyImportantStyle(element, "overflow", "visible");
+  applyImportantStyle(element, "overflow", "hidden");
   applyImportantStyle(element, "box-shadow", "0 0 0 9999px rgba(5, 7, 18, 0.92)");
+
+  /* Vendor often nests a full-width row; kill accidental max-width from their CSS */
+  Array.from(element.children).forEach((child) => {
+    if (child instanceof HTMLElement) {
+      applyImportantStyle(child, "width", "100%");
+      applyImportantStyle(child, "max-width", "100%");
+      applyImportantStyle(child, "box-sizing", "border-box");
+    }
+  });
 
   element.querySelectorAll<HTMLElement>("iframe, video, canvas").forEach((child) => {
     applyImportantStyle(child, "width", "100%");
     applyImportantStyle(child, "height", "100%");
-    applyImportantStyle(child, "max-width", "none");
+    applyImportantStyle(child, "max-width", "100%");
     applyImportantStyle(child, "max-height", "none");
-    applyImportantStyle(child, "object-fit", "contain");
+    applyImportantStyle(child, "object-fit", "cover");
   });
 }
 
