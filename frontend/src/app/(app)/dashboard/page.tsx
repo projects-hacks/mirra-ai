@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Camera, CloudSun, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, CloudSun, Sparkles, Target } from "lucide-react";
 import AgentInsightCard from "@/components/dashboard/AgentInsightCard";
 import RecentLooksRow from "@/components/dashboard/RecentLooksRow";
 import SkinSummaryCard from "@/components/dashboard/SkinSummaryCard";
@@ -75,7 +75,7 @@ export default function DashboardPage() {
               <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Skin Score</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/12">
-              <ScanFace size={16} className="text-white/65" aria-hidden="true" />
+              <Target size={16} className="text-white/65" aria-hidden="true" />
               <p className="metric-display mt-3 text-2xl">{isLoading ? "--" : focusCount}</p>
               <p className="eyebrow mt-1 text-[0.65rem] text-white/48">Focus</p>
             </div>
