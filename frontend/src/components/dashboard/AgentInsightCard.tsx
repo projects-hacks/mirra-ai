@@ -42,6 +42,17 @@ const STEP_ICONS: Record<AgentStep["icon"], LucideIcon> = {
   check: CheckCircle2,
 };
 
+type ActionKind = "internal" | "external" | "none";
+
+function classifyAction(action: string | undefined | null): { kind: ActionKind; href: string | null } {
+  if (typeof action !== "string") return { kind: "none", href: null };
+  const trimmed = action.trim();
+  if (!trimmed) return { kind: "none", href: null };
+  if (trimmed.startsWith("/")) return { kind: "internal", href: trimmed };
+  if (/^https?:\/\//i.test(trimmed)) return { kind: "external", href: trimmed };
+  return { kind: "none", href: null };
+}
+
 function StepIcon({ step, visible, nebula }: Readonly<{ step: AgentStep; visible: boolean; nebula: boolean }>) {
   if (!visible || step.status === "running" || step.status === "pending") {
     return (
@@ -210,15 +221,10 @@ export default function AgentInsightCard({
         <p className={`text-base leading-7 ${nebula ? "text-[var(--on-surface)]" : "text-white/86"}`}>{insight.insight}</p>
         <div className="mt-5 flex flex-wrap gap-2">
           {insight.recommendations.map((recommendation) => {
-            if (!recommendation.action) {
-              return (
-                <span key={recommendation.title} className={recommendationClassName}>
-                  {recommendation.title}
-                </span>
-              );
-            }
+            const { kind, href } = classifyAction(recommendation.action);
 
-            if (onRecommendationTap) {
+            // Tap handler always wins, regardless of the action shape.
+            if (recommendation.action && onRecommendationTap) {
               return (
                 <button
                   key={recommendation.title}
@@ -231,10 +237,34 @@ export default function AgentInsightCard({
               );
             }
 
+            if (kind === "internal" && href) {
+              return (
+                <Link key={recommendation.title} href={href} className={recommendationClassName}>
+                  {recommendation.title}
+                </Link>
+              );
+            }
+
+            if (kind === "external" && href) {
+              return (
+                <a
+                  key={recommendation.title}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={recommendationClassName}
+                >
+                  {recommendation.title}
+                </a>
+              );
+            }
+
+            // Unknown / free-text action (e.g. "view_matched_outfits") → render as a label
+            // so Next.js never tries to RSC-prefetch a non-route.
             return (
-              <Link key={recommendation.title} href={recommendation.action} className={recommendationClassName}>
+              <span key={recommendation.title} className={recommendationClassName}>
                 {recommendation.title}
-              </Link>
+              </span>
             );
           })}
         </div>

@@ -49,24 +49,29 @@ class ProofCardGenerator:
         look_name: str,
         vto_result: Optional[Dict],
         selected_items: List[Dict],
-        _closet_items: List[Dict],
-        context: Dict,
+        closet_items: Optional[List[Dict]] = None,
+        context: Optional[Dict] = None,
         user_profile: Optional[Dict] = None,
     ) -> ProofCardData:
         """
         Generate proof card from outfit selection
-        
+
         Args:
             look_name: User-friendly name for the look
             vto_result: VTO result with image URL (if available)
             selected_items: Items selected for the outfit (owned + new)
-            closet_items: User's closet items used in outfit
+            closet_items: User's closet items used in outfit (currently used as a hint
+                only — owned vs. new is derived from each item's ``owned`` flag).
             context: Occasion, weather, season
             user_profile: User's color profile, skin type, etc.
-        
+
         Returns:
             ProofCardData with calculated scores
         """
+        # ``closet_items`` is accepted for API compatibility; selection is owned-flag driven.
+        _ = closet_items
+        context = context or {}
+
         # Separate owned vs new items
         owned = [item for item in selected_items if item.get('owned', False)]
         new = [item for item in selected_items if not item.get('owned', False)]

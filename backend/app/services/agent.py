@@ -97,9 +97,48 @@ def _filter_skin_concern_scores(scores: dict[str, Any]) -> dict[str, Any]:
     return {key: scores[key] for key in SKIN_CONCERN_LABELS if key in scores}
 
 
+_VALID_ACTION_PREFIXES = ("/", "http://", "https://")
+
+
+def _sanitize_action(value: Any) -> str | None:
+    """Drop free-text Gemini ``action`` values that aren't real routes/URLs.
+
+    Without this, the frontend used to render strings like ``view_matched_outfits``
+    inside a Next.js ``<Link>``, which then RSC-prefetches and 404s.
+    """
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if trimmed.lower().startswith(_VALID_ACTION_PREFIXES):
+        return trimmed
+    return None
+
+
+def _sanitize_recommendations(payload: dict[str, Any]) -> dict[str, Any]:
+    recs = payload.get("recommendations")
+    if not isinstance(recs, list):
+        return payload
+    cleaned: list[dict[str, Any]] = []
+    for rec in recs:
+        if not isinstance(rec, dict):
+            continue
+        action = _sanitize_action(rec.get("action"))
+        new_rec = dict(rec)
+        if action is None:
+            new_rec.pop("action", None)
+        else:
+            new_rec["action"] = action
+        cleaned.append(new_rec)
+    payload["recommendations"] = cleaned
+    return payload
+
+
 def _validate_agent_response(payload: dict[str, Any]) -> dict[str, Any]:
     try:
-        return AgentStructuredResponseModel.model_validate(payload).model_dump(exclude_none=True)
+        cleaned = _sanitize_recommendations(payload if isinstance(payload, dict) else {})
+        return AgentStructuredResponseModel.model_validate(cleaned).model_dump(exclude_none=True)
     except ValidationError as exc:
         raise AgentServiceError(f"Gemini response did not match the agent schema: {exc}") from exc
 
@@ -281,7 +320,9 @@ Requirements:
 - Keep it concise and practical.
 - Connect worst skin scores to weather/history when possible.
 - Include 2 to 4 recommendations.
-- Use actions such as "/skin", "/skin/simulate", or "/try-on".
+- "action" MUST be a real in-app path starting with "/" such as "/skin",
+  "/skin/simulate", "/try-on", or "/glowup". Never emit free-text like
+  "view_results" or "shop_now". If no real route fits, omit the field.
 - Do not include markdown.
 """
 
@@ -365,6 +406,10 @@ Requirements:
 - Call out missing pieces plainly when gaps exist.
 - If CONTEXT includes shopping_queries, briefly reference those search strings so the user sees how product options were retrieved.
 - Include 2 to 4 recommendations.
+- "action" MUST be a real in-app path starting with "/" such as "/outfit",
+  "/try-on", or "/closet". Never emit free-text labels like
+  "view_matched_outfits" or "shop_for_shoes". If no real route fits, omit
+  the field entirely.
 - Do not include markdown.
 """
 
